@@ -2,17 +2,18 @@
 
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { createContext, useContext, useEffect, useState, ReactNode } from "react";
-import { supabase } from "@/lib/supabase";
-import { User, Session } from "@supabase/supabase-js";
+import { getCurrentUser, logout as customLogout, isLoggedIn } from "@/lib/custom-auth";
+
+interface User {
+  id: string;
+  email: string;
+}
 
 interface AuthContextType {
   user: User | null;
-  session: Session | null;
   isLoading: boolean;
-  signInWithEmail: (email: string) => Promise<{ error: Error | null }>;
-  signInWithPassword: (email: string, password: string) => Promise<{ error: Error | null }>;
-  signUpWithPassword: (email: string, password: string) => Promise<{ error: Error | null }>;
   signOut: () => Promise<void>;
+  isAuthenticated: boolean;
 }
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
@@ -21,8 +22,8 @@ function makeQueryClient() {
   return new QueryClient({
     defaultOptions: {
       queries: {
-        staleTime: 1000 * 60, // 1 minute
-        gcTime: 1000 * 60 * 60 * 24, // 24 hours
+        staleTime: 1000 * 60,
+        gcTime: 1000 * 60 * 60 * 24,
         retry: 1,
         refetchOnWindowFocus: false,
       },
@@ -54,84 +55,40 @@ export function Providers({ children }: { children: ReactNode }) {
 
 function AuthProvider({ children }: { children: ReactNode }) {
   const [user, setUser] = useState<User | null>(null);
-  const [session, setSession] = useState<Session | null>(null);
   const [isLoading, setIsLoading] = useState(true);
 
   useEffect(() => {
     // Get initial session
-    supabase.auth.getSession().then(({ data: { session } }) => {
-      setSession(session);
-      setUser(session?.user ?? null);
-      setIsLoading(false);
-    });
+    const currentUser = getCurrentUser();
+    if (currentUser) {
+      setUser(currentUser);
+    }
+    setIsLoading(false);
 
-    // Listen for auth changes
-    const {
-      data: { subscription },
-    } = supabase.auth.onAuthStateChange((_event, session) => {
-      setSession(session);
-      setUser(session?.user ?? null);
-      setIsLoading(false);
-    });
+    // Listen for storage changes (for multi-tab sync)
+    const handleStorageChange = () => {
+      const currentUser = getCurrentUser();
+      setUser(currentUser);
+    };
 
-    return () => subscription.unsubscribe();
+    window.addEventListener("storage", handleStorageChange);
+    return () => window.removeEventListener("storage", handleStorageChange);
   }, []);
 
-  const signInWithEmail = async (email: string) => {
-    try {
-      const { error } = await supabase.auth.signInWithOtp({
-        email,
-        options: {
-          emailRedirectTo: `${window.location.origin}/auth/callback`,
-        },
-      });
-      return { error: error ? new Error(error.message) : null };
-    } catch (err) {
-      return { error: err as Error };
-    }
-  };
-
-  const signInWithPassword = async (email: string, password: string) => {
-    try {
-      const { error } = await supabase.auth.signInWithPassword({
-        email,
-        password,
-      });
-      return { error: error ? new Error(error.message) : null };
-    } catch (err) {
-      return { error: err as Error };
-    }
-  };
-
-  const signUpWithPassword = async (email: string, password: string) => {
-    try {
-      const { error } = await supabase.auth.signUp({
-        email,
-        password,
-        options: {
-          emailRedirectTo: `${window.location.origin}/auth/callback`,
-        },
-      });
-      return { error: error ? new Error(error.message) : null };
-    } catch (err) {
-      return { error: err as Error };
-    }
-  };
-
   const signOut = async () => {
-    await supabase.auth.signOut();
+    customLogout();
+    setUser(null);
+    // Redirect to login
+    window.location.href = "/login";
   };
 
   return (
     <AuthContext.Provider
       value={{
         user,
-        session,
         isLoading,
-        signInWithEmail,
-        signInWithPassword,
-        signUpWithPassword,
         signOut,
+        isAuthenticated: !!user,
       }}
     >
       {children}

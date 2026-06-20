@@ -1,16 +1,8 @@
 "use client";
 
 import { useEffect, useCallback, useRef } from "react";
-import { useQuery, useMutation, useQueryClient, QueryClient } from "@tanstack/react-query";
+import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { useAuth } from "@/lib/providers";
-import {
-  supabase,
-  toAppEntry,
-  toDbEntry,
-  toAppSettings,
-  toDbSettings,
-  DatabaseMoodEntry,
-} from "@/lib/supabase";
 import { MoodEntry, UserSettings, MoodStats, MoodType } from "@/types/mood";
 import { generateId, formatTime, moodToScore, calculateStreak } from "@/lib/moods";
 import { analyzeSentiment } from "@/lib/sentiment";
@@ -20,15 +12,48 @@ const OFFLINE_QUEUE_KEY = "mood-tracker-offline-queue";
 const LOCAL_ENTRIES_KEY = "mood-tracker-entries";
 const LOCAL_SETTINGS_KEY = "mood-tracker-settings";
 
-interface OfflineAction {
-  id: string;
-  type: "CREATE" | "UPDATE" | "DELETE";
-  data: any;
-  timestamp: number;
+// Get entries from localStorage
+function getLocalEntries(): MoodEntry[] {
+  if (typeof window === "undefined") return [];
+  const stored = localStorage.getItem(LOCAL_ENTRIES_KEY);
+  return stored ? JSON.parse(stored) : [];
+}
+
+// Save entries to localStorage
+function saveLocalEntries(entries: MoodEntry[]): void {
+  if (typeof window === "undefined") return;
+  localStorage.setItem(LOCAL_ENTRIES_KEY, JSON.stringify(entries));
+}
+
+// Get settings from localStorage
+function getLocalSettings(): UserSettings {
+  if (typeof window === "undefined") {
+    return {
+      theme: "dark",
+      notifications: true,
+      reminderTime: "21:00",
+      language: "en",
+      exportFormat: "json",
+    };
+  }
+  const stored = localStorage.getItem(LOCAL_SETTINGS_KEY);
+  return stored ? JSON.parse(stored) : {
+    theme: "dark" as const,
+    notifications: true,
+    reminderTime: "21:00",
+    language: "en",
+    exportFormat: "json" as const,
+  };
+}
+
+// Save settings to localStorage
+function saveLocalSettings(settings: UserSettings): void {
+  if (typeof window === "undefined") return;
+  localStorage.setItem(LOCAL_SETTINGS_KEY, JSON.stringify(settings));
 }
 
 export function useSyncStore() {
-  const { user, isLoading: authLoading } = useAuth();
+  const { user, isLoading: authLoading, isAuthenticated } = useAuth();
   const queryClient = useQueryClient();
   const isOnlineRef = useRef(typeof window !== "undefined" ? navigator.onLine : true);
 
@@ -36,7 +61,6 @@ export function useSyncStore() {
   useEffect(() => {
     const handleOnline = () => {
       isOnlineRef.current = true;
-      // Process offline queue when back online
       processOfflineQueue();
     };
     const handleOffline = () => {
@@ -52,74 +76,22 @@ export function useSyncStore() {
     };
   }, []);
 
-  // Real-time subscription for entries
-  useEffect(() => {
-    if (!user || !isOnlineRef.current) return;
-
-    const channel = supabase
-      .channel("mood_entries_changes")
-      .on(
-        "postgres_changes",
-        {
-          event: "*",
-          schema: "public",
-          table: "mood_entries",
-          filter: `user_id=eq.${user.id}`,
-        },
-        (payload) => {
-          // Invalidate and refetch on changes
-          queryClient.invalidateQueries({ queryKey: ["mood-entries"] });
-        }
-      )
-      .subscribe();
-
-    return () => {
-      supabase.removeChannel(channel);
-    };
-  }, [user, queryClient]);
-
-  // Load entries from Supabase
+  // Load entries
   const {
     data: entries = [],
     isLoading: entriesLoading,
     error: entriesError,
+    refetch,
   } = useQuery({
     queryKey: ["mood-entries", user?.id],
-    queryFn: async () => {
-      if (!user) return [];
-
-      const { data, error } = await supabase
-        .from("mood_entries")
-        .select("*")
-        .eq("user_id", user.id)
-        .order("date", { ascending: false })
-        .order("created_at", { ascending: false });
-
-      if (error) throw error;
-
-      // Also save to localStorage as backup
-      const appEntries = data.map(toAppEntry);
-      localStorage.setItem(LOCAL_ENTRIES_KEY, JSON.stringify(appEntries));
-      return appEntries;
+    queryFn: () => {
+      return getLocalEntries();
     },
-    enabled: !!user && isOnlineRef.current,
-    staleTime: 1000 * 30, // 30 seconds
+    enabled: true,
+    staleTime: 1000 * 30,
   });
 
-  // Load entries from localStorage when offline
-  const localEntries: MoodEntry[] = (() => {
-    try {
-      const stored = localStorage.getItem(LOCAL_ENTRIES_KEY);
-      return stored ? JSON.parse(stored) : [];
-    } catch {
-      return [];
-    }
-  })();
-
-  // Merge local and remote entries
-  const mergedEntries = user ? entries : localEntries;
-
-  // Load settings from Supabase
+  // Load settings
   const {
     data: settings = {
       theme: "dark" as const,
@@ -131,43 +103,13 @@ export function useSyncStore() {
     isLoading: settingsLoading,
   } = useQuery({
     queryKey: ["user-settings", user?.id],
-    queryFn: async () => {
-      if (!user) {
-        const stored = localStorage.getItem(LOCAL_SETTINGS_KEY);
-        return stored ? JSON.parse(stored) : {
-          theme: "dark" as const,
-          notifications: true,
-          reminderTime: "21:00",
-          language: "en",
-          exportFormat: "json" as const,
-        };
-      }
-
-      const { data, error } = await supabase
-        .from("user_settings")
-        .select("*")
-        .eq("user_id", user.id)
-        .single();
-
-      if (error && error.code !== "PGRST116") {
-        throw error;
-      }
-
-      const appSettings = data ? toAppSettings(data) : {
-        theme: "dark" as const,
-        notifications: true,
-        reminderTime: "21:00",
-        language: "en",
-        exportFormat: "json" as const,
-      };
-
-      localStorage.setItem(LOCAL_SETTINGS_KEY, JSON.stringify(appSettings));
-      return appSettings;
+    queryFn: () => {
+      return getLocalSettings();
     },
-    enabled: !!user,
+    enabled: true,
   });
 
-  // Create entry mutation with optimistic update
+  // Create entry mutation
   const createEntryMutation = useMutation({
     mutationFn: async (params: {
       mood: MoodType;
@@ -175,29 +117,6 @@ export function useSyncStore() {
       text: string;
       tags: string[];
     }) => {
-      if (!user) {
-        // Offline mode - save locally
-        const now = new Date();
-        const newEntry: MoodEntry = {
-          id: generateId(),
-          date: now.toISOString().split("T")[0],
-          time: formatTime(now),
-          mood: params.mood,
-          intensity: params.intensity,
-          text: params.text,
-          tags: params.tags,
-        };
-
-        // Save to localStorage
-        const stored = localStorage.getItem(LOCAL_ENTRIES_KEY);
-        const entries: MoodEntry[] = stored ? JSON.parse(stored) : [];
-        entries.unshift(newEntry);
-        localStorage.setItem(LOCAL_ENTRIES_KEY, JSON.stringify(entries));
-
-        return newEntry;
-      }
-
-      // Online mode - save to Supabase
       const now = new Date();
       const sentiment = analyzeSentiment(params.text);
 
@@ -212,49 +131,13 @@ export function useSyncStore() {
         sentiment: { score: sentiment.score, keywords: sentiment.keywords },
       };
 
-      const { data, error } = await supabase
-        .from("mood_entries")
-        .insert(toDbEntry(newEntry, user.id))
-        .select()
-        .single();
+      const currentEntries = getLocalEntries();
+      currentEntries.unshift(newEntry);
+      saveLocalEntries(currentEntries);
 
-      if (error) throw error;
-      return toAppEntry(data);
+      return newEntry;
     },
-    onMutate: async (params) => {
-      // Cancel outgoing refetches
-      await queryClient.cancelQueries({ queryKey: ["mood-entries"] });
-
-      // Snapshot previous value
-      const previousEntries = queryClient.getQueryData(["mood-entries", user?.id]);
-
-      // Optimistically update
-      const now = new Date();
-      const optimisticEntry: MoodEntry = {
-        id: generateId(),
-        date: now.toISOString().split("T")[0],
-        time: formatTime(now),
-        mood: params.mood,
-        intensity: params.intensity,
-        text: params.text,
-        tags: params.tags,
-      };
-
-      queryClient.setQueryData(["mood-entries", user?.id], (old: MoodEntry[] = []) => [
-        optimisticEntry,
-        ...old,
-      ]);
-
-      return { previousEntries };
-    },
-    onError: (err, params, context) => {
-      // Rollback on error
-      if (context?.previousEntries) {
-        queryClient.setQueryData(["mood-entries", user?.id], context.previousEntries);
-      }
-    },
-    onSettled: () => {
-      // Refetch after mutation
+    onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["mood-entries"] });
     },
   });
@@ -262,39 +145,11 @@ export function useSyncStore() {
   // Delete entry mutation
   const deleteEntryMutation = useMutation({
     mutationFn: async (id: string) => {
-      if (!user) {
-        // Offline mode
-        const stored = localStorage.getItem(LOCAL_ENTRIES_KEY);
-        const entries: MoodEntry[] = stored ? JSON.parse(stored) : [];
-        const filtered = entries.filter((e) => e.id !== id);
-        localStorage.setItem(LOCAL_ENTRIES_KEY, JSON.stringify(filtered));
-        return;
-      }
-
-      const { error } = await supabase
-        .from("mood_entries")
-        .delete()
-        .eq("id", id)
-        .eq("user_id", user.id);
-
-      if (error) throw error;
+      const currentEntries = getLocalEntries();
+      const filtered = currentEntries.filter((e) => e.id !== id);
+      saveLocalEntries(filtered);
     },
-    onMutate: async (id) => {
-      await queryClient.cancelQueries({ queryKey: ["mood-entries"] });
-      const previousEntries = queryClient.getQueryData(["mood-entries", user?.id]);
-
-      queryClient.setQueryData(["mood-entries", user?.id], (old: MoodEntry[] = []) =>
-        old.filter((e) => e.id !== id)
-      );
-
-      return { previousEntries };
-    },
-    onError: (err, id, context) => {
-      if (context?.previousEntries) {
-        queryClient.setQueryData(["mood-entries", user?.id], context.previousEntries);
-      }
-    },
-    onSettled: () => {
+    onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["mood-entries"] });
     },
   });
@@ -302,73 +157,33 @@ export function useSyncStore() {
   // Update settings mutation
   const updateSettingsMutation = useMutation({
     mutationFn: async (updates: Partial<UserSettings>) => {
-      // Always save to localStorage first
-      const current = settings;
+      const current = getLocalSettings();
       const updated = { ...current, ...updates };
-      localStorage.setItem(LOCAL_SETTINGS_KEY, JSON.stringify(updated));
-
-      if (!user) return updated;
-
-      const { error } = await supabase
-        .from("user_settings")
-        .upsert(toDbSettings(updates, user.id));
-
-      if (error) throw error;
+      saveLocalSettings(updated);
       return updated;
     },
-    onMutate: async (updates) => {
-      await queryClient.cancelQueries({ queryKey: ["user-settings"] });
-      const previousSettings = queryClient.getQueryData(["user-settings", user?.id]);
-
-      queryClient.setQueryData(["user-settings", user?.id], (old: UserSettings) => ({
-        ...old,
-        ...updates,
-      }));
-
-      return { previousSettings };
-    },
-    onError: (err, updates, context) => {
-      if (context?.previousSettings) {
-        queryClient.setQueryData(["user-settings", user?.id], context.previousSettings);
-      }
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["user-settings"] });
     },
   });
 
-  // Process offline queue when back online
+  // Process offline queue
   const processOfflineQueue = useCallback(async () => {
-    if (!user || !isOnlineRef.current) return;
+    // For local-only mode, offline queue is not needed
+  }, []);
 
-    try {
-      const queue = JSON.parse(
-        localStorage.getItem(OFFLINE_QUEUE_KEY) || "[]"
-      ) as OfflineAction[];
-
-      for (const action of queue) {
-        if (action.type === "CREATE") {
-          await supabase.from("mood_entries").insert(action.data);
-        } else if (action.type === "UPDATE") {
-          await supabase
-            .from("mood_entries")
-            .update(action.data)
-            .eq("id", action.data.id);
-        } else if (action.type === "DELETE") {
-          await supabase
-            .from("mood_entries")
-            .delete()
-            .eq("id", action.id);
-        }
-      }
-
-      localStorage.removeItem(OFFLINE_QUEUE_KEY);
-      queryClient.invalidateQueries({ queryKey: ["mood-entries"] });
-    } catch (err) {
-      console.error("Error processing offline queue:", err);
-    }
-  }, [user, queryClient]);
+  // Clear all data
+  const clearAllData = useCallback(() => {
+    localStorage.removeItem(LOCAL_ENTRIES_KEY);
+    localStorage.removeItem(LOCAL_SETTINGS_KEY);
+    localStorage.removeItem(OFFLINE_QUEUE_KEY);
+    queryClient.invalidateQueries({ queryKey: ["mood-entries"] });
+    queryClient.invalidateQueries({ queryKey: ["user-settings"] });
+  }, [queryClient]);
 
   // Calculate stats
   const getStats = useCallback((): MoodStats => {
-    const data = mergedEntries;
+    const data = entries;
 
     if (data.length === 0) {
       return {
@@ -419,7 +234,7 @@ export function useSyncStore() {
       entriesThisWeek,
       moodDistribution,
     };
-  }, [mergedEntries]);
+  }, [entries]);
 
   const getWeeklyData = useCallback(() => {
     const weekData: { day: string; score: number }[] = [];
@@ -431,7 +246,7 @@ export function useSyncStore() {
       const dateStr = date.toISOString().split("T")[0];
       const dayName = date.toLocaleDateString("en-US", { weekday: "short" });
 
-      const dayEntries = mergedEntries.filter((e) => e.date === dateStr);
+      const dayEntries = entries.filter((e) => e.date === dateStr);
       const avgScore =
         dayEntries.length > 0
           ? dayEntries.reduce((sum, e) => sum + moodToScore[e.mood], 0) /
@@ -445,10 +260,10 @@ export function useSyncStore() {
     }
 
     return weekData;
-  }, [mergedEntries]);
+  }, [entries]);
 
   return {
-    entries: mergedEntries,
+    entries,
     settings,
     isLoading: authLoading || entriesLoading || settingsLoading,
     error: entriesError,
@@ -461,33 +276,15 @@ export function useSyncStore() {
     isCreating: createEntryMutation.isPending,
     isDeleting: deleteEntryMutation.isPending,
     isUpdating: updateSettingsMutation.isPending,
-    clearAllData: async () => {
-      // Clear localStorage
-      localStorage.removeItem(LOCAL_ENTRIES_KEY);
-      localStorage.removeItem(LOCAL_SETTINGS_KEY);
-      localStorage.removeItem(OFFLINE_QUEUE_KEY);
-
-      // Clear server data if logged in
-      if (user) {
-        await supabase
-          .from("mood_entries")
-          .delete()
-          .eq("user_id", user.id);
-      }
-
-      // Invalidate React Query cache
-      queryClient.invalidateQueries({ queryKey: ["mood-entries"] });
-      queryClient.invalidateQueries({ queryKey: ["user-settings"] });
-    },
+    clearAllData,
     exportData: (format: "json" | "csv") => {
-      const data = entries;
       let content: string;
 
       if (format === "json") {
-        content = JSON.stringify(data, null, 2);
+        content = JSON.stringify(entries, null, 2);
       } else {
         const headers = ["Date", "Time", "Mood", "Intensity", "Text", "Tags"];
-        const rows = data.map((e) => [
+        const rows = entries.map((e) => [
           e.date,
           e.time,
           e.mood,

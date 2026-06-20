@@ -2,10 +2,11 @@
 
 import { useState } from "react";
 import { motion } from "framer-motion";
-import { useAuth } from "@/lib/providers";
 import { Sparkles, Mail, Lock, ArrowLeft, Check, Loader2, Eye, EyeOff } from "lucide-react";
 import Link from "next/link";
+import { useRouter } from "next/navigation";
 import GlassBackground from "@/components/ui/GlassBackground";
+import { register, login } from "@/lib/custom-auth";
 
 type AuthMode = "login" | "signup";
 
@@ -17,7 +18,7 @@ export default function LoginPage() {
   const [isSuccess, setIsSuccess] = useState(false);
   const [mode, setMode] = useState<AuthMode>("login");
   const [error, setError] = useState<string | null>(null);
-  const { signInWithPassword, signUpWithPassword } = useAuth();
+  const router = useRouter();
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -36,23 +37,31 @@ export default function LoginPage() {
       return;
     }
 
-    if (mode === "signup") {
-      const { error } = await signUpWithPassword(email, password);
-      if (error) {
-        setError(error.message);
-        setIsLoading(false);
+    try {
+      let result;
+      if (mode === "signup") {
+        result = await register(email, password);
       } else {
+        result = await login(email, password);
+      }
+
+      if (!result.success) {
+        setError(result.error || "Something went wrong");
+        setIsLoading(false);
+        return;
+      }
+
+      if (mode === "signup") {
         setIsSuccess(true);
         setIsLoading(false);
-      }
-    } else {
-      const { error } = await signInWithPassword(email, password);
-      if (error) {
-        setError(error.message);
-        setIsLoading(false);
       } else {
-        window.location.href = "/";
+        // Login success - redirect
+        router.push("/");
+        router.refresh();
       }
+    } catch (err) {
+      setError("Network error. Please try again.");
+      setIsLoading(false);
     }
   };
 
@@ -79,19 +88,8 @@ export default function LoginPage() {
             <p className="text-white/60 mb-8">
               Your account has been created successfully.
               <br />
-              You can now sign in.
+              Redirecting you now...
             </p>
-            <button
-              onClick={() => {
-                setIsSuccess(false);
-                setMode("login");
-                setEmail("");
-                setPassword("");
-              }}
-              className="text-purple-400 hover:text-purple-300 transition-colors"
-            >
-              Go to Sign In
-            </button>
           </motion.div>
         </div>
       </GlassBackground>
