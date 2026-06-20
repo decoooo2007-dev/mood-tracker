@@ -1,5 +1,10 @@
+-- Drop existing tables if they exist (with RLS issues)
+DROP TABLE IF EXISTS public.user_settings CASCADE;
+DROP TABLE IF EXISTS public.mood_entries CASCADE;
+DROP TABLE IF EXISTS public.users CASCADE;
+
 -- Custom users table for username/password auth
-CREATE TABLE IF NOT EXISTS public.users (
+CREATE TABLE public.users (
   id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
   username TEXT UNIQUE NOT NULL,
   password_hash TEXT NOT NULL,
@@ -8,7 +13,7 @@ CREATE TABLE IF NOT EXISTS public.users (
 );
 
 -- Mood entries table with user reference
-CREATE TABLE IF NOT EXISTS public.mood_entries (
+CREATE TABLE public.mood_entries (
   id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
   user_id UUID NOT NULL REFERENCES public.users(id) ON DELETE CASCADE,
   date DATE NOT NULL,
@@ -23,7 +28,7 @@ CREATE TABLE IF NOT EXISTS public.mood_entries (
 );
 
 -- User settings table with user reference
-CREATE TABLE IF NOT EXISTS public.user_settings (
+CREATE TABLE public.user_settings (
   id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
   user_id UUID UNIQUE NOT NULL REFERENCES public.users(id) ON DELETE CASCADE,
   theme TEXT DEFAULT 'dark',
@@ -34,12 +39,13 @@ CREATE TABLE IF NOT EXISTS public.user_settings (
   updated_at TIMESTAMPTZ DEFAULT NOW()
 );
 
--- Disable RLS temporarily for custom auth (enable per-table as needed)
+-- IMPORTANT: Disable RLS so our custom auth can work
+-- Our auth uses x-user-id header instead of Supabase Auth
 ALTER TABLE public.users DISABLE ROW LEVEL SECURITY;
 ALTER TABLE public.mood_entries DISABLE ROW LEVEL SECURITY;
 ALTER TABLE public.user_settings DISABLE ROW LEVEL SECURITY;
 
--- Create index for faster queries
-CREATE INDEX IF NOT EXISTS idx_mood_entries_user_id ON public.mood_entries(user_id);
-CREATE INDEX IF NOT EXISTS idx_mood_entries_date ON public.mood_entries(date);
-CREATE INDEX IF NOT EXISTS idx_user_settings_user_id ON public.user_settings(user_id);
+-- Create indexes for faster queries
+CREATE INDEX idx_mood_entries_user_id ON public.mood_entries(user_id);
+CREATE INDEX idx_mood_entries_date ON public.mood_entries(date);
+CREATE INDEX idx_user_settings_user_id ON public.user_settings(user_id);
