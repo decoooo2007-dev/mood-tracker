@@ -20,17 +20,9 @@ import GlassBackground from "@/components/ui/GlassBackground";
 import Navigation from "@/components/ui/Navigation";
 
 export default function SettingsPage() {
-  const { user, isLoading: authLoading } = useAuth();
   const { settings, entries, updateSettings, getStats, clearAllData, isUpdating } = useSyncStore();
   const [showClearConfirm, setShowClearConfirm] = useState(false);
   const [exportSuccess, setExportSuccess] = useState<string | null>(null);
-
-  // Redirect to login if not authenticated
-  useEffect(() => {
-    if (!authLoading && !user) {
-      window.location.href = "/login";
-    }
-  }, [user, authLoading]);
 
   const stats = getStats();
 
@@ -74,7 +66,7 @@ export default function SettingsPage() {
     }
   };
 
-  if (authLoading) {
+  if (false) { // No loading state needed
     return (
       <GlassBackground>
         <div className="flex items-center justify-center min-h-screen">

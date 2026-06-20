@@ -1,19 +1,10 @@
 "use client";
 
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
-import { createContext, useContext, useEffect, useState, ReactNode } from "react";
-import { getCurrentUser, logout as customLogout, isLoggedIn } from "@/lib/custom-auth";
-
-interface User {
-  id: string;
-  email: string;
-}
+import { createContext, useContext, useState, ReactNode } from "react";
 
 interface AuthContextType {
-  user: User | null;
   isLoading: boolean;
-  signOut: () => Promise<void>;
-  isAuthenticated: boolean;
 }
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
@@ -54,41 +45,12 @@ export function Providers({ children }: { children: ReactNode }) {
 }
 
 function AuthProvider({ children }: { children: ReactNode }) {
-  const [user, setUser] = useState<User | null>(null);
-  const [isLoading, setIsLoading] = useState(true);
-
-  useEffect(() => {
-    // Get initial session
-    const currentUser = getCurrentUser();
-    if (currentUser) {
-      setUser(currentUser);
-    }
-    setIsLoading(false);
-
-    // Listen for storage changes (for multi-tab sync)
-    const handleStorageChange = () => {
-      const currentUser = getCurrentUser();
-      setUser(currentUser);
-    };
-
-    window.addEventListener("storage", handleStorageChange);
-    return () => window.removeEventListener("storage", handleStorageChange);
-  }, []);
-
-  const signOut = async () => {
-    customLogout();
-    setUser(null);
-    // Redirect to login
-    window.location.href = "/login";
-  };
+  const [isLoading] = useState(false);
 
   return (
     <AuthContext.Provider
       value={{
-        user,
         isLoading,
-        signOut,
-        isAuthenticated: !!user,
       }}
     >
       {children}
@@ -101,5 +63,10 @@ export function useAuth() {
   if (context === undefined) {
     throw new Error("useAuth must be used within an AuthProvider");
   }
-  return context;
+  return {
+    user: null,
+    isLoading: context.isLoading,
+    signOut: async () => {},
+    isAuthenticated: true,
+  };
 }

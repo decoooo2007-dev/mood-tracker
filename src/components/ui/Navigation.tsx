@@ -2,11 +2,9 @@
 
 import { motion } from "framer-motion";
 import Link from "next/link";
-import { usePathname, useRouter } from "next/navigation";
-import { Home, Clock, Settings, LogOut, Wifi, WifiOff, Loader2 } from "lucide-react";
-import { useAuth } from "@/lib/providers";
+import { usePathname } from "next/navigation";
+import { Home, Clock, Settings, Wifi, WifiOff } from "lucide-react";
 import { useSyncStore } from "@/hooks/useSyncStore";
-import { useState } from "react";
 
 const navItems = [
   { href: "/", label: "Today", icon: Home },
@@ -16,17 +14,7 @@ const navItems = [
 
 export default function Navigation() {
   const pathname = usePathname();
-  const router = useRouter();
-  const { user, signOut } = useAuth();
-  const { isOnline, isLoading } = useSyncStore();
-  const [isSigningOut, setIsSigningOut] = useState(false);
-
-  const handleSignOut = async () => {
-    setIsSigningOut(true);
-    await signOut();
-    router.push("/login");
-    setIsSigningOut(false);
-  };
+  const { isOnline } = useSyncStore();
 
   return (
     <nav className="fixed bottom-0 left-0 right-0 z-50 px-4 pb-6">
@@ -73,36 +61,12 @@ export default function Navigation() {
             })}
           </div>
 
-          {/* Status & User */}
+          {/* Status indicator */}
           <div className="flex items-center gap-3">
-            {/* Online/Offline indicator */}
-            {isLoading ? (
-              <Loader2 className="w-4 h-4 text-white/50 animate-spin" />
-            ) : isOnline ? (
+            {isOnline ? (
               <Wifi className="w-4 h-4 text-green-400" />
             ) : (
-              <span title="Offline mode"><WifiOff className="w-4 h-4 text-orange-400" /></span>
-            )}
-
-            {/* User menu */}
-            {user && (
-              <button
-                onClick={handleSignOut}
-                disabled={isSigningOut}
-                className="flex items-center gap-2 px-3 py-2 rounded-xl bg-white/10 hover:bg-white/20 transition-all"
-                title="Sign out"
-              >
-                {isSigningOut ? (
-                  <Loader2 className="w-4 h-4 text-white/70 animate-spin" />
-                ) : (
-                  <>
-                    <span className="text-xs text-white/70 hidden sm:inline">
-                      {user.email?.split("@")[0]}
-                    </span>
-                    <LogOut className="w-4 h-4 text-white/70" />
-                  </>
-                )}
-              </button>
+              <WifiOff className="w-4 h-4 text-orange-400" />
             )}
           </div>
         </motion.div>

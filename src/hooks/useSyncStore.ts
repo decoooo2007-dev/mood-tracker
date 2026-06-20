@@ -2,7 +2,6 @@
 
 import { useEffect, useCallback, useRef } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
-import { useAuth } from "@/lib/providers";
 import { MoodEntry, UserSettings, MoodStats, MoodType } from "@/types/mood";
 import { generateId, formatTime, moodToScore, calculateStreak } from "@/lib/moods";
 import { analyzeSentiment } from "@/lib/sentiment";
@@ -53,7 +52,6 @@ function saveLocalSettings(settings: UserSettings): void {
 }
 
 export function useSyncStore() {
-  const { user, isLoading: authLoading, isAuthenticated } = useAuth();
   const queryClient = useQueryClient();
   const isOnlineRef = useRef(typeof window !== "undefined" ? navigator.onLine : true);
 
@@ -61,7 +59,6 @@ export function useSyncStore() {
   useEffect(() => {
     const handleOnline = () => {
       isOnlineRef.current = true;
-      processOfflineQueue();
     };
     const handleOffline = () => {
       isOnlineRef.current = false;
@@ -81,9 +78,8 @@ export function useSyncStore() {
     data: entries = [],
     isLoading: entriesLoading,
     error: entriesError,
-    refetch,
   } = useQuery({
-    queryKey: ["mood-entries", user?.id],
+    queryKey: ["mood-entries"],
     queryFn: () => {
       return getLocalEntries();
     },
@@ -102,7 +98,7 @@ export function useSyncStore() {
     },
     isLoading: settingsLoading,
   } = useQuery({
-    queryKey: ["user-settings", user?.id],
+    queryKey: ["user-settings"],
     queryFn: () => {
       return getLocalSettings();
     },
@@ -166,11 +162,6 @@ export function useSyncStore() {
       queryClient.invalidateQueries({ queryKey: ["user-settings"] });
     },
   });
-
-  // Process offline queue
-  const processOfflineQueue = useCallback(async () => {
-    // For local-only mode, offline queue is not needed
-  }, []);
 
   // Clear all data
   const clearAllData = useCallback(() => {
@@ -265,7 +256,7 @@ export function useSyncStore() {
   return {
     entries,
     settings,
-    isLoading: authLoading || entriesLoading || settingsLoading,
+    isLoading: entriesLoading || settingsLoading,
     error: entriesError,
     isOnline: isOnlineRef.current,
     addEntry: createEntryMutation.mutate,

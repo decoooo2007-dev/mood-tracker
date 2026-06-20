@@ -32,7 +32,6 @@ import Navigation from "@/components/ui/Navigation";
 import Link from "next/link";
 
 export default function TodayPage() {
-  const { user, isLoading: authLoading } = useAuth();
   const {
     entries,
     addEntry,
@@ -48,13 +47,6 @@ export default function TodayPage() {
   const [sliderValue, setSliderValue] = useState(50);
   const [showSuccess, setShowSuccess] = useState(false);
   const [sentiment, setSentiment] = useState<ReturnType<typeof analyzeSentiment> | null>(null);
-
-  // Redirect to login if not authenticated
-  useEffect(() => {
-    if (!authLoading && !user) {
-      window.location.href = "/login";
-    }
-  }, [user, authLoading]);
 
   const stats = getStats();
   const weeklyInsight = generateWeeklyInsight(entries);
@@ -96,7 +88,7 @@ export default function TodayPage() {
     }
   };
 
-  if (authLoading || isLoading) {
+  if (isLoading) {
     return (
       <GlassBackground>
         <div className="flex items-center justify-center min-h-screen">

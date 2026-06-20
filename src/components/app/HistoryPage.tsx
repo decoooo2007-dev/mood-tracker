@@ -40,20 +40,12 @@ const moodColors: Record<MoodType, string> = {
 };
 
 export default function HistoryPage() {
-  const { user, isLoading: authLoading } = useAuth();
   const { entries, deleteEntry, getStats, isLoading, isDeleting } = useSyncStore();
   const [searchQuery, setSearchQuery] = useState("");
   const [filterMood, setFilterMood] = useState<MoodType | null>(null);
   const [filterTag, setFilterTag] = useState<string | null>(null);
   const [showFilters, setShowFilters] = useState(false);
   const [selectedEntry, setSelectedEntry] = useState<string | null>(null);
-
-  // Redirect to login if not authenticated
-  useEffect(() => {
-    if (!authLoading && !user) {
-      window.location.href = "/login";
-    }
-  }, [user, authLoading]);
 
   const stats = getStats();
 
@@ -93,7 +85,7 @@ export default function HistoryPage() {
     }
   };
 
-  if (authLoading || isLoading) {
+  if (isLoading) {
     return (
       <GlassBackground>
         <div className="flex items-center justify-center min-h-screen">
