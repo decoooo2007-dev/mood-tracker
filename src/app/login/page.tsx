@@ -55,14 +55,14 @@ export default function LoginPage() {
       if (isSignUp) {
         const result = await signUp(username.trim(), password);
         if (result.success) {
-          router.push("/");
+          window.location.href = "/";
         } else {
           setError(result.error || "Failed to create account");
         }
       } else {
         const result = await signIn(username.trim(), password);
         if (result.success) {
-          router.push("/");
+          window.location.href = "/";
         } else {
           setError(result.error || "Failed to sign in");
         }
