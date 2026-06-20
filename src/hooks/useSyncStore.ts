@@ -83,6 +83,15 @@ export function useSyncStore() {
     };
   }, [queryClient]);
 
+  // Refetch entries when session is available
+  useEffect(() => {
+    const session = getSession();
+    if (session) {
+      queryClient.invalidateQueries({ queryKey: ["mood-entries"] });
+      queryClient.invalidateQueries({ queryKey: ["user-settings"] });
+    }
+  }, [queryClient]);
+
   // Load entries from Supabase
   const {
     data: entries = [],
@@ -118,7 +127,7 @@ export function useSyncStore() {
         return [];
       }
     },
-    enabled: !!getSession(),
+    enabled: true,
     staleTime: 1000 * 30,
   });
 
@@ -159,7 +168,7 @@ export function useSyncStore() {
         return null;
       }
     },
-    enabled: !!getSession(),
+    enabled: true,
   });
 
   // Create entry mutation
