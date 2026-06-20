@@ -20,11 +20,20 @@ import GlassBackground from "@/components/ui/GlassBackground";
 import Navigation from "@/components/ui/Navigation";
 
 export default function SettingsPage() {
-  const { settings, entries, updateSettings, getStats, clearAllData, isUpdating } = useSyncStore();
+  const { settings, entries, updateSettings, getStats, clearAllData, isUpdating, isLoading } = useSyncStore();
   const [showClearConfirm, setShowClearConfirm] = useState(false);
   const [exportSuccess, setExportSuccess] = useState<string | null>(null);
 
   const stats = getStats();
+
+  // Default settings
+  const currentSettings = settings || {
+    theme: "dark" as const,
+    notifications: true,
+    reminderTime: "21:00",
+    language: "en",
+    exportFormat: "json" as const,
+  };
 
   const handleExport = (format: "json" | "csv") => {
     const data = entries;
@@ -66,7 +75,7 @@ export default function SettingsPage() {
     }
   };
 
-  if (false) { // No loading state needed
+  if (isLoading) {
     return (
       <GlassBackground>
         <div className="flex items-center justify-center min-h-screen">
@@ -106,7 +115,7 @@ export default function SettingsPage() {
           <div className="backdrop-blur-xl bg-white/10 rounded-2xl border border-white/20 overflow-hidden">
             <div className="p-4 flex items-center justify-between">
               <div className="flex items-center gap-3">
-                {settings.theme === "dark" ? (
+                {currentSettings.theme === "dark" ? (
                   <Moon className="w-5 h-5 text-purple-400" />
                 ) : (
                   <Sun className="w-5 h-5 text-yellow-400" />
@@ -120,7 +129,7 @@ export default function SettingsPage() {
                 <button
                   onClick={() => updateSettings({ theme: "dark" })}
                   className={`px-4 py-2 rounded-xl text-sm font-medium transition-all ${
-                    settings.theme === "dark"
+                    currentSettings.theme === "dark"
                       ? "bg-purple-500 text-white"
                       : "bg-white/10 text-white/60 hover:bg-white/20"
                   }`}
@@ -130,7 +139,7 @@ export default function SettingsPage() {
                 <button
                   onClick={() => updateSettings({ theme: "light" })}
                   className={`px-4 py-2 rounded-xl text-sm font-medium transition-all ${
-                    settings.theme === "light"
+                    currentSettings.theme === "light"
                       ? "bg-purple-500 text-white"
                       : "bg-white/10 text-white/60 hover:bg-white/20"
                   }`}
@@ -163,25 +172,25 @@ export default function SettingsPage() {
                 </div>
               </div>
               <button
-                onClick={() => updateSettings({ notifications: !settings.notifications })}
+                onClick={() => updateSettings({ notifications: !currentSettings.notifications })}
                 className={`w-12 h-7 rounded-full transition-all relative ${
-                  settings.notifications ? "bg-purple-500" : "bg-white/20"
+                  currentSettings.notifications ? "bg-purple-500" : "bg-white/20"
                 }`}
               >
                 <motion.div
                   className="absolute top-1 w-5 h-5 bg-white rounded-full shadow"
-                  animate={{ left: settings.notifications ? "26px" : "4px" }}
+                  animate={{ left: currentSettings.notifications ? "26px" : "4px" }}
                   transition={{ type: "spring", stiffness: 500, damping: 30 }}
                 />
               </button>
             </div>
-            {settings.notifications && (
+            {currentSettings.notifications && (
               <div className="px-4 pb-4">
                 <div className="flex items-center gap-3">
                   <span className="text-white/60 text-sm">Remind at</span>
                   <input
                     type="time"
-                    value={settings.reminderTime}
+                    value={currentSettings.reminderTime}
                     onChange={(e) => updateSettings({ reminderTime: e.target.value })}
                     className="px-3 py-2 bg-white/10 rounded-xl text-white text-sm outline-none focus:ring-2 focus:ring-purple-500/50"
                   />

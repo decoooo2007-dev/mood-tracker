@@ -3,8 +3,10 @@
 import { motion } from "framer-motion";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { Home, Clock, Settings, Wifi, WifiOff } from "lucide-react";
+import { Home, Clock, Settings, Wifi, WifiOff, LogOut } from "lucide-react";
 import { useSyncStore } from "@/hooks/useSyncStore";
+import { useAuth } from "@/lib/providers";
+import { useRouter } from "next/navigation";
 
 const navItems = [
   { href: "/", label: "Today", icon: Home },
@@ -15,6 +17,13 @@ const navItems = [
 export default function Navigation() {
   const pathname = usePathname();
   const { isOnline } = useSyncStore();
+  const { signOut } = useAuth();
+  const router = useRouter();
+
+  const handleSignOut = () => {
+    signOut();
+    router.push("/login");
+  };
 
   return (
     <nav className="fixed bottom-0 left-0 right-0 z-50 px-4 pb-6">
@@ -63,6 +72,13 @@ export default function Navigation() {
 
           {/* Status indicator */}
           <div className="flex items-center gap-3">
+            <button
+              onClick={handleSignOut}
+              className="p-2 hover:bg-white/10 rounded-xl transition-colors"
+              title="Sign out"
+            >
+              <LogOut className="w-4 h-4 text-white/60 hover:text-white/80" />
+            </button>
             {isOnline ? (
               <Wifi className="w-4 h-4 text-green-400" />
             ) : (

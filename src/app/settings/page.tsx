@@ -1,5 +1,10 @@
 import SettingsPage from "@/components/app/SettingsPage";
+import AuthGuard from "@/components/ui/AuthGuard";
 
 export default function Page() {
-  return <SettingsPage />;
+  return (
+    <AuthGuard>
+      <SettingsPage />
+    </AuthGuard>
+  );
 }
