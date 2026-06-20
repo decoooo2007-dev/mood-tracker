@@ -1,8 +1,8 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { motion } from "framer-motion";
-import { signUp, signIn } from "@/lib/auth";
+import { signUp, signIn, getSession } from "@/lib/auth";
 import { useRouter } from "next/navigation";
 import GlassBackground from "@/components/ui/GlassBackground";
 import { Heart, Loader2, Eye, EyeOff } from "lucide-react";
@@ -16,6 +16,14 @@ export default function LoginPage() {
   const [showPassword, setShowPassword] = useState(false);
   const [error, setError] = useState("");
   const [isLoading, setIsLoading] = useState(false);
+
+  // Redirect if already logged in
+  useEffect(() => {
+    const session = getSession();
+    if (session) {
+      router.push("/");
+    }
+  }, [router]);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
