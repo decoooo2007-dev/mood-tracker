@@ -4,149 +4,168 @@
 
 **"Your emotions matter. Track them, understand them, transform your life."**
 
-MoodFlow isn't just another mood tracker. It's a personal emotional intelligence companion that combines beautiful design with powerful insights to help you take control of your mental wellness journey.
+MoodFlow is a personal emotional intelligence companion that combines beautiful design with powerful insights. Start free, upgrade when you're ready for deeper understanding.
 
 ---
 
-## Features
+## Free Forever — Core Features
 
-### 🔐 **Simple, Hassle-Free Access**
+No credit card, no phone number, no invasion of privacy.
+
+### 🔐 **Instant Access**
+- Sign up in seconds with just username & password
 - No email verification required
-- Just pick a username and password — you're in
-- Works instantly on any device with an internet connection
-- Your data syncs seamlessly across all your devices
-- No credit card, no phone number, no invasion of privacy
+- Works on any device with internet
+- Data syncs across all your devices
 
-### 📊 **Smart Mood Tracking**
+### 📊 **Mood Tracking**
 - Track 5 core emotions: Happy, Calm, Sad, Frustrated, Tired
-- Fine-tune intensity with a visual slider (0-100%)
-- Add optional tags to categorize your entries
-- Write freely in your personal journal
+- Intensity slider (0-100%)
+- Personal journal entries
+- Custom tags for organization
 
-### 🤖 **AI-Powered Sentiment Analysis**
-- Automatic emotion detection from your journal text
-- Identifies positive and negative sentiment
-- Extracts key emotional keywords
-- Real-time insights as you write
+### 🔥 **Streak System**
+- Track consecutive journaling days
+- Build healthy habits
+- Visual flame indicator
+- Weekly mood trend chart
 
-### 🔥 **Gamified Streak System**
-- Track consecutive days of journaling
-- Build healthy habits with streak motivation
-- Visual flame indicator for active streaks
-- Celebrate consistency, not perfection
-
-### 📈 **Beautiful Analytics**
-- Weekly mood trend chart with smooth gradients
+### 📈 **Basic Analytics**
 - Mood distribution breakdown
-- Average mood score tracking
+- Average mood score
 - Entries this week counter
-- Longest streak record
+- Historical view
 
-### 📱 **Premium Mobile Experience**
-- Stunning glassmorphism design
-- Smooth animations powered by Framer Motion
-- Dark mode by default (easy on the eyes)
-- Fully responsive — works perfectly on any screen size
+### 🎨 **Beautiful Design**
+- Stunning glassmorphism UI
+- Smooth animations
+- Dark mode
+- Fully responsive
 
-### 💾 **Your Data, Your Control**
-- Export to JSON for full backup
-- Export to CSV for spreadsheet analysis
-- Clear all data anytime
-- No data collection or selling — your journal stays private
-
-### ⏰ **Gentle Reminders**
-- Set daily reminder notifications
-- Choose your preferred reminder time
-- Customize to fit your routine
-
-### 🔄 **Real-Time Sync**
-- Entries sync instantly across devices
-- Always up-to-date, anywhere you go
-- Offline-capable — log entries even without connection
-- Data stored securely in the cloud
-
-### 🎨 **Breathtaking UI**
-- Glassmorphism aesthetic — translucent, modern, elegant
-- Purple and pink gradient accents
-- Smooth micro-interactions
-- Designed to make journaling feel special
+### 💾 **Data Control**
+- Export to JSON
+- Export to CSV
+- Delete data anytime
 
 ---
 
-## Coming Soon (Roadmap)
+## Pro — $4.99/month
 
-### Premium Features (Planned)
-- **Weekly AI Insights** — Get personalized summaries of your emotional patterns
-- **Mood Predictions** — AI-powered forecasts based on your history
-- **Goals & Achievements** — Unlock badges for consistency milestones
-- **Mood Correlations** — Discover what activities affect your mood
-- **Team/Family Sharing** — Share moods with loved ones
-- **Widget Support** — Quick entry from home screen
-- **Multiple Journals** — Separate work and personal moods
-- **Custom Tags** — Create your own categorization system
+**Unlock the full power of your emotional data.**
+
+*Or $39.99/year (save 33%)*
+
+### 🤖 **Advanced AI Insights**
+- Deep sentiment analysis
+- Emotional pattern detection
+- Personalized weekly summaries
+- Mood trend predictions
+
+### 🔍 **Correlation Engine**
+- Discover what affects your mood
+- Tag-based mood patterns
+- Time-of-day analysis
+- Activity correlations
+
+### 🎯 **Goals & Achievements**
+- Daily/weekly journaling goals
+- Achievement badges
+- Progress milestones
+- Consistency rewards
+
+### 📱 **Enhanced Experience**
+- Priority support
+- Early access to new features
+- Unlimited export history
+- Custom reminder sounds
+
+### 💡 **Smart Reminders**
+- Adaptive reminder times
+- Gentle nudges based on patterns
+- Missed entry reminders
+- Streak protection alerts
 
 ---
 
-## Pricing
+## Team — $9.99/month (Coming Soon)
 
-### Free Tier — $0/month
-Everything you need to start your emotional wellness journey:
+**For couples, families, and support groups.**
 
-| Feature | Included |
-|---------|----------|
-| Unlimited mood entries | ✓ |
-| AI sentiment analysis | ✓ |
-| Streak tracking | ✓ |
-| Weekly analytics | ✓ |
-| Cloud sync (unlimited devices) | ✓ |
-| Data export (JSON/CSV) | ✓ |
-| Custom reminders | ✓ |
-| Dark mode | ✓ |
+- Shared mood sharing (opt-in)
+- See loved ones' moods (with permission)
+- Group insights
+- Private group journals
+- Shared goals
 
-**No hidden fees. No data selling. No ads. Ever.**
+---
 
-### Why Free?
+## Comparison
 
-We believe mental wellness tools should be accessible to everyone. Our Supabase hosting costs are minimal, and we're committed to keeping MoodFlow free forever. Your trust and growth are more valuable than a subscription fee.
+| Feature | Free | Pro | Team |
+|---------|:----:|:---:|:----:|
+| Mood tracking | ✓ | ✓ | ✓ |
+| Journal entries | ✓ | ✓ | ✓ |
+| Streak tracking | ✓ | ✓ | ✓ |
+| Weekly trends | ✓ | ✓ | ✓ |
+| Data export | ✓ | ✓ | ✓ |
+| **AI Sentiment Analysis** | Basic | **Advanced** | **Advanced** |
+| **Mood Predictions** | — | **✓** | **✓** |
+| **Weekly AI Summaries** | — | **✓** | **✓** |
+| **Correlation Insights** | — | **✓** | **✓** |
+| **Goals & Badges** | — | **✓** | **✓** |
+| **Smart Reminders** | — | **✓** | **✓** |
+| **Team Sharing** | — | — | **✓** |
+| Priority Support | — | ✓ | ✓ |
+| Price | $0 | $4.99/mo | $9.99/mo |
+
+---
+
+## Why a Subscription?
+
+Running MoodFlow costs money:
+- Cloud servers to store your data securely
+- AI processing for advanced insights
+- Domain & SSL certificates
+- Ongoing development & improvements
+
+Your subscription keeps MoodFlow alive, growing, and free for everyone.
+
+---
+
+## Frequently Asked Questions
+
+**Can I cancel anytime?**
+Yes. Cancel anytime, keep using until your billing period ends.
+
+**What happens to my data if I don't upgrade?**
+Nothing. Free features are free forever. Your data stays yours.
+
+**Is my payment secure?**
+We use Stripe for payments. We never see your card details.
+
+**Can I switch plans?**
+Yes. Upgrade or downgrade anytime.
+
+**Do you offer refunds?**
+Yes, within 7 days of purchase if you're not satisfied.
 
 ---
 
 ## Privacy & Security
 
-- Passwords hashed with SHA-256 (never stored in plain text)
+- Passwords hashed with SHA-256
 - Data encrypted in transit (HTTPS)
-- No third-party tracking or analytics
-- No data sold or shared
-- Delete your data anytime with one click
+- No third-party tracking
+- No data sold
+- Delete anytime
 
 ---
 
-## Testimonials
+## Ready to Start?
 
-> "Finally, a mood tracker that doesn't feel like homework. The design is stunning and the AI insights are genuinely helpful."
-> — Beta User
+**Free:** [mood-tracker-lac-one.vercel.app](https://mood-tracker-lac-one.vercel.app)
 
-> "I've tried many mood apps. MoodFlow is the first one I actually stick with because it feels rewarding, not clinical."
-> — Beta User
-
----
-
-## Ready to Transform Your Emotional Wellness?
-
-**Start journaling today at:** [mood-tracker-lac-one.vercel.app](https://mood-tracker-lac-one.vercel.app)
-
-*No signup friction. No credit card. Just you and your feelings.*
-
----
-
-## Technical Specs
-
-- **Built with:** Next.js 16, React, TypeScript
-- **Styling:** Tailwind CSS with custom glassmorphism effects
-- **Animations:** Framer Motion
-- **Data Sync:** Supabase (PostgreSQL)
-- **Charts:** Recharts
-- **Deployment:** Vercel
+**Pro:** Coming soon — stay tuned!
 
 ---
 
