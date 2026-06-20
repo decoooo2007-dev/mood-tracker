@@ -105,13 +105,22 @@ export const calculateStreak = (entries: { date: string }[]): number => {
 
   const sortedDates = [...new Set(entries.map((e) => e.date))].sort().reverse();
   let streak = 0;
+
+  // Use local date format (YYYY-MM-DD)
+  const getLocalDateStr = (d: Date) => {
+    const year = d.getFullYear();
+    const month = String(d.getMonth() + 1).padStart(2, "0");
+    const day = String(d.getDate()).padStart(2, "0");
+    return `${year}-${month}-${day}`;
+  };
+
   const today = new Date();
   today.setHours(0, 0, 0, 0);
 
   for (let i = 0; i < sortedDates.length; i++) {
     const checkDate = new Date(today);
     checkDate.setDate(checkDate.getDate() - i);
-    const checkDateStr = checkDate.toISOString().split("T")[0];
+    const checkDateStr = getLocalDateStr(checkDate);
 
     if (sortedDates.includes(checkDateStr)) {
       streak++;

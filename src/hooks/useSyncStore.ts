@@ -185,9 +185,12 @@ export function useSyncStore() {
       const now = new Date();
       const sentiment = analyzeSentiment(params.text);
 
+      // Use local date instead of UTC to fix timezone issues
+      const localDate = new Date(now.getTime() - now.getTimezoneOffset() * 60000).toISOString().split("T")[0];
+
       const newEntry = {
         user_id: session.userId,
-        date: now.toISOString().split("T")[0],
+        date: localDate,
         time: formatTime(now),
         mood: params.mood,
         intensity: params.intensity,
@@ -330,10 +333,18 @@ export function useSyncStore() {
     const weekData: { day: string; score: number }[] = [];
     const today = new Date();
 
+    // Use local date format
+    const getLocalDateStr = (d: Date) => {
+      const year = d.getFullYear();
+      const month = String(d.getMonth() + 1).padStart(2, "0");
+      const day = String(d.getDate()).padStart(2, "0");
+      return `${year}-${month}-${day}`;
+    };
+
     for (let i = 6; i >= 0; i--) {
       const date = new Date(today);
       date.setDate(date.getDate() - i);
-      const dateStr = date.toISOString().split("T")[0];
+      const dateStr = getLocalDateStr(date);
       const dayName = date.toLocaleDateString("en-US", { weekday: "short" });
 
       const dayEntries = entries.filter((e) => e.date === dateStr);
