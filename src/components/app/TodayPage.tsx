@@ -105,7 +105,7 @@ export default function TodayPage() {
 
   return (
     <GlassBackground>
-      <div className="max-w-4xl mx-auto px-6 py-12">
+      <div className="max-w-4xl mx-auto px-4 py-8 md:px-6 md:py-12">
         {/* Hero Bar */}
         <motion.div
           className="backdrop-blur-xl bg-gradient-to-r from-purple-500/20 to-pink-500/20 rounded-2xl p-4 mb-6 border border-white/20"
@@ -162,7 +162,7 @@ export default function TodayPage() {
 
         {/* Mood Selector */}
         <motion.div
-          className="backdrop-blur-xl bg-white/10 rounded-3xl p-6 border border-white/20 shadow-2xl mb-6"
+          className="backdrop-blur-xl bg-white/10 rounded-3xl p-4 md:p-6 border border-white/20 shadow-2xl mb-6"
           initial={{ opacity: 0, y: 20 }}
           animate={{ opacity: 1, y: 0 }}
           transition={{ delay: 0.3 }}
@@ -171,30 +171,23 @@ export default function TodayPage() {
             <Heart className="w-5 h-5 text-pink-400" />
             Select your mood
           </h2>
-          <div className="flex justify-center gap-3 mb-6">
+          <div className="grid grid-cols-5 gap-2 md:gap-3 mb-4 md:mb-6">
             {moodOptions.map((mood, index) => (
               <motion.button
                 key={mood.label}
                 onClick={() => setSelectedMood(index)}
-                className={`relative p-3 rounded-2xl transition-all backdrop-blur-sm ${
+                className={`relative flex flex-col items-center justify-center p-2 md:p-3 rounded-2xl transition-all backdrop-blur-sm min-h-[70px] md:min-h-[80px] ${
                   selectedMood === index
-                    ? `bg-gradient-to-br ${mood.gradient} shadow-xl scale-110`
-                    : "bg-white/5 hover:bg-white/10"
+                    ? `bg-gradient-to-br ${mood.gradient} shadow-xl ring-2 ring-white/30`
+                    : "bg-white/5 hover:bg-white/10 active:bg-white/20"
                 }`}
-                whileHover={{ scale: 1.1 }}
                 whileTap={{ scale: 0.95 }}
                 initial={{ opacity: 0, y: 20 }}
                 animate={{ opacity: 1, y: 0 }}
                 transition={{ delay: 0.4 + index * 0.05 }}
               >
-                {selectedMood === index && (
-                  <motion.div
-                    className="absolute inset-0 rounded-2xl border-2 border-white/30"
-                    layoutId="glassBorder"
-                  />
-                )}
-                <span className="text-3xl block relative z-10">{mood.emoji}</span>
-                <span className={`text-xs mt-1 block font-medium relative z-10 ${
+                <span className="text-2xl md:text-3xl">{mood.emoji}</span>
+                <span className={`text-[10px] md:text-xs mt-1 font-medium ${
                   selectedMood === index ? "text-white" : "text-white/60"
                 }`}>
                   {mood.label}
