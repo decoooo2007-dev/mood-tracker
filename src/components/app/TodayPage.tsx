@@ -40,6 +40,7 @@ export default function TodayPage() {
     isLoading,
     isCreating,
   } = useSyncStore();
+  const { user } = useAuth();
 
   const [selectedMood, setSelectedMood] = useState<number | null>(null);
   const [journalText, setJournalText] = useState("");
@@ -105,6 +106,34 @@ export default function TodayPage() {
   return (
     <GlassBackground>
       <div className="max-w-4xl mx-auto px-6 py-12">
+        {/* Hero Bar */}
+        <motion.div
+          className="backdrop-blur-xl bg-gradient-to-r from-purple-500/20 to-pink-500/20 rounded-2xl p-4 mb-6 border border-white/20"
+          initial={{ opacity: 0, y: -20 }}
+          animate={{ opacity: 1, y: 0 }}
+        >
+          <div className="flex items-center justify-between">
+            <div className="flex items-center gap-3">
+              <div className="w-12 h-12 rounded-full bg-gradient-to-br from-purple-500 to-pink-500 flex items-center justify-center">
+                <span className="text-xl font-bold text-white">
+                  {user?.username?.charAt(0).toUpperCase()}
+                </span>
+              </div>
+              <div>
+                <p className="text-white/60 text-sm">Welcome back</p>
+                <p className="text-white font-semibold text-lg">@{user?.username}</p>
+              </div>
+            </div>
+            <div className="flex items-center gap-2 px-4 py-2 bg-white/10 rounded-xl">
+              <Flame className={`w-5 h-5 ${stats.currentStreak > 0 ? "text-orange-400" : "text-white/40"}`} />
+              <div className="text-right">
+                <p className="text-white font-bold text-lg">{stats.currentStreak}</p>
+                <p className="text-white/60 text-xs">day streak</p>
+              </div>
+            </div>
+          </div>
+        </motion.div>
+
         {/* Header */}
         <motion.div
           initial={{ opacity: 0, y: -20 }}
