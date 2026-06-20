@@ -3,18 +3,21 @@
 import { useState } from "react";
 import { motion } from "framer-motion";
 import { useAuth } from "@/lib/providers";
-import { Sparkles, Mail, ArrowLeft, Check, Loader2 } from "lucide-react";
+import { Sparkles, Mail, Lock, ArrowLeft, Check, Loader2, Eye, EyeOff } from "lucide-react";
 import Link from "next/link";
-import { useRouter } from "next/navigation";
 import GlassBackground from "@/components/ui/GlassBackground";
+
+type AuthMode = "login" | "signup";
 
 export default function LoginPage() {
   const [email, setEmail] = useState("");
+  const [password, setPassword] = useState("");
+  const [showPassword, setShowPassword] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
   const [isSuccess, setIsSuccess] = useState(false);
+  const [mode, setMode] = useState<AuthMode>("login");
   const [error, setError] = useState<string | null>(null);
-  const { signInWithEmail } = useAuth();
-  const router = useRouter();
+  const { signInWithPassword, signUpWithPassword } = useAuth();
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -27,14 +30,29 @@ export default function LoginPage() {
       return;
     }
 
-    const { error } = await signInWithEmail(email);
+    if (!password || password.length < 6) {
+      setError("Password must be at least 6 characters");
+      setIsLoading(false);
+      return;
+    }
 
-    if (error) {
-      setError(error.message);
-      setIsLoading(false);
+    if (mode === "signup") {
+      const { error } = await signUpWithPassword(email, password);
+      if (error) {
+        setError(error.message);
+        setIsLoading(false);
+      } else {
+        setIsSuccess(true);
+        setIsLoading(false);
+      }
     } else {
-      setIsSuccess(true);
-      setIsLoading(false);
+      const { error } = await signInWithPassword(email, password);
+      if (error) {
+        setError(error.message);
+        setIsLoading(false);
+      } else {
+        window.location.href = "/";
+      }
     }
   };
 
@@ -56,21 +74,23 @@ export default function LoginPage() {
               <Check className="w-10 h-10 text-green-400" />
             </motion.div>
             <h1 className="text-3xl font-bold text-white mb-4">
-              Check your email!
+              Account created!
             </h1>
             <p className="text-white/60 mb-8">
-              We sent a magic link to <span className="text-white font-medium">{email}</span>
+              Your account has been created successfully.
               <br />
-              Click the link to sign in.
+              You can now sign in.
             </p>
             <button
               onClick={() => {
                 setIsSuccess(false);
+                setMode("login");
                 setEmail("");
+                setPassword("");
               }}
               className="text-purple-400 hover:text-purple-300 transition-colors"
             >
-              Use a different email
+              Go to Sign In
             </button>
           </motion.div>
         </div>
@@ -107,7 +127,7 @@ export default function LoginPage() {
             </motion.div>
             <h1 className="text-3xl font-bold text-white mb-2">Welcome to MoodFlow</h1>
             <p className="text-white/60">
-              Sign in with a magic link - no password needed
+              {mode === "login" ? "Sign in to continue" : "Create your account"}
             </p>
           </div>
 
@@ -136,6 +156,30 @@ export default function LoginPage() {
                 </div>
               </div>
 
+              <div>
+                <label className="block text-sm font-medium text-white/80 mb-2">
+                  Password
+                </label>
+                <div className="relative">
+                  <Lock className="absolute left-4 top-1/2 -translate-y-1/2 w-5 h-5 text-white/40" />
+                  <input
+                    type={showPassword ? "text" : "password"}
+                    value={password}
+                    onChange={(e) => setPassword(e.target.value)}
+                    placeholder="Enter password"
+                    className="w-full pl-12 pr-12 py-4 bg-white/10 rounded-xl border border-white/20 text-white placeholder-white/40 outline-none focus:border-purple-500 focus:ring-2 focus:ring-purple-500/20 transition-all"
+                    disabled={isLoading}
+                  />
+                  <button
+                    type="button"
+                    onClick={() => setShowPassword(!showPassword)}
+                    className="absolute right-4 top-1/2 -translate-y-1/2 text-white/40 hover:text-white/60 transition-colors"
+                  >
+                    {showPassword ? <EyeOff className="w-5 h-5" /> : <Eye className="w-5 h-5" />}
+                  </button>
+                </div>
+              </div>
+
               {error && (
                 <motion.div
                   className="p-3 bg-red-500/20 border border-red-500/30 rounded-xl text-red-400 text-sm"
@@ -149,24 +193,32 @@ export default function LoginPage() {
               <motion.button
                 type="submit"
                 className="w-full py-4 rounded-xl bg-gradient-to-r from-purple-500 to-pink-500 text-white font-medium shadow-lg disabled:opacity-50 disabled:cursor-not-allowed"
-                disabled={isLoading || !email}
+                disabled={isLoading || !email || !password}
                 whileHover={{ scale: 1.02 }}
                 whileTap={{ scale: 0.98 }}
               >
                 {isLoading ? (
                   <span className="flex items-center justify-center gap-2">
                     <Loader2 className="w-5 h-5 animate-spin" />
-                    Sending link...
+                    {mode === "login" ? "Signing in..." : "Creating account..."}
                   </span>
                 ) : (
-                  "Send Magic Link"
+                  mode === "login" ? "Sign In" : "Create Account"
                 )}
               </motion.button>
             </form>
 
-            <p className="text-center text-white/50 text-sm mt-6">
-              No account? No problem. Enter your email and we&apos;ll create one for you.
-            </p>
+            <div className="mt-6 text-center">
+              <button
+                onClick={() => {
+                  setMode(mode === "login" ? "signup" : "login");
+                  setError(null);
+                }}
+                className="text-purple-400 hover:text-purple-300 transition-colors text-sm"
+              >
+                {mode === "login" ? "Don't have an account? Sign up" : "Already have an account? Sign in"}
+              </button>
+            </div>
           </motion.div>
 
           {/* Features */}

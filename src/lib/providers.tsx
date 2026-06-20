@@ -10,6 +10,8 @@ interface AuthContextType {
   session: Session | null;
   isLoading: boolean;
   signInWithEmail: (email: string) => Promise<{ error: Error | null }>;
+  signInWithPassword: (email: string, password: string) => Promise<{ error: Error | null }>;
+  signUpWithPassword: (email: string, password: string) => Promise<{ error: Error | null }>;
   signOut: () => Promise<void>;
 }
 
@@ -89,6 +91,33 @@ function AuthProvider({ children }: { children: ReactNode }) {
     }
   };
 
+  const signInWithPassword = async (email: string, password: string) => {
+    try {
+      const { error } = await supabase.auth.signInWithPassword({
+        email,
+        password,
+      });
+      return { error: error ? new Error(error.message) : null };
+    } catch (err) {
+      return { error: err as Error };
+    }
+  };
+
+  const signUpWithPassword = async (email: string, password: string) => {
+    try {
+      const { error } = await supabase.auth.signUp({
+        email,
+        password,
+        options: {
+          emailRedirectTo: `${window.location.origin}/auth/callback`,
+        },
+      });
+      return { error: error ? new Error(error.message) : null };
+    } catch (err) {
+      return { error: err as Error };
+    }
+  };
+
   const signOut = async () => {
     await supabase.auth.signOut();
   };
@@ -100,6 +129,8 @@ function AuthProvider({ children }: { children: ReactNode }) {
         session,
         isLoading,
         signInWithEmail,
+        signInWithPassword,
+        signUpWithPassword,
         signOut,
       }}
     >
