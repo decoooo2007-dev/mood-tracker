@@ -1,4 +1,5 @@
 import { MoodType } from "@/types/mood";
+import { currentLocale } from "./i18n/translations";
 
 interface SentimentResult {
   score: number; // -1 to 1
@@ -183,7 +184,13 @@ export function getCorrelationInsights(
 export function generateWeeklyInsight(
   entries: { mood: MoodType; date: string }[]
 ): string {
-  if (entries.length === 0) return "Start tracking to see insights about your week!";
+  const isArabic = currentLocale === "ar";
+
+  if (entries.length === 0) {
+    return isArabic
+      ? "ابدأ التتبع لرؤية insights حول أسبوعك!"
+      : "Start tracking to see insights about your week!";
+  }
 
   const moodScore: Record<MoodType, number> = {
     Happy: 5,
@@ -193,6 +200,14 @@ export function generateWeeklyInsight(
     Frustrated: 1
   };
 
+  const moodNamesAr: Record<MoodType, string> = {
+    Happy: "سعيد",
+    Calm: "هادئ",
+    Sad: "حزين",
+    Frustrated: "محبط",
+    Tired: "متعب"
+  };
+
   const thisWeek = entries.filter((e) => {
     const entryDate = new Date(e.date);
     const weekAgo = new Date();
@@ -200,20 +215,33 @@ export function generateWeeklyInsight(
     return entryDate >= weekAgo;
   });
 
-  if (thisWeek.length === 0) return "No entries this week yet. Keep tracking!";
+  if (thisWeek.length === 0) {
+    return isArabic
+      ? "لا توجد إدخالات هذا الأسبوع. استمر في التتبع!"
+      : "No entries this week yet. Keep tracking!";
+  }
 
   const avgScore = thisWeek.reduce((sum, e) => sum + moodScore[e.mood], 0) / thisWeek.length;
   const moodCounts: Record<MoodType, number> = { Happy: 0, Calm: 0, Sad: 0, Frustrated: 0, Tired: 0 };
   thisWeek.forEach((e) => moodCounts[e.mood]++);
   const dominantMood = Object.entries(moodCounts).reduce((a, b) => b[1] > a[1] ? b : a)[0];
+  const dominantMoodAr = moodNamesAr[dominantMood as MoodType];
 
   if (avgScore >= 4) {
-    return `This week has been wonderful! You reported ${dominantMood.toLowerCase()} most often. Keep up the great work! 🌟`;
+    return isArabic
+      ? `أسبوع رائع! كنت تشعر بـ${dominantMoodAr} في الغالب. استمر في العمل الرائع! 🌟`
+      : `This week has been wonderful! You reported ${dominantMood.toLowerCase()} most often. Keep up the great work! 🌟`;
   } else if (avgScore >= 3) {
-    return `A solid week overall. ${dominantMood} has been your typical mood. How can you make next week even better?`;
+    return isArabic
+      ? `أسبوع جيد بشكل عام. ${dominantMoodAr} كان مزاجك المعتاد. كيف يمكنك جعل الأسبوع القادم أفضل؟`
+      : `A solid week overall. ${dominantMood} has been your typical mood. How can you make next week even better?`;
   } else if (avgScore >= 2) {
-    return `This week had some challenges. You mostly felt ${dominantMood.toLowerCase()}. Remember, it's okay to have difficult days.`;
+    return isArabic
+      ? `كان لهذا الأسبوع بعض التحديات. شعرت بـ${dominantMoodAr} في الغالب. تذكر، من الطبيعي أن تكون لديك أيام صعبة.`
+      : `This week had some challenges. You mostly felt ${dominantMood.toLowerCase()}. Remember, it's okay to have difficult days.`;
   } else {
-    return `It sounds like this was a tough week. You reported ${dominantMood.toLowerCase()} often. Consider reaching out for support if you need it. 💙`;
+    return isArabic
+      ? `يبدو أن هذا كان أسبوعًا صعبًا. كنت تشعر بـ${dominantMoodAr} غالبًا. فكر في طلب الدعم إذا احتجت ذلك. 💙`
+      : `It sounds like this was a tough week. You reported ${dominantMood.toLowerCase()} often. Consider reaching out for support if you need it. 💙`;
   }
 }

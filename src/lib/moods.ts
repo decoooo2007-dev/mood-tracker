@@ -47,8 +47,12 @@ export const generateId = (): string => {
   return `${Date.now()}-${Math.random().toString(36).substr(2, 9)}`;
 };
 
+// Import currentLocale to determine date format
+import { currentLocale } from "./i18n/translations";
+
 export const formatDate = (date: Date): string => {
-  return date.toLocaleDateString("en-US", {
+  const locale = currentLocale === "ar" ? "ar-SA" : "en-US";
+  return date.toLocaleDateString(locale, {
     weekday: "short",
     month: "short",
     day: "numeric",
@@ -56,20 +60,34 @@ export const formatDate = (date: Date): string => {
 };
 
 export const formatTime = (date: Date): string => {
-  return date.toLocaleTimeString("en-US", {
+  const locale = currentLocale === "ar" ? "ar-SA" : "en-US";
+  return date.toLocaleTimeString(locale, {
     hour: "numeric",
     minute: "2-digit",
   });
 };
 
 export const getWeekDates = (): string[] => {
-  const dates: string[] = [];
+  const isArabic = currentLocale === "ar";
+
+  // Day names - Saturday to Friday (correct order for both)
+  const arabicDays = ["سبت", "أحد", "إثنين", "ثلاثاء", "أربعاء", "خميس", "جمعة"];
+  const englishDays = ["Sat", "Sun", "Mon", "Tue", "Wed", "Thu", "Fri"];
+
+  const days = isArabic ? arabicDays : englishDays;
+
+  // Get today (0 = Sunday, 1 = Monday, ..., 6 = Saturday in JS)
+  // Convert to our index where 0 = Saturday
   const today = new Date();
-  for (let i = 6; i >= 0; i--) {
-    const date = new Date(today);
-    date.setDate(date.getDate() - i);
-    dates.push(formatDate(date));
+  const todayIndex = (today.getDay() + 1) % 7; // 0-6, Saturday=0
+
+  // Build 7 days ending with today
+  const dates: string[] = [];
+  for (let i = 0; i < 7; i++) {
+    const dayIndex = (todayIndex - 6 + i + 7) % 7;
+    dates.push(days[dayIndex]);
   }
+
   return dates;
 };
 
@@ -95,8 +113,12 @@ export const isYesterday = (dateString: string): boolean => {
 };
 
 export const getRelativeDate = (dateString: string): string => {
-  if (isToday(dateString)) return "Today";
-  if (isYesterday(dateString)) return "Yesterday";
+  if (isToday(dateString)) {
+    return currentLocale === "ar" ? "اليوم" : "Today";
+  }
+  if (isYesterday(dateString)) {
+    return currentLocale === "ar" ? "أمس" : "Yesterday";
+  }
   return formatDate(new Date(dateString));
 };
 

@@ -332,6 +332,13 @@ export function useSyncStore() {
   const getWeeklyData = useCallback(() => {
     const weekData: { day: string; score: number }[] = [];
     const today = new Date();
+    const isArabic = typeof window !== 'undefined'
+      ? (document.documentElement.dir === 'rtl')
+      : false;
+
+    // Day names in correct order: Saturday to Friday
+    const arabicDays = ["سبت", "أحد", "إثنين", "ثلاثاء", "أربعاء", "خميس", "جمعة"];
+    const englishDays = ["Sat", "Sun", "Mon", "Tue", "Wed", "Thu", "Fri"];
 
     // Use local date format
     const getLocalDateStr = (d: Date) => {
@@ -341,11 +348,19 @@ export function useSyncStore() {
       return `${year}-${month}-${day}`;
     };
 
+    // Build 7 days: start from 6 days ago (oldest), end with today
     for (let i = 6; i >= 0; i--) {
       const date = new Date(today);
       date.setDate(date.getDate() - i);
       const dateStr = getLocalDateStr(date);
-      const dayName = date.toLocaleDateString("en-US", { weekday: "short" });
+
+      // Get day index: JS uses 0=Sunday, we want 0=Saturday
+      // Convert: if Sunday(0), make it 1; if Monday(1), make it 2; etc.; if Saturday(6), make it 0
+      const jsDayIndex = date.getDay();
+      const dayIndex = (jsDayIndex + 1) % 7;
+
+      // Get day name based on locale
+      const dayName = isArabic ? arabicDays[dayIndex] : englishDays[dayIndex];
 
       const dayEntries = entries.filter((e) => e.date === dateStr);
       const avgScore =

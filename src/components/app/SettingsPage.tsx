@@ -9,20 +9,18 @@ import {
   Moon,
   Sun,
   Bell,
-  Download,
   Trash2,
   Info,
   ChevronRight,
-  Check,
   Loader2,
 } from "lucide-react";
 import GlassBackground from "@/components/ui/GlassBackground";
 import Navigation from "@/components/ui/Navigation";
+import { t, tmood } from "@/lib/i18n/translations";
 
 export default function SettingsPage() {
-  const { settings, entries, updateSettings, getStats, clearAllData, isUpdating, isLoading } = useSyncStore();
+  const { settings, updateSettings, getStats, clearAllData, isUpdating, isLoading } = useSyncStore();
   const [showClearConfirm, setShowClearConfirm] = useState(false);
-  const [exportSuccess, setExportSuccess] = useState<string | null>(null);
 
   const stats = getStats();
 
@@ -33,39 +31,6 @@ export default function SettingsPage() {
     reminderTime: "21:00",
     language: "en",
     exportFormat: "json" as const,
-  };
-
-  const handleExport = (format: "json" | "csv") => {
-    const data = entries;
-    let content: string;
-
-    if (format === "json") {
-      content = JSON.stringify(data, null, 2);
-    } else {
-      const headers = ["Date", "Time", "Mood", "Intensity", "Text", "Tags"];
-      const rows = data.map((e) => [
-        e.date,
-        e.time,
-        e.mood,
-        e.intensity.toString(),
-        `"${e.text.replace(/"/g, '""')}"`,
-        e.tags.join("; "),
-      ]);
-      content = [headers.join(","), ...rows.map((r) => r.join(","))].join("\n");
-    }
-
-    const blob = new Blob([content], { type: format === "json" ? "application/json" : "text/csv" });
-    const url = URL.createObjectURL(blob);
-    const a = document.createElement("a");
-    a.href = url;
-    a.download = `mood-journal-${new Date().toISOString().split("T")[0]}.${format}`;
-    document.body.appendChild(a);
-    a.click();
-    document.body.removeChild(a);
-    URL.revokeObjectURL(url);
-
-    setExportSuccess(format);
-    setTimeout(() => setExportSuccess(null), 2000);
   };
 
   const handleClearData = () => {
@@ -98,8 +63,8 @@ export default function SettingsPage() {
           animate={{ opacity: 1, y: 0 }}
           className="mb-8"
         >
-          <h1 className="text-3xl font-bold text-white mb-2">Settings</h1>
-          <p className="text-white/60">Customize your experience</p>
+          <h1 className="text-3xl font-bold text-white mb-2">{t("settings.title")}</h1>
+          <p className="text-white/60">{t("settings.customize")}</p>
         </motion.div>
 
         {/* Appearance */}
@@ -110,7 +75,7 @@ export default function SettingsPage() {
           transition={{ delay: 0.1 }}
         >
           <h2 className="text-sm font-semibold text-white/60 uppercase tracking-wide mb-3">
-            Appearance
+            {t("settings.appearance")}
           </h2>
           <div className="backdrop-blur-xl bg-white/10 rounded-2xl border border-white/20 overflow-hidden">
             <div className="p-4 flex items-center justify-between">
@@ -121,8 +86,8 @@ export default function SettingsPage() {
                   <Sun className="w-5 h-5 text-yellow-400" />
                 )}
                 <div>
-                  <p className="text-white font-medium">Theme</p>
-                  <p className="text-white/60 text-sm">Choose your preferred look</p>
+                  <p className="text-white font-medium">{t("settings.theme")}</p>
+                  <p className="text-white/60 text-sm">{t("settings.themeDesc")}</p>
                 </div>
               </div>
               <div className="flex gap-2">
@@ -134,7 +99,7 @@ export default function SettingsPage() {
                       : "bg-white/10 text-white/60 hover:bg-white/20"
                   }`}
                 >
-                  Dark
+                  {t("settings.dark")}
                 </button>
                 <button
                   onClick={() => updateSettings({ theme: "light" })}
@@ -145,7 +110,7 @@ export default function SettingsPage() {
                   }`}
                   disabled
                 >
-                  Light
+                  {t("settings.light")}
                 </button>
               </div>
             </div>
@@ -160,15 +125,15 @@ export default function SettingsPage() {
           transition={{ delay: 0.2 }}
         >
           <h2 className="text-sm font-semibold text-white/60 uppercase tracking-wide mb-3">
-            Reminders
+            {t("settings.reminders")}
           </h2>
           <div className="backdrop-blur-xl bg-white/10 rounded-2xl border border-white/20 overflow-hidden">
             <div className="p-4 flex items-center justify-between">
               <div className="flex items-center gap-3">
                 <Bell className="w-5 h-5 text-purple-400" />
                 <div>
-                  <p className="text-white font-medium">Daily Reminder</p>
-                  <p className="text-white/60 text-sm">Get reminded to log your mood</p>
+                  <p className="text-white font-medium">{t("settings.dailyReminder")}</p>
+                  <p className="text-white/60 text-sm">{t("settings.reminderDesc")}</p>
                 </div>
               </div>
               <button
@@ -187,7 +152,7 @@ export default function SettingsPage() {
             {currentSettings.notifications && (
               <div className="px-4 pb-4">
                 <div className="flex items-center gap-3">
-                  <span className="text-white/60 text-sm">Remind at</span>
+                  <span className="text-white/60 text-sm">{t("settings.remindAt")}</span>
                   <input
                     type="time"
                     value={currentSettings.reminderTime}
@@ -200,7 +165,7 @@ export default function SettingsPage() {
           </div>
         </motion.div>
 
-        {/* Export */}
+        {/* Clear Data */}
         <motion.div
           className="mb-6"
           initial={{ opacity: 0, y: 20 }}
@@ -208,45 +173,9 @@ export default function SettingsPage() {
           transition={{ delay: 0.3 }}
         >
           <h2 className="text-sm font-semibold text-white/60 uppercase tracking-wide mb-3">
-            Data
+            {t("settings.data")}
           </h2>
           <div className="backdrop-blur-xl bg-white/10 rounded-2xl border border-white/20 overflow-hidden">
-            <button
-              onClick={() => handleExport("json")}
-              className="w-full p-4 flex items-center justify-between hover:bg-white/5 transition-all"
-            >
-              <div className="flex items-center gap-3">
-                <Download className="w-5 h-5 text-purple-400" />
-                <div className="text-left">
-                  <p className="text-white font-medium">Export as JSON</p>
-                  <p className="text-white/60 text-sm">Full data backup</p>
-                </div>
-              </div>
-              {exportSuccess === "json" ? (
-                <Check className="w-5 h-5 text-green-400" />
-              ) : (
-                <ChevronRight className="w-5 h-5 text-white/40" />
-              )}
-            </button>
-            <div className="h-px bg-white/10" />
-            <button
-              onClick={() => handleExport("csv")}
-              className="w-full p-4 flex items-center justify-between hover:bg-white/5 transition-all"
-            >
-              <div className="flex items-center gap-3">
-                <Download className="w-5 h-5 text-purple-400" />
-                <div className="text-left">
-                  <p className="text-white font-medium">Export as CSV</p>
-                  <p className="text-white/60 text-sm">Spreadsheet compatible</p>
-                </div>
-              </div>
-              {exportSuccess === "csv" ? (
-                <Check className="w-5 h-5 text-green-400" />
-              ) : (
-                <ChevronRight className="w-5 h-5 text-white/40" />
-              )}
-            </button>
-            <div className="h-px bg-white/10" />
             <button
               onClick={() => setShowClearConfirm(true)}
               className="w-full p-4 flex items-center justify-between hover:bg-red-500/10 transition-all"
@@ -254,8 +183,8 @@ export default function SettingsPage() {
               <div className="flex items-center gap-3">
                 <Trash2 className="w-5 h-5 text-red-400" />
                 <div className="text-left">
-                  <p className="text-red-400 font-medium">Clear All Data</p>
-                  <p className="text-white/60 text-sm">Delete all entries permanently</p>
+                  <p className="text-red-400 font-medium">{t("settings.clearAllData")}</p>
+                  <p className="text-white/60 text-sm">{t("settings.clearDesc")}</p>
                 </div>
               </div>
               <ChevronRight className="w-5 h-5 text-red-400/50" />
@@ -271,25 +200,25 @@ export default function SettingsPage() {
           transition={{ delay: 0.4 }}
         >
           <h2 className="text-sm font-semibold text-white/60 uppercase tracking-wide mb-3">
-            Statistics
+            {t("settings.statistics")}
           </h2>
           <div className="backdrop-blur-xl bg-white/10 rounded-2xl border border-white/20 p-4">
             <div className="grid grid-cols-2 gap-4">
               <div className="text-center">
                 <p className="text-3xl font-bold text-white">{stats.totalEntries}</p>
-                <p className="text-white/60 text-sm">Total Entries</p>
+                <p className="text-white/60 text-sm">{t("settings.totalEntries")}</p>
               </div>
               <div className="text-center">
                 <p className="text-3xl font-bold text-white">{stats.longestStreak}</p>
-                <p className="text-white/60 text-sm">Longest Streak</p>
+                <p className="text-white/60 text-sm">{t("settings.longestStreak")}</p>
               </div>
               <div className="text-center">
                 <p className="text-3xl font-bold text-white">{stats.averageMood.toFixed(1)}</p>
-                <p className="text-white/60 text-sm">Avg Mood Score</p>
+                <p className="text-white/60 text-sm">{t("settings.avgMood")}</p>
               </div>
               <div className="text-center">
-                <p className="text-3xl font-bold text-white">{stats.mostCommonMood}</p>
-                <p className="text-white/60 text-sm">Most Common</p>
+                <p className="text-3xl font-bold text-white">{tmood(stats.mostCommonMood)}</p>
+                <p className="text-white/60 text-sm">{t("settings.mostCommon")}</p>
               </div>
             </div>
           </div>
@@ -303,14 +232,14 @@ export default function SettingsPage() {
           transition={{ delay: 0.5 }}
         >
           <h2 className="text-sm font-semibold text-white/60 uppercase tracking-wide mb-3">
-            About
+            {t("settings.about")}
           </h2>
           <div className="backdrop-blur-xl bg-white/10 rounded-2xl border border-white/20 p-4">
             <div className="flex items-center gap-3">
               <Info className="w-5 h-5 text-purple-400" />
               <div>
                 <p className="text-white font-medium">MoodFlow</p>
-                <p className="text-white/60 text-sm">Version 1.0.0</p>
+                <p className="text-white/60 text-sm">{t("settings.version")}</p>
               </div>
             </div>
           </div>
@@ -330,22 +259,22 @@ export default function SettingsPage() {
               animate={{ scale: 1, opacity: 1 }}
               onClick={(e) => e.stopPropagation()}
             >
-              <h3 className="text-xl font-bold text-white mb-2">Clear All Data?</h3>
+              <h3 className="text-xl font-bold text-white mb-2">{t("settings.clearConfirm")}</h3>
               <p className="text-white/60 mb-6">
-                This will permanently delete all {stats.totalEntries} entries. This action cannot be undone.
+                {t("settings.clearWarning")}
               </p>
               <div className="flex gap-3">
                 <button
                   onClick={() => setShowClearConfirm(false)}
                   className="flex-1 py-3 rounded-xl bg-white/10 text-white font-medium hover:bg-white/20 transition-all"
                 >
-                  Cancel
+                  {t("settings.cancel")}
                 </button>
                 <button
                   onClick={handleClearData}
                   className="flex-1 py-3 rounded-xl bg-red-500 text-white font-medium hover:bg-red-600 transition-all"
                 >
-                  Delete All
+                  {t("settings.deleteAll")}
                 </button>
               </div>
             </motion.div>

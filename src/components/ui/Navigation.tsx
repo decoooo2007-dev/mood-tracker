@@ -1,17 +1,19 @@
 "use client";
 
+import { useState } from "react";
 import { motion } from "framer-motion";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { Home, Clock, Settings, Wifi, WifiOff, LogOut } from "lucide-react";
+import { Home, Clock, Settings, Wifi, WifiOff, LogOut, Globe } from "lucide-react";
 import { useSyncStore } from "@/hooks/useSyncStore";
 import { useAuth } from "@/lib/providers";
 import { useRouter } from "next/navigation";
+import { t, setLocale, currentLocale, getDirection, Locale } from "@/lib/i18n/translations";
 
 const navItems = [
-  { href: "/", label: "Today", icon: Home },
-  { href: "/history", label: "History", icon: Clock },
-  { href: "/settings", label: "Settings", icon: Settings },
+  { href: "/", labelKey: "nav.today" as const, icon: Home },
+  { href: "/history", labelKey: "nav.history" as const, icon: Clock },
+  { href: "/settings", labelKey: "nav.settings" as const, icon: Settings },
 ];
 
 export default function Navigation() {
@@ -19,6 +21,19 @@ export default function Navigation() {
   const { isOnline } = useSyncStore();
   const { signOut } = useAuth();
   const router = useRouter();
+  const [locale, setLocaleState] = useState<Locale>(currentLocale);
+
+  const toggleLanguage = () => {
+    const newLocale = locale === "en" ? "ar" : "en";
+    setLocaleState(newLocale);
+    setLocale(newLocale);
+    // Store in localStorage for persistence
+    localStorage.setItem("moodflow-locale", newLocale);
+    // Update document direction
+    document.documentElement.dir = newLocale === "ar" ? "rtl" : "ltr";
+    // Force re-render without full page refresh
+    router.refresh();
+  };
 
   const handleSignOut = () => {
     signOut();
@@ -53,8 +68,9 @@ export default function Navigation() {
                   {isActive && (
                     <motion.div
                       className="absolute inset-0 bg-gradient-to-br from-purple-500/30 to-pink-500/30 rounded-xl"
-                      layoutId="navIndicator"
-                      transition={{ type: "spring", stiffness: 300, damping: 30 }}
+                      initial={false}
+                      animate={{ opacity: 1 }}
+                      transition={{ duration: 0.15 }}
                     />
                   )}
                   <Icon
@@ -63,7 +79,7 @@ export default function Navigation() {
                     }`}
                   />
                   <span className={`text-xs relative z-10 ${isActive ? "font-medium" : ""}`}>
-                    {item.label}
+                    {t(item.labelKey)}
                   </span>
                 </Link>
               );
@@ -72,6 +88,18 @@ export default function Navigation() {
 
           {/* Status indicator */}
           <div className="flex items-center gap-3">
+            {/* Language Toggle */}
+            <button
+              onClick={toggleLanguage}
+              className="flex items-center gap-1.5 px-2.5 py-1.5 hover:bg-white/10 rounded-xl transition-colors"
+              title={locale === "en" ? "Switch to Arabic" : "Switch to English"}
+            >
+              <Globe className="w-4 h-4 text-white/80" />
+              <span className="text-xs font-medium text-white/80 uppercase">
+                {locale === "en" ? "عربي" : "EN"}
+              </span>
+            </button>
+
             <button
               onClick={handleSignOut}
               className="p-2 hover:bg-white/10 rounded-xl transition-colors"

@@ -91,6 +91,17 @@ input[type="time"]::-webkit-calendar-picker-indicator {
   outline-offset: 2px;
 }
 
+/* Fix chart axis labels being cut off */
+.recharts-xaxis-tick-value {
+  overflow: visible !important;
+}
+
+/* Chart container padding */
+.chart-container {
+  padding-left: 4px;
+  padding-right: 4px;
+}
+
 /* Safe area for mobile devices */
 @supports (padding-bottom: env(safe-area-inset-bottom)) {
   nav {
@@ -126,4 +137,71 @@ input[type="time"]::-webkit-calendar-picker-indicator {
   -webkit-backdrop-filter: blur(24px);
   background: rgba(255, 255, 255, 0.15);
   border: 1px solid rgba(255, 255, 255, 0.25);
+}
+
+/* RTL Support */
+[dir="rtl"] {
+  direction: rtl;
+}
+
+[dir="rtl"] .rtl\:space-x-reverse > :not([hidden]) ~ :not([hidden]) {
+  --tw-space-x-reverse: 1;
+}
+
+[dir="rtl"] .rtl\:mr-auto { margin-right: auto; margin-left: 0; }
+[dir="rtl"] .rtl\:ml-auto { margin-left: auto; margin-right: 0; }
+[dir="rtl"] .rtl\:text-right { text-align: right; }
+[dir="rtl"] .rtl\:text-left { text-align: left; }
+
+/* Flip icons for RTL */
+.rtl-flip {
+  transform: scaleX(-1);
+}
+
+/* Emoji font stack for better cross-platform rendering */
+.emoji {
+  font-family: "Apple Color Emoji", "Segoe UI Emoji", "Noto Color Emoji", "Android Emoji", "Twitter Emoji", "Facebook Emoji", "Symbola", "DejaVu Sans", sans-serif;
+  font-display: swap;
+}
+
+/* Touch target minimum size - ensures buttons are easy to tap on mobile */
+.touch-target {
+  min-height: 48px;
+  min-width: 48px;
+}
+
+/* Mood button improvements for mobile touch */
+.mood-button {
+  min-height: 80px;
+}
+
+@media (min-width: 768px) {
+  .mood-button {
+    min-height: 90px;
+  }
+}
+
+/* Improved mobile tap areas */
+@media (pointer: coarse) {
+  .mood-button {
+    min-height: 80px;
+  }
+
+  button:not(.no-touch-target),
+  [role="button"]:not(.no-touch-target) {
+    min-height: 48px;
+    padding: 12px 16px;
+  }
+
+  /* Ensure slider thumb is large enough for touch */
+  input[type="range"]::-webkit-slider-thumb {
+    width: 28px;
+    height: 28px;
+    margin-top: -10px;
+  }
+
+  input[type="range"]::-moz-range-thumb {
+    width: 28px;
+    height: 28px;
+  }
 }

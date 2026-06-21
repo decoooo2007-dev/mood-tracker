@@ -30,6 +30,7 @@ import { MoodType } from "@/types/mood";
 import { moodOptions, getRelativeDate, moodToScore, getMoodByLabel } from "@/lib/moods";
 import GlassBackground from "@/components/ui/GlassBackground";
 import Navigation from "@/components/ui/Navigation";
+import { t, tmood } from "@/lib/i18n/translations";
 
 const moodColors: Record<MoodType, string> = {
   Happy: "#4ADE80",
@@ -80,7 +81,7 @@ export default function HistoryPage() {
   }, [stats]);
 
   const handleDelete = (id: string) => {
-    if (confirm("Delete this entry?")) {
+    if (confirm(t("history.deleteConfirm"))) {
       deleteEntry(id);
     }
   };
@@ -108,8 +109,8 @@ export default function HistoryPage() {
           animate={{ opacity: 1, y: 0 }}
           className="mb-6"
         >
-          <h1 className="text-3xl font-bold text-white mb-2">Your Journey</h1>
-          <p className="text-white/60">{stats.totalEntries} entries recorded</p>
+          <h1 className="text-3xl font-bold text-white mb-2">{t("history.title")}</h1>
+          <p className="text-white/60">{stats.totalEntries} {t("history.entriesRecorded")}</p>
         </motion.div>
 
         {/* Stats Overview */}
@@ -120,12 +121,12 @@ export default function HistoryPage() {
           transition={{ delay: 0.1 }}
         >
           <div className="backdrop-blur-xl bg-white/10 rounded-2xl p-4 border border-white/20">
-            <p className="text-white/60 text-xs mb-1">Current Streak</p>
-            <p className="text-2xl font-bold text-white">{stats.currentStreak} days</p>
+            <p className="text-white/60 text-xs mb-1">{t("history.currentStreak")}</p>
+            <p className="text-2xl font-bold text-white">{stats.currentStreak} {t("history.days")}</p>
           </div>
           <div className="backdrop-blur-xl bg-white/10 rounded-2xl p-4 border border-white/20">
-            <p className="text-white/60 text-xs mb-1">Longest Streak</p>
-            <p className="text-2xl font-bold text-white">{stats.longestStreak} days</p>
+            <p className="text-white/60 text-xs mb-1">{t("history.longestStreak")}</p>
+            <p className="text-2xl font-bold text-white">{stats.longestStreak} {t("history.days")}</p>
           </div>
         </motion.div>
 
@@ -139,7 +140,7 @@ export default function HistoryPage() {
           >
             <h2 className="text-base font-semibold text-white mb-4 flex items-center gap-2">
               <Calendar className="w-5 h-5 text-purple-400" />
-              Mood Distribution
+              {t("history.moodDistribution")}
             </h2>
             <div className="h-48">
               <ResponsiveContainer width="100%" height="100%">
@@ -176,7 +177,7 @@ export default function HistoryPage() {
                     className="w-3 h-3 rounded-full"
                     style={{ backgroundColor: entry.color }}
                   />
-                  <span className="text-xs text-white/60">{entry.name}</span>
+                  <span className="text-xs text-white/60">{tmood(entry.name)}</span>
                 </div>
               ))}
             </div>
@@ -195,7 +196,7 @@ export default function HistoryPage() {
               <Search className="absolute left-4 top-1/2 -translate-y-1/2 w-5 h-5 text-white/40" />
               <input
                 type="text"
-                placeholder="Search entries..."
+                placeholder={t("history.searchPlaceholder")}
                 value={searchQuery}
                 onChange={(e) => setSearchQuery(e.target.value)}
                 className="w-full pl-12 pr-4 py-3 backdrop-blur-sm bg-white/10 rounded-xl border border-white/20 text-white placeholder-white/40 outline-none focus:border-white/40"
@@ -223,7 +224,7 @@ export default function HistoryPage() {
               >
                 <div className="mt-3 p-4 backdrop-blur-sm bg-white/10 rounded-xl border border-white/20">
                   <div className="mb-3">
-                    <span className="text-xs text-white/60 mb-2 block">Filter by Mood</span>
+                    <span className="text-xs text-white/60 mb-2 block">{t("history.filterByMood")}</span>
                     <div className="flex flex-wrap gap-2">
                       <button
                         onClick={() => setFilterMood(null)}
@@ -233,7 +234,7 @@ export default function HistoryPage() {
                             : "bg-white/10 text-white/60"
                         }`}
                       >
-                        All
+                        {t("history.all")}
                       </button>
                       {moodOptions.map((mood) => (
                         <button
@@ -245,8 +246,8 @@ export default function HistoryPage() {
                               : "bg-white/10 text-white/60 hover:bg-white/20"
                           }`}
                         >
-                          <span>{mood.emoji}</span>
-                          {mood.label}
+                          <span className="emoji">{mood.emoji}</span>
+                          {tmood(mood.label)}
                         </button>
                       ))}
                     </div>
@@ -254,7 +255,7 @@ export default function HistoryPage() {
 
                   {allTags.length > 0 && (
                     <div>
-                      <span className="text-xs text-white/60 mb-2 block">Filter by Tag</span>
+                      <span className="text-xs text-white/60 mb-2 block">{t("history.filterByTag")}</span>
                       <div className="flex flex-wrap gap-2">
                         <button
                           onClick={() => setFilterTag(null)}
@@ -264,7 +265,7 @@ export default function HistoryPage() {
                               : "bg-white/10 text-white/60"
                           }`}
                         >
-                          All
+                          {t("history.all")}
                         </button>
                         {allTags.map((tag) => (
                           <button
@@ -297,19 +298,19 @@ export default function HistoryPage() {
           <div className="flex items-center justify-between mb-4">
             <h2 className="text-base font-semibold text-white flex items-center gap-2">
               <BookOpen className="w-5 h-5 text-purple-400" />
-              {filteredEntries.length} {filteredEntries.length === 1 ? "Entry" : "Entries"}
+              {filteredEntries.length} {filteredEntries.length === 1 ? t("history.entry") : t("history.entries")}
             </h2>
           </div>
 
           <div className="space-y-3">
             {filteredEntries.length === 0 ? (
               <div className="backdrop-blur-xl bg-white/10 rounded-3xl p-8 border border-white/20 text-center">
-                <span className="text-5xl mb-4 block">📝</span>
-                <h3 className="text-white font-medium mb-2">No entries found</h3>
+                <span className="text-5xl mb-4 block emoji">📝</span>
+                <h3 className="text-white font-medium mb-2">{t("history.noEntries")}</h3>
                 <p className="text-white/60 text-sm">
                   {searchQuery || filterMood || filterTag
-                    ? "Try adjusting your filters"
-                    : "Start tracking your mood to see entries here"}
+                    ? t("history.adjustFilters")
+                    : t("history.startTracking")}
                 </p>
               </div>
             ) : (
@@ -329,12 +330,13 @@ export default function HistoryPage() {
                     >
                       <div className="flex items-center justify-between">
                         <div className="flex items-center gap-3">
-                          <span className="text-2xl">{mood.emoji}</span>
-                          <div>
-                            <span className="font-medium text-white">{entry.mood}</span>
-                            <span className="text-white/40 text-sm ml-2">
-                              {getRelativeDate(entry.date)} · {entry.time}
-                            </span>
+                          <span className="text-2xl emoji">{mood.emoji}</span>
+                          <div className="flex flex-wrap items-center gap-1">
+                            <span className="font-medium text-white">{tmood(entry.mood)}</span>
+                            <span className="text-white/40 text-sm">·</span>
+                            <span className="text-white/40 text-sm">{getRelativeDate(entry.date)}</span>
+                            <span className="text-white/40 text-sm">·</span>
+                            <span className="text-white/40 text-sm">{entry.time}</span>
                           </div>
                         </div>
                         <div className="flex items-center gap-2">
@@ -377,7 +379,7 @@ export default function HistoryPage() {
                                 className="flex items-center gap-2 px-3 py-2 bg-red-500/20 hover:bg-red-500/30 rounded-xl text-red-400 text-sm transition-all"
                               >
                                 <Trash2 className="w-4 h-4" />
-                                Delete
+                                {t("history.delete")}
                               </button>
                             </div>
                           </motion.div>
