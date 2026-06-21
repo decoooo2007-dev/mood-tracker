@@ -6,6 +6,7 @@ import { signUp, signIn, getSession } from "@/lib/auth";
 import { useRouter } from "next/navigation";
 import GlassBackground from "@/components/ui/GlassBackground";
 import { Heart, Loader2, Eye, EyeOff } from "lucide-react";
+import { t, currentLocale } from "@/lib/i18n/translations";
 
 export default function LoginPage() {
   const router = useRouter();
@@ -16,6 +17,7 @@ export default function LoginPage() {
   const [showPassword, setShowPassword] = useState(false);
   const [error, setError] = useState("");
   const [isLoading, setIsLoading] = useState(false);
+  const isRtl = currentLocale === "ar";
 
   // Redirect if already logged in
   useEffect(() => {
@@ -25,27 +27,32 @@ export default function LoginPage() {
     }
   }, [router]);
 
+  const getError = (code: string): string => {
+    const key = `error.${code}` as const;
+    return t(key as any);
+  };
+
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setError("");
 
     if (!username.trim() || !password.trim()) {
-      setError("Please fill in all fields");
+      setError(getError("fillAllFields"));
       return;
     }
 
     if (username.length < 3) {
-      setError("Username must be at least 3 characters");
+      setError(getError("usernameMinLength"));
       return;
     }
 
     if (password.length < 4) {
-      setError("Password must be at least 4 characters");
+      setError(getError("passwordMinLength"));
       return;
     }
 
     if (isSignUp && password !== confirmPassword) {
-      setError("Passwords do not match");
+      setError(getError("passwordsDoNotMatch"));
       return;
     }
 
@@ -57,18 +64,26 @@ export default function LoginPage() {
         if (result.success) {
           window.location.href = "/";
         } else {
-          setError(result.error || "Failed to create account");
+          const errorKey = result.error?.includes("taken") ? "usernameTaken" :
+                          result.error?.includes("exists") ? "usernameTaken" :
+                          result.error?.includes("network") ? "networkError" :
+                          "signUpFailed";
+          setError(getError(errorKey));
         }
       } else {
         const result = await signIn(username.trim(), password);
         if (result.success) {
           window.location.href = "/";
         } else {
-          setError(result.error || "Failed to sign in");
+          const errorKey = result.error?.includes("not found") ? "signInFailed" :
+                          result.error?.includes("Incorrect") ? "signInFailed" :
+                          result.error?.includes("network") ? "networkError" :
+                          "signInFailed";
+          setError(getError(errorKey));
         }
       }
     } catch {
-      setError("Something went wrong");
+      setError(getError("somethingWentWrong"));
     } finally {
       setIsLoading(false);
     }
@@ -76,14 +91,14 @@ export default function LoginPage() {
 
   return (
     <GlassBackground>
-      <div className="min-h-screen flex items-center justify-center px-4">
+      <div className="min-h-screen flex items-center justify-center px-4" dir={isRtl ? "rtl" : "ltr"}>
         <motion.div
           initial={{ opacity: 0, y: 20 }}
           animate={{ opacity: 1, y: 0 }}
           className="w-full max-w-md"
         >
           {/* Logo */}
-          <div className="text-center mb-8">
+          <div className={`text-center mb-8 ${isRtl ? "rtl" : ""}`}>
             <motion.div
               className="inline-flex items-center justify-center w-16 h-16 rounded-3xl bg-gradient-to-br from-purple-500 to-pink-500 mb-4"
               initial={{ scale: 0 }}
@@ -92,9 +107,9 @@ export default function LoginPage() {
             >
               <Heart className="w-8 h-8 text-white" />
             </motion.div>
-            <h1 className="text-3xl font-bold text-white mb-2">MoodFlow</h1>
+            <h1 className="text-3xl font-bold text-white mb-2">{t("app.title")}</h1>
             <p className="text-white/60">
-              {isSignUp ? "Create your account" : "Welcome back"}
+              {isSignUp ? t("auth.createAccount") : t("auth.welcomeBack")}
             </p>
           </div>
 
@@ -108,34 +123,40 @@ export default function LoginPage() {
             <form onSubmit={handleSubmit} className="space-y-4">
               {/* Username */}
               <div>
-                <label className="block text-sm text-white/60 mb-2">Username</label>
+                <label className={`block text-sm text-white/60 mb-2 ${isRtl ? "text-right" : ""}`}>
+                  {t("auth.username")}
+                </label>
                 <input
                   type="text"
                   value={username}
                   onChange={(e) => setUsername(e.target.value.toLowerCase().replace(/\s/g, ""))}
-                  placeholder="Choose a username"
-                  className="w-full px-4 py-3 bg-white/10 rounded-xl border border-white/20 text-white placeholder-white/40 outline-none focus:border-white/40 focus:ring-2 focus:ring-white/20 transition-all"
+                  placeholder={t("auth.chooseUsername")}
+                  className={`w-full px-4 py-3 bg-white/10 rounded-xl border border-white/20 text-white placeholder-white/40 outline-none focus:border-white/40 focus:ring-2 focus:ring-white/20 transition-all ${isRtl ? "text-right" : ""}`}
                   autoComplete="username"
                   maxLength={20}
+                  dir={isRtl ? "ltr" : undefined}
                 />
               </div>
 
               {/* Password */}
               <div>
-                <label className="block text-sm text-white/60 mb-2">Password</label>
+                <label className={`block text-sm text-white/60 mb-2 ${isRtl ? "text-right" : ""}`}>
+                  {t("auth.password")}
+                </label>
                 <div className="relative">
                   <input
                     type={showPassword ? "text" : "password"}
                     value={password}
                     onChange={(e) => setPassword(e.target.value)}
-                    placeholder="Enter password"
-                    className="w-full px-4 py-3 bg-white/10 rounded-xl border border-white/20 text-white placeholder-white/40 outline-none focus:border-white/40 focus:ring-2 focus:ring-white/20 transition-all pr-10"
+                    placeholder={t("auth.enterPassword")}
+                    className={`w-full px-4 py-3 bg-white/10 rounded-xl border border-white/20 text-white placeholder-white/40 outline-none focus:border-white/40 focus:ring-2 focus:ring-white/20 transition-all pr-10 ${isRtl ? "text-right pl-10 pr-4" : ""}`}
                     autoComplete={isSignUp ? "new-password" : "current-password"}
+                    dir={isRtl ? "ltr" : undefined}
                   />
                   <button
                     type="button"
                     onClick={() => setShowPassword(!showPassword)}
-                    className="absolute right-3 top-1/2 -translate-y-1/2 text-white/40 hover:text-white/60 transition-colors"
+                    className={`absolute top-1/2 -translate-y-1/2 text-white/40 hover:text-white/60 transition-colors ${isRtl ? "left-3 right-auto" : "right-3"}`}
                   >
                     {showPassword ? <EyeOff className="w-5 h-5" /> : <Eye className="w-5 h-5" />}
                   </button>
@@ -148,14 +169,17 @@ export default function LoginPage() {
                   initial={{ opacity: 0, height: 0 }}
                   animate={{ opacity: 1, height: "auto" }}
                 >
-                  <label className="block text-sm text-white/60 mb-2">Confirm Password</label>
+                  <label className={`block text-sm text-white/60 mb-2 ${isRtl ? "text-right" : ""}`}>
+                    {t("auth.confirmPassword")}
+                  </label>
                   <input
                     type="password"
                     value={confirmPassword}
                     onChange={(e) => setConfirmPassword(e.target.value)}
-                    placeholder="Confirm password"
-                    className="w-full px-4 py-3 bg-white/10 rounded-xl border border-white/20 text-white placeholder-white/40 outline-none focus:border-white/40 focus:ring-2 focus:ring-white/20 transition-all"
+                    placeholder={t("auth.confirmPasswordPlaceholder")}
+                    className={`w-full px-4 py-3 bg-white/10 rounded-xl border border-white/20 text-white placeholder-white/40 outline-none focus:border-white/40 focus:ring-2 focus:ring-white/20 transition-all ${isRtl ? "text-right" : ""}`}
                     autoComplete="new-password"
+                    dir={isRtl ? "ltr" : undefined}
                   />
                 </motion.div>
               )}
@@ -165,7 +189,7 @@ export default function LoginPage() {
                 <motion.div
                   initial={{ opacity: 0 }}
                   animate={{ opacity: 1 }}
-                  className="p-3 bg-red-500/20 border border-red-500/30 rounded-xl text-red-300 text-sm"
+                  className={`p-3 bg-red-500/20 border border-red-500/30 rounded-xl text-red-300 text-sm ${isRtl ? "text-right" : ""}`}
                 >
                   {error}
                 </motion.div>
@@ -180,7 +204,7 @@ export default function LoginPage() {
                 {isLoading ? (
                   <Loader2 className="w-5 h-5 animate-spin" />
                 ) : (
-                  isSignUp ? "Create Account" : "Sign In"
+                  isSignUp ? t("auth.createAccountBtn") : t("auth.signIn")
                 )}
               </button>
             </form>
@@ -194,14 +218,14 @@ export default function LoginPage() {
                 }}
                 className="text-white/60 hover:text-white transition-colors text-sm"
               >
-                {isSignUp ? "Already have an account? Sign In" : "Don't have an account? Sign Up"}
+                {isSignUp ? t("auth.alreadyHaveAccount") : t("auth.dontHaveAccount")}
               </button>
             </div>
           </motion.div>
 
           {/* Info */}
-          <p className="text-center text-white/40 text-xs mt-6">
-            Your data syncs across all your devices
+          <p className={`text-center text-white/40 text-xs mt-6 ${isRtl ? "rtl" : ""}`}>
+            {t("auth.syncInfo")}
           </p>
         </motion.div>
       </div>

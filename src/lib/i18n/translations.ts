@@ -91,6 +91,31 @@ export const translations = {
     // Additional
     "chart.moodIntensity": "Mood Intensity Over Time",
     "chart.encouragement": "Keep it up!",
+    // Error messages
+    "error.fillAllFields": "Please fill in all fields",
+    "error.usernameMinLength": "Username must be at least 3 characters",
+    "error.passwordMinLength": "Password must be at least 4 characters",
+    "error.passwordsDoNotMatch": "Passwords do not match",
+    "error.signInFailed": "Invalid username or password",
+    "error.signUpFailed": "Failed to create account",
+    "error.somethingWentWrong": "Something went wrong",
+    "error.networkError": "Network error. Please try again.",
+    "error.usernameTaken": "Username is already taken",
+    // Auth page
+    "auth.welcomeBack": "Welcome back",
+    "auth.createAccount": "Create your account",
+    "auth.username": "Username",
+    "auth.password": "Password",
+    "auth.confirmPassword": "Confirm Password",
+    "auth.chooseUsername": "Choose a username",
+    "auth.enterPassword": "Enter password",
+    "auth.confirmPasswordPlaceholder": "Confirm password",
+    "auth.signIn": "Sign In",
+    "auth.signUp": "Sign Up",
+    "auth.createAccountBtn": "Create Account",
+    "auth.alreadyHaveAccount": "Already have an account? Sign In",
+    "auth.dontHaveAccount": "Don't have an account? Sign Up",
+    "auth.syncInfo": "Your data syncs across all your devices",
   },
   ar: {
     "app.title": "مد فلو",
@@ -184,6 +209,31 @@ export const translations = {
     // Additional
     "chart.moodIntensity": "شدة المزاج عبر الوقت",
     "chart.encouragement": "استمر!",
+    // Error messages
+    "error.fillAllFields": "يرجى ملء جميع الحقول",
+    "error.usernameMinLength": "يجب أن يكون اسم المستخدم 3 أحرف على الأقل",
+    "error.passwordMinLength": "يجب أن تكون كلمة المرور 4 أحرف على الأقل",
+    "error.passwordsDoNotMatch": "كلمات المرور غير متطابقة",
+    "error.signInFailed": "اسم المستخدم أو كلمة المرور غير صحيحة",
+    "error.signUpFailed": "فشل في إنشاء الحساب",
+    "error.somethingWentWrong": "حدث خطأ ما",
+    "error.networkError": "خطأ في الشبكة. يرجى المحاولة مرة أخرى.",
+    "error.usernameTaken": "اسم المستخدم مستخدم بالفعل",
+    // Auth page
+    "auth.welcomeBack": "مرحباً بعودتك",
+    "auth.createAccount": "إنشاء حسابك",
+    "auth.username": "اسم المستخدم",
+    "auth.password": "كلمة المرور",
+    "auth.confirmPassword": "تأكيد كلمة المرور",
+    "auth.chooseUsername": "اختر اسم مستخدم",
+    "auth.enterPassword": "أدخل كلمة المرور",
+    "auth.confirmPasswordPlaceholder": "تأكيد كلمة المرور",
+    "auth.signIn": "تسجيل الدخول",
+    "auth.signUp": "التسجيل",
+    "auth.createAccountBtn": "إنشاء حساب",
+    "auth.alreadyHaveAccount": "لديك حساب بالفعل؟ تسجيل الدخول",
+    "auth.dontHaveAccount": "ليس لديك حساب؟ إنشاء حساب",
+    "auth.syncInfo": "تتم مزامنة بياناتك عبر جميع أجهزتك",
   }
 } as const;
 

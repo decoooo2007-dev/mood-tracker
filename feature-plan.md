@@ -72,8 +72,8 @@ Goals, Reminders, Payments, AI, Team features...
 
 | Group | Status | Notes |
 |-------|--------|-------|
-| 1 | To Do | Mobile + Arabic foundation |
-| 2 | To Do | Full translations |
+| 1 | Done ✅ | Mobile + Arabic foundation |
+| 2 | In Progress | Full translations |
 | 3 | To Do | Feedback system |
 | 4 | To Do | Legal pages |
 | 5 | To Do | PWA |
