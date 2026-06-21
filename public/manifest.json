@@ -1,0 +1,50 @@
+{
+  "name": "MoodFlow - Daily Mood Journal",
+  "short_name": "MoodFlow",
+  "description": "Track your emotions, understand your patterns, and improve your well-being",
+  "start_url": "/",
+  "display": "standalone",
+  "background_color": "#0F0F14",
+  "theme_color": "#7C3AED",
+  "orientation": "portrait-primary",
+  "scope": "/",
+  "lang": "en",
+  "dir": "auto",
+  "categories": ["health", "lifestyle", "productivity"],
+  "icons": [
+    {
+      "src": "/icons/icon.svg",
+      "sizes": "any",
+      "type": "image/svg+xml",
+      "purpose": "any maskable"
+    },
+    {
+      "src": "/icons/icon-192x192.svg",
+      "sizes": "192x192",
+      "type": "image/svg+xml",
+      "purpose": "any maskable"
+    },
+    {
+      "src": "/icons/icon-512x512.svg",
+      "sizes": "512x512",
+      "type": "image/svg+xml",
+      "purpose": "any maskable"
+    }
+  ],
+  "shortcuts": [
+    {
+      "name": "Add Mood Entry",
+      "short_name": "Add Entry",
+      "description": "Quickly log your current mood",
+      "url": "/?action=add"
+    },
+    {
+      "name": "History",
+      "short_name": "History",
+      "description": "View your mood history",
+      "url": "/history"
+    }
+  ],
+  "related_applications": [],
+  "prefer_related_applications": false
+}

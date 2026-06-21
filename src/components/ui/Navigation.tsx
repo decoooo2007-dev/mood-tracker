@@ -1,17 +1,18 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { motion } from "framer-motion";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { Home, Clock, Settings, Wifi, WifiOff, LogOut, Globe } from "lucide-react";
+import { Home, Clock, Settings, Wifi, WifiOff, LogOut, Globe, MessageSquare } from "lucide-react";
 import { useSyncStore } from "@/hooks/useSyncStore";
 import { useAuth } from "@/lib/providers";
 import { useRouter } from "next/navigation";
-import { t, setLocale, currentLocale, getDirection, Locale } from "@/lib/i18n/translations";
+import { t, setLocale, translations, Locale } from "@/lib/i18n/translations";
 
 const navItems = [
-  { href: "/", labelKey: "nav.today" as const, icon: Home },
+  { href: "/", labelKey: "nav.home" as const, icon: Home },
+  { href: "/feedback", labelKey: "nav.feedback" as const, icon: MessageSquare },
   { href: "/history", labelKey: "nav.history" as const, icon: Clock },
   { href: "/settings", labelKey: "nav.settings" as const, icon: Settings },
 ];
@@ -21,18 +22,30 @@ export default function Navigation() {
   const { isOnline } = useSyncStore();
   const { signOut } = useAuth();
   const router = useRouter();
-  const [locale, setLocaleState] = useState<Locale>(currentLocale);
+  const [locale, setLocaleState] = useState<Locale>("en");
+  const [mounted, setMounted] = useState(false);
+
+  // Read locale from localStorage after mount to avoid hydration mismatch
+  useEffect(() => {
+    const stored = localStorage.getItem("moodflow-locale") as Locale;
+    if (stored === "en" || stored === "ar") {
+      setLocaleState(stored);
+    }
+    setMounted(true);
+  }, []);
 
   const toggleLanguage = () => {
     const newLocale = locale === "en" ? "ar" : "en";
     setLocaleState(newLocale);
     setLocale(newLocale);
-    // Store in localStorage for persistence
     localStorage.setItem("moodflow-locale", newLocale);
-    // Update document direction
     document.documentElement.dir = newLocale === "ar" ? "rtl" : "ltr";
-    // Force re-render without full page refresh
     router.refresh();
+  };
+
+  // Translation function using current state
+  const t = (key: string): string => {
+    return translations[locale][key as keyof typeof translations.en] || translations.en[key as keyof typeof translations.en] || key;
   };
 
   const handleSignOut = () => {

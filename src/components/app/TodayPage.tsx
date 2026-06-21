@@ -28,6 +28,7 @@ import { analyzeSentiment, generateWeeklyInsight } from "@/lib/sentiment";
 import { t, tmood, currentLocale } from "@/lib/i18n/translations";
 import GlassBackground from "@/components/ui/GlassBackground";
 import Navigation from "@/components/ui/Navigation";
+import Disclaimer from "@/components/ui/Disclaimer";
 
 export default function TodayPage() {
   const {
@@ -182,6 +183,7 @@ export default function TodayPage() {
 
   return (
     <GlassBackground>
+      <Disclaimer onAcknowledge={() => {}} />
       <div className="max-w-4xl mx-auto px-4 py-8 md:px-6 md:py-12">
         {/* Hero Bar */}
         <motion.div

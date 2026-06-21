@@ -13,14 +13,29 @@ import {
   Info,
   ChevronRight,
   Loader2,
+  MessageSquare,
+  Shield,
+  FileText,
+  ExternalLink,
 } from "lucide-react";
 import GlassBackground from "@/components/ui/GlassBackground";
 import Navigation from "@/components/ui/Navigation";
-import { t, tmood } from "@/lib/i18n/translations";
+import FeedbackForm from "@/components/ui/FeedbackForm";
+import { t, tmood, translations, Locale } from "@/lib/i18n/translations";
 
 export default function SettingsPage() {
   const { settings, updateSettings, getStats, clearAllData, isUpdating, isLoading } = useSyncStore();
   const [showClearConfirm, setShowClearConfirm] = useState(false);
+  const [showFeedback, setShowFeedback] = useState(false);
+  const [locale, setLocale] = useState<Locale>("en");
+
+  // Get locale from localStorage
+  useEffect(() => {
+    const stored = localStorage.getItem("moodflow-locale") as Locale;
+    if (stored === "en" || stored === "ar") {
+      setLocale(stored);
+    }
+  }, []);
 
   const stats = getStats();
 
@@ -165,6 +180,33 @@ export default function SettingsPage() {
           </div>
         </motion.div>
 
+        {/* Feedback */}
+        <motion.div
+          className="mb-6"
+          initial={{ opacity: 0, y: 20 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ delay: 0.25 }}
+        >
+          <h2 className="text-sm font-semibold text-white/60 uppercase tracking-wide mb-3">
+            {t("feedback.title")}
+          </h2>
+          <div className="backdrop-blur-xl bg-white/10 rounded-2xl border border-white/20 overflow-hidden">
+            <button
+              onClick={() => setShowFeedback(true)}
+              className="w-full p-4 flex items-center justify-between hover:bg-purple-500/10 transition-all"
+            >
+              <div className="flex items-center gap-3">
+                <MessageSquare className="w-5 h-5 text-purple-400" />
+                <div className="text-left">
+                  <p className="text-white font-medium">{t("settings.sendFeedback")}</p>
+                  <p className="text-white/60 text-sm">{t("settings.feedbackDesc")}</p>
+                </div>
+              </div>
+              <ChevronRight className="w-5 h-5 text-purple-400/50" />
+            </button>
+          </div>
+        </motion.div>
+
         {/* Clear Data */}
         <motion.div
           className="mb-6"
@@ -234,14 +276,46 @@ export default function SettingsPage() {
           <h2 className="text-sm font-semibold text-white/60 uppercase tracking-wide mb-3">
             {t("settings.about")}
           </h2>
-          <div className="backdrop-blur-xl bg-white/10 rounded-2xl border border-white/20 p-4">
-            <div className="flex items-center gap-3">
+          <div className="backdrop-blur-xl bg-white/10 rounded-2xl border border-white/20 overflow-hidden">
+            {/* App Info */}
+            <div className="p-4 flex items-center gap-3">
               <Info className="w-5 h-5 text-purple-400" />
               <div>
                 <p className="text-white font-medium">MoodFlow</p>
                 <p className="text-white/60 text-sm">{t("settings.version")}</p>
               </div>
             </div>
+
+            <div className="border-t border-white/10" />
+
+            {/* Legal Links */}
+            <a
+              href="/privacy"
+              className="w-full p-4 flex items-center justify-between hover:bg-purple-500/10 transition-all"
+            >
+              <div className="flex items-center gap-3">
+                <Shield className="w-5 h-5 text-purple-400" />
+                <div className="text-left">
+                  <p className="text-white font-medium">{t("legal.privacyPolicy")}</p>
+                </div>
+              </div>
+              <ChevronRight className="w-5 h-5 text-purple-400/50" />
+            </a>
+
+            <div className="border-t border-white/10" />
+
+            <a
+              href="/terms"
+              className="w-full p-4 flex items-center justify-between hover:bg-purple-500/10 transition-all"
+            >
+              <div className="flex items-center gap-3">
+                <FileText className="w-5 h-5 text-purple-400" />
+                <div className="text-left">
+                  <p className="text-white font-medium">{t("legal.termsOfService")}</p>
+                </div>
+              </div>
+              <ChevronRight className="w-5 h-5 text-purple-400/50" />
+            </a>
           </div>
         </motion.div>
 
@@ -280,6 +354,13 @@ export default function SettingsPage() {
             </motion.div>
           </motion.div>
         )}
+
+        {/* Feedback Form Modal */}
+        <FeedbackForm
+          isOpen={showFeedback}
+          onClose={() => setShowFeedback(false)}
+          locale={locale}
+        />
       </div>
 
       <Navigation />

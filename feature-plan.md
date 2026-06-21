@@ -74,9 +74,9 @@ Goals, Reminders, Payments, AI, Team features...
 |-------|--------|-------|
 | 1 | Done ✅ | Mobile + Arabic foundation |
 | 2 | Done ✅ | Full Arabic translations, RTL, error messages |
-| 3 | To Do | Feedback system |
-| 4 | To Do | Legal pages |
-| 5 | To Do | PWA |
+| 3 | Done ✅ | Feedback form, Resend API, Settings button |
+| 4 | Done ✅ | Privacy Policy, ToS, Cookie Consent, Disclaimer |
+| 5 | Done ✅ | PWA manifest, service worker, offline page, install prompt |
 | 6-11 | To Do | Advanced features |
 
 ---

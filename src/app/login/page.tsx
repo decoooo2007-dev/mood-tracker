@@ -5,7 +5,7 @@ import { motion } from "framer-motion";
 import { signUp, signIn, getSession } from "@/lib/auth";
 import { useRouter } from "next/navigation";
 import GlassBackground from "@/components/ui/GlassBackground";
-import { Heart, Loader2, Eye, EyeOff } from "lucide-react";
+import { Heart, Loader2, Eye, EyeOff, Globe } from "lucide-react";
 import { translations, Locale } from "@/lib/i18n/translations";
 
 export default function LoginPage() {
@@ -32,6 +32,14 @@ export default function LoginPage() {
   // Translation function using current state
   const t = (key: string): string => {
     return translations[locale][key as keyof typeof translations.en] || translations.en[key as keyof typeof translations.en] || key;
+  };
+
+  const toggleLanguage = () => {
+    const newLocale = locale === "en" ? "ar" : "en";
+    setLocale(newLocale);
+    setIsRtl(newLocale === "ar");
+    localStorage.setItem("moodflow-locale", newLocale);
+    document.documentElement.dir = newLocale === "ar" ? "rtl" : "ltr";
   };
 
   // Redirect if already logged in
@@ -112,6 +120,19 @@ export default function LoginPage() {
           animate={{ opacity: 1, y: 0 }}
           className="w-full max-w-md"
         >
+          {/* Language Toggle */}
+          <div className="flex justify-end mb-4">
+            <button
+              onClick={toggleLanguage}
+              className="flex items-center gap-2 px-4 py-2 backdrop-blur-md bg-white/10 rounded-xl border border-white/20 hover:bg-white/20 transition-colors"
+            >
+              <Globe className="w-4 h-4 text-white/80" />
+              <span className="text-sm font-medium text-white/80 uppercase">
+                {locale === "en" ? "عربي" : "EN"}
+              </span>
+            </button>
+          </div>
+
           {/* Logo */}
           <div className={`text-center mb-8 ${isRtl ? "rtl" : ""}`}>
             <motion.div
