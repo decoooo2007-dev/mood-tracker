@@ -6,7 +6,7 @@ import { signUp, signIn, getSession } from "@/lib/auth";
 import { useRouter } from "next/navigation";
 import GlassBackground from "@/components/ui/GlassBackground";
 import { Heart, Loader2, Eye, EyeOff } from "lucide-react";
-import { t } from "@/lib/i18n/translations";
+import { translations, Locale } from "@/lib/i18n/translations";
 
 export default function LoginPage() {
   const router = useRouter();
@@ -18,12 +18,21 @@ export default function LoginPage() {
   const [error, setError] = useState("");
   const [isLoading, setIsLoading] = useState(false);
   const [isRtl, setIsRtl] = useState(false);
+  const [locale, setLocale] = useState<Locale>("en");
 
   // Get locale from localStorage on mount
   useEffect(() => {
-    const stored = localStorage.getItem("moodflow-locale");
-    setIsRtl(stored === "ar");
+    const stored = localStorage.getItem("moodflow-locale") as Locale;
+    if (stored === "en" || stored === "ar") {
+      setLocale(stored);
+      setIsRtl(stored === "ar");
+    }
   }, []);
+
+  // Translation function using current state
+  const t = (key: string): string => {
+    return translations[locale][key as keyof typeof translations.en] || translations.en[key as keyof typeof translations.en] || key;
+  };
 
   // Redirect if already logged in
   useEffect(() => {
