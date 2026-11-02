@@ -4,16 +4,9 @@
   "outputDirectory": ".next",
   "installCommand": "npm install",
   "regions": ["iad1"],
-  "crons": [
-    {
-      "path": "/api/keep-alive",
-      "schedule": "0 0 * * *"
-    }
-  ],
   "github": {
     "enabled": true,
     "autoJobCancellation": true,
-    "autoDeploy": false,
     "silent": true
   }
 }
