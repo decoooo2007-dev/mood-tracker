@@ -1,43 +1,39 @@
 "use client";
 
 import { useState, useEffect } from "react";
+import { usePathname } from "next/navigation";
 import { motion, AnimatePresence } from "framer-motion";
 import { AlertTriangle, Heart, Brain, Hand } from "lucide-react";
-import { translations, Locale } from "@/lib/i18n/translations";
+import { useLanguage } from "@/lib/providers";
 
 interface DisclaimerProps {
-  onAcknowledge: () => void;
+  onAcknowledge?: () => void;
 }
 
 export default function Disclaimer({ onAcknowledge }: DisclaimerProps) {
+  const pathname = usePathname();
+  const { isRtl, t } = useLanguage();
   const [isVisible, setIsVisible] = useState(false);
-  const [locale, setLocale] = useState<Locale>("en");
 
   useEffect(() => {
-    // Check if user has already acknowledged
-    const hasAcknowledged = localStorage.getItem("moodflow-disclaimer-acknowledged");
+    const hasAcknowledged =
+      localStorage.getItem("moodflow-disclaimer-acknowledged") ||
+      localStorage.getItem("moodflow-disclaimer-accepted");
     if (!hasAcknowledged) {
       setIsVisible(true);
     }
-
-    // Get locale
-    const stored = localStorage.getItem("moodflow-locale") as Locale;
-    if (stored === "en" || stored === "ar") {
-      setLocale(stored);
-    }
   }, []);
+
+  if (pathname === "/login" || pathname === "/offline") {
+    return null;
+  }
 
   const handleAcknowledge = () => {
     localStorage.setItem("moodflow-disclaimer-acknowledged", "true");
     setIsVisible(false);
-    onAcknowledge();
+    window.dispatchEvent(new Event("moodflow-onboarding-step"));
+    onAcknowledge?.();
   };
-
-  const t = (key: string): string => {
-    return translations[locale]?.[key as keyof typeof translations.en] || translations.en[key as keyof typeof translations.en] || key;
-  };
-
-  const isArabic = locale === "ar";
 
   const items = [
     {
@@ -86,22 +82,22 @@ export default function Disclaimer({ onAcknowledge }: DisclaimerProps) {
             exit={{ opacity: 0 }}
           >
             <motion.div
-              className="w-full max-w-lg pointer-events-auto backdrop-blur-xl bg-black/90 rounded-3xl border border-white/20 shadow-2xl overflow-hidden"
+              className="w-full max-w-lg pointer-events-auto glass-modal rounded-3xl border border-white/20 shadow-2xl overflow-hidden"
               initial={{ scale: 0.9, y: 20 }}
               animate={{ scale: 1, y: 0 }}
               exit={{ scale: 0.9, y: 20 }}
               transition={{ type: "spring", damping: 25 }}
-              dir={isArabic ? "rtl" : "ltr"}
+              dir={isRtl ? "rtl" : "ltr"}
             >
               {/* Header */}
               <div className="p-6 pb-4">
                 <div className="flex items-center gap-3 mb-4">
                   <div className="w-12 h-12 rounded-2xl bg-gradient-to-br from-yellow-500 to-orange-500 flex items-center justify-center">
-                    <Hand className="w-6 h-6 text-white" />
+                    <Hand className="w-6 h-6 text-white keep-white" />
                   </div>
                   <div>
                     <h2 className="text-xl font-bold text-white">{t("disclaimer.title")}</h2>
-                    <p className="text-white/60 text-sm">MoodFlow</p>
+                    <p className="text-white/60 text-sm">{t("app.title")}</p>
                   </div>
                 </div>
               </div>
@@ -114,7 +110,7 @@ export default function Disclaimer({ onAcknowledge }: DisclaimerProps) {
                     className={`flex items-start gap-3 p-4 rounded-xl ${colorClasses[item.color as keyof typeof colorClasses].bg} border ${colorClasses[item.color as keyof typeof colorClasses].border}`}
                   >
                     <item.icon className={`w-5 h-5 ${colorClasses[item.color as keyof typeof colorClasses].text} flex-shrink-0 mt-0.5`} />
-                    <div className={isArabic ? "text-right" : ""}>
+                    <div className={isRtl ? "text-right" : ""}>
                       <h3 className="font-semibold text-white text-sm mb-1">{item.title}</h3>
                       <p className="text-white/70 text-sm leading-relaxed">{item.desc}</p>
                     </div>

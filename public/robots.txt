@@ -1,0 +1,6 @@
+# Prevent all search engines from indexing
+User-agent: *
+Disallow: /
+
+# Allow crawlers to access CSS/JS for SEO (optional)
+Allow: /_next/static/

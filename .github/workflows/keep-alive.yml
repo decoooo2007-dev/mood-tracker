@@ -1,0 +1,32 @@
+name: Supabase Keep-Alive Ping
+
+on:
+  schedule:
+    - cron: '0 0 * * *'
+  workflow_dispatch:
+
+jobs:
+  ping-supabase:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Ping Next.js Keep-Alive Endpoint
+        env:
+          TARGET_URL: ${{ vars.DEPLOYED_URL || 'https://mood-tracker-lac-one.vercel.app' }}
+          KEEP_ALIVE_SECRET: ${{ secrets.KEEP_ALIVE_SECRET }}
+        run: |
+          echo "Pinging MoodFlow Supabase Keep-Alive endpoint..."
+          if [ -n "$KEEP_ALIVE_SECRET" ]; then
+            RESPONSE=$(curl -s -w "\n%{http_code}" -H "x-keep-alive-secret: $KEEP_ALIVE_SECRET" "${TARGET_URL%/}/api/keep-alive")
+          else
+            RESPONSE=$(curl -s -w "\n%{http_code}" "${TARGET_URL%/}/api/keep-alive")
+          fi
+          HTTP_BODY=$(echo "$RESPONSE" | head -n 1)
+          HTTP_STATUS=$(echo "$RESPONSE" | tail -n 1)
+          echo "Response Body: $HTTP_BODY"
+          echo "HTTP Status: $HTTP_STATUS"
+          if [ "$HTTP_STATUS" -ne 200 ]; then
+            echo "::error::Supabase Keep-Alive ping failed with HTTP status $HTTP_STATUS"
+            exit 1
+          fi
+          echo "Supabase Keep-Alive ping succeeded!"
+

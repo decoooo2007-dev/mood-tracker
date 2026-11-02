@@ -181,7 +181,7 @@ export default function Option1Serene() {
               >
                 <div className="pt-6 border-t border-gray-100">
                   <label className="block text-sm font-medium text-gray-600 mb-3">
-                    What's on your mind? (optional)
+                    What&apos;s on your mind? (optional)
                   </label>
                   <textarea
                     value={journalText}
@@ -218,7 +218,7 @@ export default function Option1Serene() {
         >
           <h2 className="text-lg font-semibold text-gray-700 mb-6 flex items-center gap-2">
             <Calendar className="w-5 h-5 text-purple-500" />
-            This Week's Mood
+            This Week&apos;s Mood
           </h2>
           <div className="flex justify-between">
             {calendarDays.map((day, i) => (

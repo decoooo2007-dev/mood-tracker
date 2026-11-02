@@ -1,45 +1,46 @@
 "use client";
 
-import { useState, useEffect } from "react";
-import { motion } from "framer-motion";
+import { useState } from "react";
+import Link from "next/link";
+import { useRouter } from "next/navigation";
+import { motion, AnimatePresence } from "framer-motion";
 import { useSyncStore } from "@/hooks/useSyncStore";
-import { useAuth } from "@/lib/providers";
+import { useAuth, useLanguage } from "@/lib/providers";
 import {
-  Settings as SettingsIcon,
   Moon,
   Sun,
   Bell,
   Trash2,
   Info,
   ChevronRight,
-  Loader2,
   MessageSquare,
   Shield,
   FileText,
-  ExternalLink,
+  Download,
+  LogOut,
+  User,
 } from "lucide-react";
 import GlassBackground from "@/components/ui/GlassBackground";
 import Navigation from "@/components/ui/Navigation";
-import FeedbackForm from "@/components/ui/FeedbackForm";
-import { t, tmood, translations, Locale } from "@/lib/i18n/translations";
 
 export default function SettingsPage() {
-  const { settings, updateSettings, getStats, clearAllData, isUpdating, isLoading } = useSyncStore();
-  const [showClearConfirm, setShowClearConfirm] = useState(false);
-  const [showFeedback, setShowFeedback] = useState(false);
-  const [locale, setLocale] = useState<Locale>("en");
+  const router = useRouter();
+  const {
+    settings,
+    updateSettings,
+    changeTheme,
+    getStats,
+    clearAllData,
+    exportData,
+    isLoading,
+  } = useSyncStore();
+  const { user, signOut } = useAuth();
+  const { t, isRtl } = useLanguage();
 
-  // Get locale from localStorage
-  useEffect(() => {
-    const stored = localStorage.getItem("moodflow-locale") as Locale;
-    if (stored === "en" || stored === "ar") {
-      setLocale(stored);
-    }
-  }, []);
+  const [showClearConfirm, setShowClearConfirm] = useState(false);
 
   const stats = getStats();
 
-  // Default settings
   const currentSettings = settings || {
     theme: "dark" as const,
     notifications: true,
@@ -48,11 +49,18 @@ export default function SettingsPage() {
     exportFormat: "json" as const,
   };
 
-  const handleClearData = () => {
-    if (confirm("Are you sure you want to delete all your data? This cannot be undone.")) {
-      clearAllData();
+  const handleClearData = async () => {
+    try {
+      await clearAllData();
       setShowClearConfirm(false);
+    } catch (err) {
+      console.error("Failed to clear data:", err);
     }
+  };
+
+  const handleSignOut = () => {
+    signOut();
+    router.push("/login");
   };
 
   if (isLoading) {
@@ -71,28 +79,68 @@ export default function SettingsPage() {
 
   return (
     <GlassBackground>
-      <div className="max-w-4xl mx-auto px-6 py-12">
+      <div className="max-w-4xl mx-auto px-4 py-8 md:px-6 md:py-12" dir={isRtl ? "rtl" : "ltr"}>
         {/* Header */}
         <motion.div
           initial={{ opacity: 0, y: -20 }}
           animate={{ opacity: 1, y: 0 }}
           className="mb-8"
         >
-          <h1 className="text-3xl font-bold text-white mb-2">{t("settings.title")}</h1>
-          <p className="text-white/60">{t("settings.customize")}</p>
+          <h1 className="text-3xl font-extrabold text-white mb-1 tracking-tight">
+            {t("settings.title")}
+          </h1>
+          <p className="text-white/60 text-sm">{t("settings.customize")}</p>
         </motion.div>
 
-        {/* Appearance */}
+        {/* Account Card */}
+        {user && (
+          <motion.div
+            className="mb-6"
+            initial={{ opacity: 0, y: 20 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ delay: 0.05 }}
+          >
+            <h2 className="text-xs font-semibold text-white/60 uppercase tracking-wider mb-2.5">
+              {t("settings.account")}
+            </h2>
+            <div className="glass rounded-2xl p-4 flex items-center justify-between shadow-sm">
+              <div className="flex items-center gap-3">
+                <div className="w-10 h-10 rounded-full bg-gradient-to-br from-purple-500 to-pink-500 flex items-center justify-center text-white font-bold text-sm shadow-md">
+                  <User className="w-5 h-5" />
+                </div>
+                <div>
+                  <p className="text-white font-semibold text-sm">
+                    @{user.username}
+                  </p>
+                  <p className="text-white/50 text-xs">
+                    {stats.totalEntries} {t("history.entriesRecorded")}
+                  </p>
+                </div>
+              </div>
+
+              <button
+                type="button"
+                onClick={handleSignOut}
+                className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-white/10 hover:bg-white/15 text-white/80 hover:text-white text-xs font-medium transition-colors"
+              >
+                <LogOut className="w-3.5 h-3.5" />
+                <span>{t("settings.signOut")}</span>
+              </button>
+            </div>
+          </motion.div>
+        )}
+
+        {/* Appearance (Theme) */}
         <motion.div
           className="mb-6"
           initial={{ opacity: 0, y: 20 }}
           animate={{ opacity: 1, y: 0 }}
           transition={{ delay: 0.1 }}
         >
-          <h2 className="text-sm font-semibold text-white/60 uppercase tracking-wide mb-3">
+          <h2 className="text-xs font-semibold text-white/60 uppercase tracking-wider mb-2.5">
             {t("settings.appearance")}
           </h2>
-          <div className="backdrop-blur-xl bg-white/10 rounded-2xl border border-white/20 overflow-hidden">
+          <div className="glass rounded-2xl overflow-hidden shadow-sm">
             <div className="p-4 flex items-center justify-between">
               <div className="flex items-center gap-3">
                 {currentSettings.theme === "dark" ? (
@@ -101,29 +149,34 @@ export default function SettingsPage() {
                   <Sun className="w-5 h-5 text-yellow-400" />
                 )}
                 <div>
-                  <p className="text-white font-medium">{t("settings.theme")}</p>
-                  <p className="text-white/60 text-sm">{t("settings.themeDesc")}</p>
+                  <p className="text-white font-medium text-sm">
+                    {t("settings.theme")}
+                  </p>
+                  <p className="text-white/60 text-xs">
+                    {t("settings.themeDesc")}
+                  </p>
                 </div>
               </div>
-              <div className="flex gap-2">
+              <div className="flex gap-1.5">
                 <button
-                  onClick={() => updateSettings({ theme: "dark" })}
-                  className={`px-4 py-2 rounded-xl text-sm font-medium transition-all ${
+                  type="button"
+                  onClick={() => changeTheme("dark")}
+                  className={`px-3.5 py-1.5 rounded-xl text-xs font-semibold transition-all ${
                     currentSettings.theme === "dark"
-                      ? "bg-purple-500 text-white"
-                      : "bg-white/10 text-white/60 hover:bg-white/20"
+                      ? "bg-purple-500 text-white shadow-sm"
+                      : "bg-white/10 text-white/60 hover:bg-white/15"
                   }`}
                 >
                   {t("settings.dark")}
                 </button>
                 <button
-                  onClick={() => updateSettings({ theme: "light" })}
-                  className={`px-4 py-2 rounded-xl text-sm font-medium transition-all ${
+                  type="button"
+                  onClick={() => changeTheme("light")}
+                  className={`px-3.5 py-1.5 rounded-xl text-xs font-semibold transition-all ${
                     currentSettings.theme === "light"
-                      ? "bg-purple-500 text-white"
-                      : "bg-white/10 text-white/60 hover:bg-white/20"
+                      ? "bg-purple-500 text-white shadow-sm"
+                      : "bg-white/10 text-white/60 hover:bg-white/15"
                   }`}
-                  disabled
                 >
                   {t("settings.light")}
                 </button>
@@ -132,47 +185,63 @@ export default function SettingsPage() {
           </div>
         </motion.div>
 
-        {/* Notifications */}
+        {/* Reminders / Notifications */}
         <motion.div
           className="mb-6"
           initial={{ opacity: 0, y: 20 }}
           animate={{ opacity: 1, y: 0 }}
-          transition={{ delay: 0.2 }}
+          transition={{ delay: 0.15 }}
         >
-          <h2 className="text-sm font-semibold text-white/60 uppercase tracking-wide mb-3">
+          <h2 className="text-xs font-semibold text-white/60 uppercase tracking-wider mb-2.5">
             {t("settings.reminders")}
           </h2>
-          <div className="backdrop-blur-xl bg-white/10 rounded-2xl border border-white/20 overflow-hidden">
+          <div className="glass rounded-2xl overflow-hidden shadow-sm">
             <div className="p-4 flex items-center justify-between">
               <div className="flex items-center gap-3">
                 <Bell className="w-5 h-5 text-purple-400" />
                 <div>
-                  <p className="text-white font-medium">{t("settings.dailyReminder")}</p>
-                  <p className="text-white/60 text-sm">{t("settings.reminderDesc")}</p>
+                  <p className="text-white font-medium text-sm">
+                    {t("settings.dailyReminder")}
+                  </p>
+                  <p className="text-white/60 text-xs">
+                    {t("settings.reminderDesc")}
+                  </p>
                 </div>
               </div>
               <button
-                onClick={() => updateSettings({ notifications: !currentSettings.notifications })}
-                className={`w-12 h-7 rounded-full transition-all relative ${
+                type="button"
+                onClick={() =>
+                  updateSettings({
+                    notifications: !currentSettings.notifications,
+                  })
+                }
+                className={`w-11 h-6 rounded-full transition-colors relative ${
                   currentSettings.notifications ? "bg-purple-500" : "bg-white/20"
                 }`}
+                aria-label="Toggle reminder"
               >
                 <motion.div
-                  className="absolute top-1 w-5 h-5 bg-white rounded-full shadow"
-                  animate={{ left: currentSettings.notifications ? "26px" : "4px" }}
+                  className="absolute top-0.5 w-5 h-5 bg-white rounded-full shadow"
+                  animate={{
+                    left: currentSettings.notifications ? "22px" : "2px",
+                  }}
                   transition={{ type: "spring", stiffness: 500, damping: 30 }}
                 />
               </button>
             </div>
             {currentSettings.notifications && (
-              <div className="px-4 pb-4">
+              <div className="px-4 pb-4 pt-1 border-t border-white/5">
                 <div className="flex items-center gap-3">
-                  <span className="text-white/60 text-sm">{t("settings.remindAt")}</span>
+                  <span className="text-white/70 text-xs">
+                    {t("settings.remindAt")}
+                  </span>
                   <input
                     type="time"
                     value={currentSettings.reminderTime}
-                    onChange={(e) => updateSettings({ reminderTime: e.target.value })}
-                    className="px-3 py-2 bg-white/10 rounded-xl text-white text-sm outline-none focus:ring-2 focus:ring-purple-500/50"
+                    onChange={(e) =>
+                      updateSettings({ reminderTime: e.target.value })
+                    }
+                    className="px-3 py-1.5 bg-white/10 rounded-xl text-white text-xs outline-none focus:ring-1 focus:ring-purple-400"
                   />
                 </div>
               </div>
@@ -180,187 +249,214 @@ export default function SettingsPage() {
           </div>
         </motion.div>
 
-        {/* Feedback */}
+        {/* Data & Export */}
+        <motion.div
+          className="mb-6"
+          initial={{ opacity: 0, y: 20 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ delay: 0.2 }}
+        >
+          <h2 className="text-xs font-semibold text-white/60 uppercase tracking-wider mb-2.5">
+            {t("settings.data")}
+          </h2>
+          <div className="glass rounded-2xl overflow-hidden shadow-sm divide-y divide-white/10">
+            {/* Export JSON */}
+            <button
+              type="button"
+              onClick={() => exportData("json")}
+              className="w-full p-4 flex items-center justify-between hover:bg-white/5 transition-colors text-start"
+            >
+              <div className="flex items-center gap-3">
+                <Download className="w-5 h-5 text-purple-400" />
+                <div>
+                  <p className="text-white font-medium text-sm">
+                    {t("settings.exportJson")}
+                  </p>
+                  <p className="text-white/60 text-xs">
+                    {isRtl ? "نسخة احتياطية كاملة لبياناتك" : "Full backup of all entries"}
+                  </p>
+                </div>
+              </div>
+              <ChevronRight
+                className={`w-4 h-4 text-white/40 ${isRtl ? "rotate-180" : ""}`}
+              />
+            </button>
+
+            {/* Export CSV */}
+            <button
+              type="button"
+              onClick={() => exportData("csv")}
+              className="w-full p-4 flex items-center justify-between hover:bg-white/5 transition-colors text-start"
+            >
+              <div className="flex items-center gap-3">
+                <Download className="w-5 h-5 text-pink-400" />
+                <div>
+                  <p className="text-white font-medium text-sm">
+                    {t("settings.exportCsv")}
+                  </p>
+                  <p className="text-white/60 text-xs">
+                    {isRtl ? "ملف جداول بيانات متوافق مع برامج الجداول" : "Excel-compatible spreadsheet with Arabic support"}
+                  </p>
+                </div>
+              </div>
+              <ChevronRight
+                className={`w-4 h-4 text-white/40 ${isRtl ? "rotate-180" : ""}`}
+              />
+            </button>
+
+            {/* Clear All Data */}
+            <button
+              type="button"
+              onClick={() => setShowClearConfirm(true)}
+              className="w-full p-4 flex items-center justify-between hover:bg-red-500/10 transition-colors text-start"
+            >
+              <div className="flex items-center gap-3">
+                <Trash2 className="w-5 h-5 text-red-400" />
+                <div>
+                  <p className="text-red-400 font-medium text-sm">
+                    {t("settings.clearAllData")}
+                  </p>
+                  <p className="text-white/60 text-xs">
+                    {t("settings.clearDesc")}
+                  </p>
+                </div>
+              </div>
+              <ChevronRight
+                className={`w-4 h-4 text-red-400/50 ${isRtl ? "rotate-180" : ""}`}
+              />
+            </button>
+          </div>
+        </motion.div>
+
+        {/* Feedback Link */}
         <motion.div
           className="mb-6"
           initial={{ opacity: 0, y: 20 }}
           animate={{ opacity: 1, y: 0 }}
           transition={{ delay: 0.25 }}
         >
-          <h2 className="text-sm font-semibold text-white/60 uppercase tracking-wide mb-3">
+          <h2 className="text-xs font-semibold text-white/60 uppercase tracking-wider mb-2.5">
             {t("feedback.title")}
           </h2>
-          <div className="backdrop-blur-xl bg-white/10 rounded-2xl border border-white/20 overflow-hidden">
-            <button
-              onClick={() => setShowFeedback(true)}
-              className="w-full p-4 flex items-center justify-between hover:bg-purple-500/10 transition-all"
+          <div className="glass rounded-2xl overflow-hidden shadow-sm">
+            <Link
+              href="/feedback"
+              className="w-full p-4 flex items-center justify-between hover:bg-white/5 transition-colors text-start"
             >
               <div className="flex items-center gap-3">
                 <MessageSquare className="w-5 h-5 text-purple-400" />
-                <div className="text-left">
-                  <p className="text-white font-medium">{t("settings.sendFeedback")}</p>
-                  <p className="text-white/60 text-sm">{t("settings.feedbackDesc")}</p>
+                <div>
+                  <p className="text-white font-medium text-sm">
+                    {t("settings.sendFeedback")}
+                  </p>
+                  <p className="text-white/60 text-xs">
+                    {t("settings.feedbackDesc")}
+                  </p>
                 </div>
               </div>
-              <ChevronRight className="w-5 h-5 text-purple-400/50" />
-            </button>
+              <ChevronRight
+                className={`w-4 h-4 text-purple-400/50 ${
+                  isRtl ? "rotate-180" : ""
+                }`}
+              />
+            </Link>
           </div>
         </motion.div>
 
-        {/* Clear Data */}
+        {/* About & Legal */}
         <motion.div
           className="mb-6"
           initial={{ opacity: 0, y: 20 }}
           animate={{ opacity: 1, y: 0 }}
           transition={{ delay: 0.3 }}
         >
-          <h2 className="text-sm font-semibold text-white/60 uppercase tracking-wide mb-3">
-            {t("settings.data")}
-          </h2>
-          <div className="backdrop-blur-xl bg-white/10 rounded-2xl border border-white/20 overflow-hidden">
-            <button
-              onClick={() => setShowClearConfirm(true)}
-              className="w-full p-4 flex items-center justify-between hover:bg-red-500/10 transition-all"
-            >
-              <div className="flex items-center gap-3">
-                <Trash2 className="w-5 h-5 text-red-400" />
-                <div className="text-left">
-                  <p className="text-red-400 font-medium">{t("settings.clearAllData")}</p>
-                  <p className="text-white/60 text-sm">{t("settings.clearDesc")}</p>
-                </div>
-              </div>
-              <ChevronRight className="w-5 h-5 text-red-400/50" />
-            </button>
-          </div>
-        </motion.div>
-
-        {/* Statistics */}
-        <motion.div
-          className="mb-6"
-          initial={{ opacity: 0, y: 20 }}
-          animate={{ opacity: 1, y: 0 }}
-          transition={{ delay: 0.4 }}
-        >
-          <h2 className="text-sm font-semibold text-white/60 uppercase tracking-wide mb-3">
-            {t("settings.statistics")}
-          </h2>
-          <div className="backdrop-blur-xl bg-white/10 rounded-2xl border border-white/20 p-4">
-            <div className="grid grid-cols-2 gap-4">
-              <div className="text-center">
-                <p className="text-3xl font-bold text-white">{stats.totalEntries}</p>
-                <p className="text-white/60 text-sm">{t("settings.totalEntries")}</p>
-              </div>
-              <div className="text-center">
-                <p className="text-3xl font-bold text-white">{stats.longestStreak}</p>
-                <p className="text-white/60 text-sm">{t("settings.longestStreak")}</p>
-              </div>
-              <div className="text-center">
-                <p className="text-3xl font-bold text-white">{stats.averageMood.toFixed(1)}</p>
-                <p className="text-white/60 text-sm">{t("settings.avgMood")}</p>
-              </div>
-              <div className="text-center">
-                <p className="text-3xl font-bold text-white">{tmood(stats.mostCommonMood)}</p>
-                <p className="text-white/60 text-sm">{t("settings.mostCommon")}</p>
-              </div>
-            </div>
-          </div>
-        </motion.div>
-
-        {/* About */}
-        <motion.div
-          className="mb-6"
-          initial={{ opacity: 0, y: 20 }}
-          animate={{ opacity: 1, y: 0 }}
-          transition={{ delay: 0.5 }}
-        >
-          <h2 className="text-sm font-semibold text-white/60 uppercase tracking-wide mb-3">
+          <h2 className="text-xs font-semibold text-white/60 uppercase tracking-wider mb-2.5">
             {t("settings.about")}
           </h2>
-          <div className="backdrop-blur-xl bg-white/10 rounded-2xl border border-white/20 overflow-hidden">
-            {/* App Info */}
+          <div className="glass rounded-2xl overflow-hidden shadow-sm divide-y divide-white/10">
             <div className="p-4 flex items-center gap-3">
               <Info className="w-5 h-5 text-purple-400" />
               <div>
-                <p className="text-white font-medium">MoodFlow</p>
-                <p className="text-white/60 text-sm">{t("settings.version")}</p>
+                <p className="text-white font-medium text-sm">{t("app.title")}</p>
+                <p className="text-white/60 text-xs">{t("settings.version")}</p>
               </div>
             </div>
 
-            <div className="border-t border-white/10" />
-
-            {/* Legal Links */}
-            <a
+            <Link
               href="/privacy"
-              className="w-full p-4 flex items-center justify-between hover:bg-purple-500/10 transition-all"
+              className="w-full p-4 flex items-center justify-between hover:bg-white/5 transition-colors text-start"
             >
               <div className="flex items-center gap-3">
                 <Shield className="w-5 h-5 text-purple-400" />
-                <div className="text-left">
-                  <p className="text-white font-medium">{t("legal.privacyPolicy")}</p>
-                </div>
+                <p className="text-white font-medium text-sm">
+                  {t("legal.privacyPolicy")}
+                </p>
               </div>
-              <ChevronRight className="w-5 h-5 text-purple-400/50" />
-            </a>
+              <ChevronRight
+                className={`w-4 h-4 text-white/40 ${isRtl ? "rotate-180" : ""}`}
+              />
+            </Link>
 
-            <div className="border-t border-white/10" />
-
-            <a
+            <Link
               href="/terms"
-              className="w-full p-4 flex items-center justify-between hover:bg-purple-500/10 transition-all"
+              className="w-full p-4 flex items-center justify-between hover:bg-white/5 transition-colors text-start"
             >
               <div className="flex items-center gap-3">
                 <FileText className="w-5 h-5 text-purple-400" />
-                <div className="text-left">
-                  <p className="text-white font-medium">{t("legal.termsOfService")}</p>
-                </div>
+                <p className="text-white font-medium text-sm">
+                  {t("legal.termsOfService")}
+                </p>
               </div>
-              <ChevronRight className="w-5 h-5 text-purple-400/50" />
-            </a>
+              <ChevronRight
+                className={`w-4 h-4 text-white/40 ${isRtl ? "rotate-180" : ""}`}
+              />
+            </Link>
           </div>
         </motion.div>
 
         {/* Clear Data Confirmation Modal */}
-        {showClearConfirm && (
-          <motion.div
-            className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/50 backdrop-blur-sm"
-            initial={{ opacity: 0 }}
-            animate={{ opacity: 1 }}
-            onClick={() => setShowClearConfirm(false)}
-          >
-            <motion.div
-              className="w-full max-w-sm backdrop-blur-xl bg-white/10 rounded-3xl border border-white/20 p-6"
-              initial={{ scale: 0.9, opacity: 0 }}
-              animate={{ scale: 1, opacity: 1 }}
-              onClick={(e) => e.stopPropagation()}
+        <AnimatePresence>
+          {showClearConfirm && (
+            <div
+              className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/70 backdrop-blur-md"
+              role="dialog"
+              aria-modal="true"
             >
-              <h3 className="text-xl font-bold text-white mb-2">{t("settings.clearConfirm")}</h3>
-              <p className="text-white/60 mb-6">
-                {t("settings.clearWarning")}
-              </p>
-              <div className="flex gap-3">
-                <button
-                  onClick={() => setShowClearConfirm(false)}
-                  className="flex-1 py-3 rounded-xl bg-white/10 text-white font-medium hover:bg-white/20 transition-all"
-                >
-                  {t("settings.cancel")}
-                </button>
-                <button
-                  onClick={handleClearData}
-                  className="flex-1 py-3 rounded-xl bg-red-500 text-white font-medium hover:bg-red-600 transition-all"
-                >
-                  {t("settings.deleteAll")}
-                </button>
-              </div>
-            </motion.div>
-          </motion.div>
-        )}
-
-        {/* Feedback Form Modal */}
-        <FeedbackForm
-          isOpen={showFeedback}
-          onClose={() => setShowFeedback(false)}
-          locale={locale}
-        />
+              <motion.div
+                className="w-full max-w-sm glass-modal rounded-3xl border border-white/20 p-6 text-center shadow-2xl text-white"
+                initial={{ scale: 0.9, opacity: 0 }}
+                animate={{ scale: 1, opacity: 1 }}
+                exit={{ scale: 0.9, opacity: 0 }}
+              >
+                <div className="w-12 h-12 rounded-full bg-red-500/20 text-red-400 flex items-center justify-center mx-auto mb-3">
+                  <Trash2 className="w-6 h-6" />
+                </div>
+                <h3 className="text-base font-bold mb-1">
+                  {t("settings.clearConfirm")}
+                </h3>
+                <p className="text-white/60 text-xs mb-5">
+                  {t("settings.clearWarning")}
+                </p>
+                <div className="flex gap-2.5">
+                  <button
+                    type="button"
+                    onClick={() => setShowClearConfirm(false)}
+                    className="flex-1 py-2.5 rounded-xl bg-white/10 hover:bg-white/15 text-white font-medium text-sm transition-colors"
+                  >
+                    {t("settings.cancel")}
+                  </button>
+                  <button
+                    type="button"
+                    onClick={handleClearData}
+                    className="flex-1 py-2.5 rounded-xl bg-red-500 hover:bg-red-600 text-white font-medium text-sm transition-colors"
+                  >
+                    {t("settings.deleteAll")}
+                  </button>
+                </div>
+              </motion.div>
+            </div>
+          )}
+        </AnimatePresence>
       </div>
 
       <Navigation />

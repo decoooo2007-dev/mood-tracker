@@ -1,67 +1,102 @@
-import { NextRequest, NextResponse } from "next/server";
+import { NextResponse } from "next/server";
 import { Resend } from "resend";
+import { z } from "zod";
+import { checkRateLimit, getClientIp } from "@/lib/rate-limit";
 
-const FEEDBACK_EMAIL = process.env.FEEDBACK_EMAIL || "feedback@moodflow.app";
+const FeedbackSchema = z.object({
+  rating: z.number().int().min(1).max(5),
+  category: z.enum(["general", "bug", "feature", "design", "other"]).default("general"),
+  message: z.string().trim().min(10).max(2000),
+});
 
-export async function POST(request: NextRequest) {
+const CATEGORY_LABELS: Record<"general" | "bug" | "feature" | "design" | "other", string> = {
+  general: "General Feedback",
+  bug: "Bug Report",
+  feature: "Feature Request",
+  design: "Design / UI",
+  other: "Other",
+};
+
+export function escapeHtml(unsafe: string): string {
+  return unsafe
+    .replace(/&/g, "&amp;")
+    .replace(/</g, "&lt;")
+    .replace(/>/g, "&gt;")
+    .replace(/"/g, "&quot;")
+    .replace(/'/g, "&#039;");
+}
+
+export async function POST(request: Request) {
   try {
-    const { rating, message } = await request.json();
-
-    if (!rating || !message) {
+    const ip = getClientIp(request);
+    const rateLimit = await checkRateLimit(`feedback:${ip}`, 5, 15 * 60_000);
+    if (!rateLimit.allowed) {
       return NextResponse.json(
-        { error: "Rating and message are required" },
+        { error: "Too many feedback submissions. Please try again later." },
+        { status: 429 }
+      );
+    }
+
+    const rawBody = await request.json().catch(() => null);
+    const parsed = FeedbackSchema.safeParse(rawBody);
+    if (!parsed.success) {
+      return NextResponse.json(
+        { error: "Invalid feedback payload", details: parsed.error.flatten() },
         { status: 400 }
       );
     }
 
-    if (message.length < 10) {
-      return NextResponse.json(
-        { error: "Message is too short" },
-        { status: 400 }
-      );
-    }
-
-    // Rating stars
+    const { rating, category, message } = parsed.data;
     const stars = "⭐".repeat(rating);
+    const categoryLabel = CATEGORY_LABELS[category];
+    const safeMessageHtml = escapeHtml(message);
 
-    // If RESEND_API_KEY is not set, log feedback and return success (for development)
-    if (!process.env.RESEND_API_KEY) {
-      console.log("📧 Feedback received (no API key configured):", {
-        rating,
-        stars,
-        message: message.substring(0, 100),
-      });
-      return NextResponse.json({ success: true, dev: true });
+    const apiKey = process.env.RESEND_API_KEY;
+    if (!apiKey) {
+      return NextResponse.json(
+        { error: "Email service is not configured on the server." },
+        { status: 503 }
+      );
     }
 
-    // Send email
-    const resend = new Resend(process.env.RESEND_API_KEY);
-    await resend.emails.send({
+    const resend = new Resend(apiKey);
+    const { data, error } = await resend.emails.send({
       from: "MoodFlow Feedback <onboarding@resend.dev>",
-      to: FEEDBACK_EMAIL,
-      subject: `${stars} Feedback: ${rating}/5 - ${message.substring(0, 50)}...`,
+      to: [process.env.FEEDBACK_EMAIL || "abdo77samy@gmail.com"],
+      subject: `MoodFlow Feedback: ${categoryLabel} (${rating}/5 stars)`,
       html: `
-        <div style="font-family: sans-serif; max-width: 600px; margin: 0 auto;">
-          <h2 style="color: #7C3AED;">New MoodFlow Feedback</h2>
-          <div style="background: #F3F4F6; padding: 16px; border-radius: 8px; margin: 16px 0;">
-            <p style="margin: 0; font-size: 18px;">${stars} <strong>${rating}/5</strong></p>
+        <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto; padding: 20px; background: linear-gradient(135deg, #1e1b4b 0%, #312e81 100%); color: white; border-radius: 16px;">
+          <h1 style="color: #a855f7; margin-bottom: 20px;">New Feedback Received</h1>
+          <div style="background: rgba(255,255,255,0.1); padding: 16px; border-radius: 12px; margin-bottom: 16px;">
+            <p style="margin: 8px 0;"><strong>Rating:</strong> ${stars} (${rating}/5)</p>
+            <p style="margin: 8px 0;"><strong>Category:</strong> ${escapeHtml(categoryLabel)}</p>
+            <p style="margin: 8px 0;"><strong>Time:</strong> ${new Date().toISOString()}</p>
           </div>
-          <h3 style="color: #374151;">Message:</h3>
-          <p style="color: #6B7280; white-space: pre-wrap;">${message}</p>
-          <hr style="border: none; border-top: 1px solid #E5E7EB; margin: 24px 0;" />
-          <p style="color: #9CA3AF; font-size: 12px;">
-            Sent from MoodFlow App
-          </p>
+          <div style="background: rgba(255,255,255,0.1); padding: 16px; border-radius: 12px;">
+            <h3 style="margin-top: 0; color: #c084fc;">Message:</h3>
+            <p style="line-height: 1.6; white-space: pre-wrap;">${safeMessageHtml}</p>
+          </div>
         </div>
       `,
-      replyTo: FEEDBACK_EMAIL,
     });
 
-    return NextResponse.json({ success: true });
+    if (error) {
+      console.error("[Feedback API] Resend error:", error);
+      return NextResponse.json(
+        { error: "Failed to deliver feedback email." },
+        { status: 502 }
+      );
+    }
+
+    return NextResponse.json({
+      success: true,
+      id: data?.id ?? null,
+      message: "Feedback submitted successfully",
+    });
   } catch (error) {
-    console.error("Feedback error:", error);
+    console.error("[Feedback API] Unexpected error:", error);
     return NextResponse.json(
-      { error: "Failed to send feedback" },
+      { error: "Failed to submit feedback" },
       { status: 500 }
     );
   }

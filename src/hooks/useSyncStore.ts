@@ -3,60 +3,73 @@
 import { useEffect, useCallback, useRef, useState } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { MoodEntry, UserSettings, MoodStats, MoodType } from "@/types/mood";
-import { generateId, formatTime, moodToScore, calculateStreak } from "@/lib/moods";
+import {
+  generateId,
+  formatTime,
+  moodToScore,
+  calculateStreak,
+  getLongestStreak,
+  toLocalDateStr,
+} from "@/lib/moods";
 import { analyzeSentiment } from "@/lib/sentiment";
 import { getSession } from "@/lib/auth";
+import { useAuth } from "@/lib/providers";
 
-const SUPABASE_URL = process.env.NEXT_PUBLIC_SUPABASE_URL!;
-const SUPABASE_ANON_KEY = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!;
-
-// Supabase fetch helper
-async function supabaseFetch(
-  table: string,
-  options: {
-    method?: string;
-    body?: object;
-    params?: Record<string, string>;
-    select?: string;
-  } = {}
-) {
-  const { method = "GET", body, params, select = "*" } = options;
-
-  let url = `${SUPABASE_URL}/rest/v1/${table}?select=${select}`;
-  if (params) {
-    Object.entries(params).forEach(([key, value]) => {
-      url += `&${key}=${value}`;
+async function bffFetch<T>(
+  path: string,
+  options: RequestInit = {}
+): Promise<{ data: T | null; error: Error | null }> {
+  try {
+    const response = await fetch(path, {
+      ...options,
+      credentials: "include",
+      headers: {
+        "Content-Type": "application/json",
+        ...options.headers,
+      },
     });
+    if (!response.ok) {
+      if (response.status === 401 && typeof window !== "undefined") {
+        localStorage.removeItem("mood-tracker-session");
+      }
+      const errBody = await response.json().catch(() => ({}));
+      return {
+        data: null,
+        error: new Error(errBody.error || `HTTP ${response.status}`),
+      };
+    }
+    const json = await response.json();
+    return { data: (json.data ?? json) as T, error: null };
+  } catch (err) {
+    return {
+      data: null,
+      error: err instanceof Error ? err : new Error("Network error"),
+    };
   }
+}
 
-  const headers: Record<string, string> = {
-    apikey: SUPABASE_ANON_KEY,
-    Authorization: `Bearer ${SUPABASE_ANON_KEY}`,
-    "Content-Type": "application/json",
-  };
-
-  const session = getSession();
-  if (session) {
-    headers["x-user-id"] = session.userId;
-  }
-
-  const res = await fetch(url, {
-    method,
-    headers,
-    body: body ? JSON.stringify(body) : undefined,
-  });
-
-  if (!res.ok) {
-    throw new Error(`Supabase error: ${res.status}`);
-  }
-
-  return res.json();
+export function sanitizeCsvCell(value: string): string {
+  const escaped = String(value ?? "").replace(/"/g, '""');
+  const safe = /^[=+\-@\t\r]/.test(escaped) ? `'${escaped}` : escaped;
+  return `"${safe}"`;
 }
 
 export function useSyncStore() {
   const queryClient = useQueryClient();
+  const { user: authUser } = useAuth();
   const [isOnline, setIsOnline] = useState(true);
   const isOnlineRef = useRef(true);
+
+  const session = getSession();
+  const userId = authUser?.id || session?.userId || "guest";
+
+  const [localSettings, setLocalSettings] = useState<UserSettings>({
+    theme: "dark",
+    notifications: true,
+    reminderTime: "20:00",
+    language: "en",
+    exportFormat: "json",
+  });
 
   // Detect online/offline
   useEffect(() => {
@@ -66,8 +79,8 @@ export function useSyncStore() {
     const handleOnline = () => {
       setIsOnline(true);
       isOnlineRef.current = true;
-      queryClient.invalidateQueries({ queryKey: ["mood-entries"] });
-      queryClient.invalidateQueries({ queryKey: ["user-settings"] });
+      queryClient.invalidateQueries({ queryKey: ["mood-entries", userId] });
+      queryClient.invalidateQueries({ queryKey: ["user-settings", userId] });
     };
     const handleOffline = () => {
       setIsOnline(false);
@@ -81,97 +94,54 @@ export function useSyncStore() {
       window.removeEventListener("online", handleOnline);
       window.removeEventListener("offline", handleOffline);
     };
-  }, [queryClient]);
+  }, [queryClient, userId]);
 
-  // Refetch entries when session is available
-  useEffect(() => {
-    const session = getSession();
-    if (session) {
-      queryClient.invalidateQueries({ queryKey: ["mood-entries"] });
-      queryClient.invalidateQueries({ queryKey: ["user-settings"] });
-    }
-  }, [queryClient]);
-
-  // Load entries from Supabase
+  // Load entries from BFF API
   const {
     data: entries = [],
     isLoading: entriesLoading,
     error: entriesError,
   } = useQuery({
-    queryKey: ["mood-entries"],
+    queryKey: ["mood-entries", userId],
     queryFn: async () => {
-      const session = getSession();
-      if (!session) return [];
+      const currentSession = getSession();
+      if (!authUser && !currentSession) return [];
 
-      try {
-        const data = await supabaseFetch("mood_entries", {
-          params: {
-            user_id: `eq.${session.userId}`,
-            order: "created_at.desc",
-          },
-        });
-        return data.map((e: Record<string, unknown>) => ({
-          id: e.id,
-          date: e.date,
-          time: e.time,
-          mood: e.mood,
-          intensity: e.intensity,
-          text: e.text,
-          tags: e.tags || [],
-          sentiment: {
-            score: (e.sentiment_score as number) || 0,
-            keywords: (e.sentiment_keywords as string[]) || [],
-          },
-        })) as MoodEntry[];
-      } catch {
-        return [];
-      }
+      const { data, error } = await bffFetch<MoodEntry[]>("/api/entries");
+      if (error || !data) return [];
+      return data;
     },
-    enabled: true,
+    enabled: typeof window !== "undefined" && userId !== "guest",
     staleTime: 1000 * 30,
   });
 
-  // Load settings from Supabase
+  // Load settings from BFF API
   const {
-    data: settings = {
-      theme: "dark" as const,
-      notifications: true,
-      reminderTime: "21:00",
-      language: "en",
-      exportFormat: "json" as const,
-    },
+    data: serverSettings,
     isLoading: settingsLoading,
   } = useQuery({
-    queryKey: ["user-settings"],
+    queryKey: ["user-settings", userId],
     queryFn: async () => {
-      const session = getSession();
-      if (!session) return null;
+      const currentSession = getSession();
+      if (!authUser && !currentSession) return null;
 
-      try {
-        const data = await supabaseFetch("user_settings", {
-          params: {
-            user_id: `eq.${session.userId}`,
-          },
-        });
+      const { data, error } = await bffFetch<Record<string, unknown>>("/api/settings");
+      if (error || !data) return null;
 
-        if (data.length === 0) return null;
-
-        const s = data[0];
-        return {
-          theme: (s.theme as "dark" | "light") || "dark",
-          notifications: s.notifications ?? true,
-          reminderTime: s.reminder_time || "21:00",
-          language: s.language || "en",
-          exportFormat: (s.export_format as "json" | "csv") || "json",
-        } as UserSettings;
-      } catch {
-        return null;
-      }
+      return {
+        theme: (data.theme as "dark" | "light") || "dark",
+        notifications: typeof data.notifications === "boolean" ? data.notifications : true,
+        reminderTime: (data.reminder_time as string) || (data.reminderTime as string) || "20:00",
+        language: (data.language as "en" | "ar") || "en",
+        exportFormat: (data.export_format as "json" | "csv") || (data.exportFormat as "json" | "csv") || "json",
+      } as UserSettings;
     },
-    enabled: true,
+    enabled: typeof window !== "undefined" && userId !== "guest",
   });
 
-  // Create entry mutation
+  const settings = serverSettings || localSettings;
+
+  // Create entry mutation with optimistic update
   const createEntryMutation = useMutation({
     mutationFn: async (params: {
       mood: MoodType;
@@ -179,102 +149,225 @@ export function useSyncStore() {
       text: string;
       tags: string[];
     }) => {
-      const session = getSession();
-      if (!session) throw new Error("Not authenticated");
-
       const now = new Date();
       const sentiment = analyzeSentiment(params.text);
-
-      // Use local date instead of UTC to fix timezone issues
-      const localDate = new Date(now.getTime() - now.getTimezoneOffset() * 60000).toISOString().split("T")[0];
-
-      const newEntry = {
-        user_id: session.userId,
-        date: localDate,
-        time: formatTime(now),
+      const payload = {
         mood: params.mood,
         intensity: params.intensity,
-        text: params.text,
+        text: params.text || "",
         tags: params.tags,
+        date: toLocalDateStr(now),
+        time: formatTime(now),
         sentiment_score: sentiment.score,
         sentiment_keywords: sentiment.keywords,
       };
 
-      await supabaseFetch("mood_entries", {
+      const { data, error } = await bffFetch<MoodEntry>("/api/entries", {
         method: "POST",
-        body: newEntry,
+        body: JSON.stringify(payload),
       });
 
-      return newEntry;
+      if (error || !data) {
+        throw error || new Error("Failed to create mood entry");
+      }
+
+      return data;
     },
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ["mood-entries"] });
+    onMutate: async (newParams) => {
+      await queryClient.cancelQueries({ queryKey: ["mood-entries", userId] });
+      const previousEntries = queryClient.getQueryData<MoodEntry[]>(["mood-entries", userId]) || [];
+
+      const optimisticEntry: MoodEntry = {
+        id: generateId(),
+        date: toLocalDateStr(new Date()),
+        time: formatTime(new Date()),
+        mood: newParams.mood,
+        intensity: newParams.intensity,
+        text: newParams.text || "",
+        tags: newParams.tags,
+        sentiment: {
+          score: analyzeSentiment(newParams.text).score,
+          keywords: analyzeSentiment(newParams.text).keywords,
+        },
+      };
+
+      queryClient.setQueryData<MoodEntry[]>(["mood-entries", userId], [
+        optimisticEntry,
+        ...previousEntries,
+      ]);
+
+      return { previousEntries };
+    },
+    onError: (_err, _newParams, context) => {
+      if (context?.previousEntries) {
+        queryClient.setQueryData(["mood-entries", userId], context.previousEntries);
+      }
+    },
+    onSettled: () => {
+      queryClient.invalidateQueries({ queryKey: ["mood-entries", userId] });
     },
   });
 
-  // Delete entry mutation
+  // Delete entry mutation with optimistic update
   const deleteEntryMutation = useMutation({
     mutationFn: async (id: string) => {
-      await supabaseFetch(`mood_entries?id=eq.${id}`, {
+      const { error } = await bffFetch(`/api/entries/${id}`, {
         method: "DELETE",
       });
+      if (error) throw error;
+      return id;
     },
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ["mood-entries"] });
+    onMutate: async (deletedId) => {
+      await queryClient.cancelQueries({ queryKey: ["mood-entries", userId] });
+      const previousEntries = queryClient.getQueryData<MoodEntry[]>(["mood-entries", userId]);
+
+      queryClient.setQueryData<MoodEntry[]>(["mood-entries", userId], (old) =>
+        old ? old.filter((entry) => entry.id !== deletedId) : []
+      );
+
+      return { previousEntries };
+    },
+    onError: (_err, _deletedId, context) => {
+      if (context?.previousEntries) {
+        queryClient.setQueryData(["mood-entries", userId], context.previousEntries);
+      }
+    },
+    onSettled: () => {
+      queryClient.invalidateQueries({ queryKey: ["mood-entries", userId] });
     },
   });
+
+  // Update entry mutation with optimistic update
+  const updateEntryMutation = useMutation({
+    mutationFn: async (params: {
+      id: string;
+      mood?: MoodType;
+      intensity?: number;
+      text?: string;
+      tags?: string[];
+    }) => {
+      const body: Record<string, unknown> = {};
+      if (params.mood !== undefined) body.mood = params.mood;
+      if (params.intensity !== undefined) body.intensity = params.intensity;
+      if (params.text !== undefined) body.text = params.text;
+      if (params.tags !== undefined) body.tags = params.tags;
+
+      const { data, error } = await bffFetch<MoodEntry>(`/api/entries/${params.id}`, {
+        method: "PATCH",
+        body: JSON.stringify(body),
+      });
+      if (error || !data) throw error || new Error("Failed to update entry");
+      return data;
+    },
+    onMutate: async (updatedParams) => {
+      await queryClient.cancelQueries({ queryKey: ["mood-entries", userId] });
+      const previousEntries = queryClient.getQueryData<MoodEntry[]>(["mood-entries", userId]);
+
+      queryClient.setQueryData<MoodEntry[]>(["mood-entries", userId], (old) =>
+        old
+          ? old.map((entry) =>
+              entry.id === updatedParams.id
+                ? {
+                    ...entry,
+                    ...(updatedParams.mood !== undefined && { mood: updatedParams.mood }),
+                    ...(updatedParams.intensity !== undefined && { intensity: updatedParams.intensity }),
+                    ...(updatedParams.text !== undefined && { text: updatedParams.text }),
+                    ...(updatedParams.tags !== undefined && { tags: updatedParams.tags }),
+                  }
+                : entry
+            )
+          : []
+      );
+
+      return { previousEntries };
+    },
+    onError: (_err, _updatedParams, context) => {
+      if (context?.previousEntries) {
+        queryClient.setQueryData(["mood-entries", userId], context.previousEntries);
+      }
+    },
+    onSettled: () => {
+      queryClient.invalidateQueries({ queryKey: ["mood-entries", userId] });
+    },
+  });
+
+  // Theme change - works immediately offline or online
+  const changeTheme = useCallback(
+    (theme: "dark" | "light") => {
+      setLocalSettings((prev) => ({ ...prev, theme }));
+
+      if (theme === "light") {
+        document.documentElement.classList.remove("dark");
+        document.documentElement.classList.add("light");
+      } else {
+        document.documentElement.classList.remove("light");
+        document.documentElement.classList.add("dark");
+      }
+
+      localStorage.setItem("moodflow-theme", theme);
+
+      const currentSession = getSession();
+      const currentUserId = currentSession?.userId ?? "guest";
+
+      queryClient.setQueryData(["user-settings", currentUserId], (old: UserSettings | undefined) => ({
+        ...(old || localSettings),
+        theme,
+      }));
+
+      if (currentSession) {
+        bffFetch("/api/settings", {
+          method: "PATCH",
+          body: JSON.stringify({ theme }),
+        }).catch(() => {});
+      }
+    },
+    [localSettings, queryClient]
+  );
 
   // Update settings mutation
   const updateSettingsMutation = useMutation({
     mutationFn: async (updates: Partial<UserSettings>) => {
-      const session = getSession();
-      if (!session) throw new Error("Not authenticated");
-
-      const body: Record<string, unknown> = {};
-      if (updates.theme !== undefined) body.theme = updates.theme;
-      if (updates.notifications !== undefined) body.notifications = updates.notifications;
-      if (updates.reminderTime !== undefined) body.reminder_time = updates.reminderTime;
-      if (updates.language !== undefined) body.language = updates.language;
-      if (updates.exportFormat !== undefined) body.export_format = updates.exportFormat;
-      body.updated_at = new Date().toISOString();
-
-      // Check if settings exist
-      const existing = await supabaseFetch("user_settings", {
-        params: { user_id: `eq.${session.userId}` },
-      });
-
-      if (existing.length === 0) {
-        await supabaseFetch("user_settings", {
-          method: "POST",
-          body: { user_id: session.userId, ...body },
-        });
-      } else {
-        await supabaseFetch(`user_settings?user_id=eq.${session.userId}`, {
-          method: "PATCH",
-          body,
-        });
+      if (updates.theme !== undefined) {
+        changeTheme(updates.theme);
       }
 
-      return updates;
+      const body: Record<string, unknown> = {};
+      if (updates.notifications !== undefined) body.notifications = updates.notifications;
+      if (updates.reminderTime !== undefined) {
+        body.reminder_time = updates.reminderTime;
+        body.reminderTime = updates.reminderTime;
+      }
+      if (updates.language !== undefined) body.language = updates.language;
+      if (updates.exportFormat !== undefined) {
+        body.export_format = updates.exportFormat;
+        body.exportFormat = updates.exportFormat;
+      }
+
+      const { data, error } = await bffFetch<Record<string, unknown>>("/api/settings", {
+        method: "PATCH",
+        body: JSON.stringify(body),
+      });
+
+      if (error) throw error;
+      return data;
     },
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ["user-settings"] });
+      queryClient.invalidateQueries({ queryKey: ["user-settings", userId] });
     },
   });
 
   // Clear all data
   const clearAllData = useCallback(async () => {
-    const session = getSession();
-    if (!session) return;
-
-    await supabaseFetch(`mood_entries?user_id=eq.${session.userId}`, {
+    const { error } = await bffFetch("/api/entries", {
       method: "DELETE",
     });
+    if (error) throw error;
 
-    queryClient.invalidateQueries({ queryKey: ["mood-entries"] });
-  }, [queryClient]);
+    queryClient.setQueryData(["mood-entries", userId], []);
+    queryClient.invalidateQueries({ queryKey: ["mood-entries", userId] });
+  }, [queryClient, userId]);
 
-  // Calculate stats
+  // Calculate stats with true historical longest streak
   const getStats = useCallback((): MoodStats => {
     const data = entries;
 
@@ -300,8 +393,10 @@ export function useSyncStore() {
 
     let totalScore = 0;
     data.forEach((entry) => {
-      totalScore += moodToScore[entry.mood];
-      moodDistribution[entry.mood]++;
+      totalScore += moodToScore[entry.mood] || 3;
+      if (moodDistribution[entry.mood] !== undefined) {
+        moodDistribution[entry.mood]++;
+      }
     });
 
     const averageMood = totalScore / data.length;
@@ -311,17 +406,18 @@ export function useSyncStore() {
     )[0];
 
     const currentStreak = calculateStreak(data);
+    const longestStreak = Math.max(currentStreak, getLongestStreak(data));
 
     const weekAgo = new Date();
-    weekAgo.setDate(weekAgo.getDate() - 7);
-    const entriesThisWeek = data.filter(
-      (e) => new Date(e.date) >= weekAgo
-    ).length;
+    weekAgo.setHours(0, 0, 0, 0);
+    weekAgo.setDate(weekAgo.getDate() - 6);
+    const weekAgoStr = toLocalDateStr(weekAgo);
+    const entriesThisWeek = data.filter((e) => e.date >= weekAgoStr).length;
 
     return {
       totalEntries: data.length,
       currentStreak,
-      longestStreak: currentStreak,
+      longestStreak,
       averageMood,
       mostCommonMood,
       entriesThisWeek,
@@ -329,43 +425,28 @@ export function useSyncStore() {
     };
   }, [entries]);
 
-  const getWeeklyData = useCallback(() => {
+  const getWeeklyDataFn = useCallback(() => {
     const weekData: { day: string; score: number }[] = [];
     const today = new Date();
-    const isArabic = typeof window !== 'undefined'
-      ? (document.documentElement.dir === 'rtl')
-      : false;
+    const isArabic =
+      typeof window !== "undefined"
+        ? document.documentElement.dir === "rtl"
+        : false;
 
-    // Day names in correct order: Saturday to Friday
-    const arabicDays = ["سبت", "أحد", "إثنين", "ثلاثاء", "أربعاء", "خميس", "جمعة"];
-    const englishDays = ["Sat", "Sun", "Mon", "Tue", "Wed", "Thu", "Fri"];
+    const arabicDays = ["أحد", "إثنين", "ثلاثاء", "أربعاء", "خميس", "جمعة", "سبت"];
+    const englishDays = ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"];
 
-    // Use local date format
-    const getLocalDateStr = (d: Date) => {
-      const year = d.getFullYear();
-      const month = String(d.getMonth() + 1).padStart(2, "0");
-      const day = String(d.getDate()).padStart(2, "0");
-      return `${year}-${month}-${day}`;
-    };
-
-    // Build 7 days: start from 6 days ago (oldest), end with today
     for (let i = 6; i >= 0; i--) {
       const date = new Date(today);
-      date.setDate(date.getDate() - i);
-      const dateStr = getLocalDateStr(date);
-
-      // Get day index: JS uses 0=Sunday, we want 0=Saturday
-      // Convert: if Sunday(0), make it 1; if Monday(1), make it 2; etc.; if Saturday(6), make it 0
-      const jsDayIndex = date.getDay();
-      const dayIndex = (jsDayIndex + 1) % 7;
-
-      // Get day name based on locale
-      const dayName = isArabic ? arabicDays[dayIndex] : englishDays[dayIndex];
+      date.setDate(today.getDate() - i);
+      const dateStr = toLocalDateStr(date);
+      const dayOfWeek = date.getDay();
+      const dayName = isArabic ? arabicDays[dayOfWeek] : englishDays[dayOfWeek];
 
       const dayEntries = entries.filter((e) => e.date === dateStr);
       const avgScore =
         dayEntries.length > 0
-          ? dayEntries.reduce((sum, e) => sum + moodToScore[e.mood], 0) /
+          ? dayEntries.reduce((sum, e) => sum + (moodToScore[e.mood] || 3), 0) /
             dayEntries.length
           : 0;
 
@@ -378,6 +459,42 @@ export function useSyncStore() {
     return weekData;
   }, [entries]);
 
+  const exportData = useCallback(
+    (format: "json" | "csv") => {
+      let content: string;
+      let mimeType: string;
+
+      if (format === "json") {
+        content = JSON.stringify(entries, null, 2);
+        mimeType = "application/json";
+      } else {
+        const headers = ["Date", "Time", "Mood", "Intensity", "Text", "Tags", "Sentiment Score"];
+        const rows = entries.map((e) => [
+          e.date,
+          e.time,
+          e.mood,
+          String(e.intensity ?? 50),
+          sanitizeCsvCell(e.text || ""),
+          sanitizeCsvCell((e.tags || []).join("; ")),
+          String(e.sentiment?.score ?? ""),
+        ]);
+        content = "\uFEFF" + [headers.join(","), ...rows.map((r) => r.join(","))].join("\n");
+        mimeType = "text/csv;charset=utf-8;";
+      }
+
+      const blob = new Blob([content], { type: mimeType });
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement("a");
+      a.href = url;
+      a.download = `mood-journal-${toLocalDateStr(new Date())}.${format}`;
+      document.body.appendChild(a);
+      a.click();
+      document.body.removeChild(a);
+      URL.revokeObjectURL(url);
+    },
+    [entries]
+  );
+
   return {
     entries,
     settings,
@@ -385,41 +502,17 @@ export function useSyncStore() {
     error: entriesError,
     isOnline,
     addEntry: createEntryMutation.mutate,
-    deleteEntry: deleteEntryMutation.mutate,
+    createEntry: createEntryMutation.mutateAsync,
+    deleteEntry: deleteEntryMutation.mutateAsync,
+    updateEntry: updateEntryMutation.mutateAsync,
     updateSettings: updateSettingsMutation.mutate,
+    changeTheme,
     getStats,
-    getWeeklyData,
+    getWeeklyData: getWeeklyDataFn,
     isCreating: createEntryMutation.isPending,
     isDeleting: deleteEntryMutation.isPending,
-    isUpdating: updateSettingsMutation.isPending,
+    isUpdating: updateEntryMutation.isPending,
     clearAllData,
-    exportData: (format: "json" | "csv") => {
-      let content: string;
-
-      if (format === "json") {
-        content = JSON.stringify(entries, null, 2);
-      } else {
-        const headers = ["Date", "Time", "Mood", "Intensity", "Text", "Tags"];
-        const rows = entries.map((e) => [
-          e.date,
-          e.time,
-          e.mood,
-          e.intensity.toString(),
-          `"${e.text.replace(/"/g, '""')}"`,
-          e.tags.join("; "),
-        ]);
-        content = [headers.join(","), ...rows.map((r) => r.join(","))].join("\n");
-      }
-
-      const blob = new Blob([content], { type: format === "json" ? "application/json" : "text/csv" });
-      const url = URL.createObjectURL(blob);
-      const a = document.createElement("a");
-      a.href = url;
-      a.download = `mood-journal-${new Date().toISOString().split("T")[0]}.${format}`;
-      document.body.appendChild(a);
-      a.click();
-      document.body.removeChild(a);
-      URL.revokeObjectURL(url);
-    },
+    exportData,
   };
 }

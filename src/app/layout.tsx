@@ -3,11 +3,16 @@ import { Providers } from "@/lib/providers";
 import CookieConsent from "@/components/ui/CookieConsent";
 import InstallPrompt from "@/components/ui/InstallPrompt";
 import ServiceWorkerRegistration from "@/components/ui/ServiceWorkerRegistration";
+import ThemeScript from "@/components/ThemeScript";
 import "./globals.css";
 
 export const metadata: Metadata = {
   title: "MoodFlow - Your Daily Mood Journal",
   description: "Track your emotions, understand your patterns, and improve your well-being with MoodFlow",
+  robots: {
+    index: false,
+    follow: false,
+  },
   manifest: "/manifest.json",
   appleWebApp: {
     capable: true,
@@ -28,8 +33,8 @@ export const metadata: Metadata = {
 export const viewport: Viewport = {
   width: "device-width",
   initialScale: 1,
-  maximumScale: 1,
-  userScalable: false,
+  maximumScale: 5,
+  userScalable: true,
   themeColor: "#0F0F14",
   viewportFit: "cover",
 };
@@ -40,8 +45,32 @@ export default function RootLayout({
   children: React.ReactNode;
 }) {
   return (
-    <html lang="en" className="dark">
+    <html lang="en" className="dark" suppressHydrationWarning>
       <head>
+        <script
+          dangerouslySetInnerHTML={{
+            __html: `
+              try {
+                var t = localStorage.getItem('moodflow-theme');
+                if (t === 'light') {
+                  document.documentElement.classList.remove('dark');
+                  document.documentElement.classList.add('light');
+                } else {
+                  document.documentElement.classList.remove('light');
+                  document.documentElement.classList.add('dark');
+                }
+                var l = localStorage.getItem('moodflow-locale');
+                if (l === 'ar') {
+                  document.documentElement.dir = 'rtl';
+                  document.documentElement.lang = 'ar';
+                } else {
+                  document.documentElement.dir = 'ltr';
+                  document.documentElement.lang = 'en';
+                }
+              } catch (e) {}
+            `,
+          }}
+        />
         <link rel="preconnect" href="https://fonts.googleapis.com" />
         <link rel="preconnect" href="https://fonts.gstatic.com" crossOrigin="anonymous" />
         <link
@@ -60,11 +89,16 @@ export default function RootLayout({
         <meta name="msapplication-TileColor" content="#7C3AED" />
         <meta name="msapplication-tap-highlight" content="no" />
       </head>
-      <body className="font-sans antialiased">
-        <Providers>{children}</Providers>
-        <CookieConsent />
-        <InstallPrompt />
-        <ServiceWorkerRegistration />
+      <body className="font-sans antialiased min-h-screen">
+        <ThemeScript />
+        <Providers>
+          <main className="min-h-screen pb-24 md:pb-28">
+            {children}
+          </main>
+          <CookieConsent />
+          <InstallPrompt />
+          <ServiceWorkerRegistration />
+        </Providers>
       </body>
     </html>
   );

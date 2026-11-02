@@ -1,51 +1,47 @@
--- Drop existing tables if they exist (with RLS issues)
-DROP TABLE IF EXISTS public.user_settings CASCADE;
-DROP TABLE IF EXISTS public.mood_entries CASCADE;
-DROP TABLE IF EXISTS public.users CASCADE;
+-- MoodFlow Authoritative Idempotent Schema (Project: kcklqdtxlnwkhkbhxfei)
+-- Safe to run repeatedly: ZERO DROP TABLE statements.
 
--- Custom users table for username/password auth
-CREATE TABLE public.users (
+CREATE EXTENSION IF NOT EXISTS "pgcrypto";
+
+CREATE TABLE IF NOT EXISTS public.users (
   id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
   username TEXT UNIQUE NOT NULL,
   password_hash TEXT NOT NULL,
-  created_at TIMESTAMPTZ DEFAULT NOW(),
-  updated_at TIMESTAMPTZ DEFAULT NOW()
+  created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+  CONSTRAINT users_username_length CHECK (char_length(btrim(username)) BETWEEN 3 AND 30)
 );
 
--- Mood entries table with user reference
-CREATE TABLE public.mood_entries (
-  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+CREATE TABLE IF NOT EXISTS public.mood_entries (
+  id TEXT PRIMARY KEY,
   user_id UUID NOT NULL REFERENCES public.users(id) ON DELETE CASCADE,
-  date DATE NOT NULL,
-  time TEXT NOT NULL,
-  mood TEXT NOT NULL,
-  intensity INTEGER NOT NULL,
-  text TEXT NOT NULL,
-  tags TEXT[] DEFAULT '{}',
-  sentiment_score REAL DEFAULT 0,
-  sentiment_keywords TEXT[] DEFAULT '{}',
-  created_at TIMESTAMPTZ DEFAULT NOW()
+  date DATE NOT NULL DEFAULT CURRENT_DATE,
+  mood TEXT NOT NULL CHECK (mood IN ('happy', 'calm', 'excited', 'neutral', 'sad', 'frustrated')),
+  mood_label TEXT NOT NULL,
+  intensity SMALLINT NOT NULL DEFAULT 5 CHECK (intensity BETWEEN 1 AND 10),
+  text TEXT NOT NULL DEFAULT '',
+  tags TEXT[] NOT NULL DEFAULT '{}',
+  sentiment JSONB,
+  created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+  updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
 );
 
--- User settings table with user reference
-CREATE TABLE public.user_settings (
-  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
-  user_id UUID UNIQUE NOT NULL REFERENCES public.users(id) ON DELETE CASCADE,
-  theme TEXT DEFAULT 'dark',
-  notifications BOOLEAN DEFAULT true,
-  reminder_time TEXT DEFAULT '21:00',
-  language TEXT DEFAULT 'en',
-  export_format TEXT DEFAULT 'json',
-  updated_at TIMESTAMPTZ DEFAULT NOW()
+CREATE TABLE IF NOT EXISTS public.user_settings (
+  user_id UUID PRIMARY KEY REFERENCES public.users(id) ON DELETE CASCADE,
+  theme TEXT NOT NULL DEFAULT 'dark' CHECK (theme IN ('dark', 'light', 'ocean', 'sunset', 'forest')),
+  reminder_enabled BOOLEAN NOT NULL DEFAULT FALSE,
+  reminder_time TEXT NOT NULL DEFAULT '20:00',
+  weekly_digest BOOLEAN NOT NULL DEFAULT TRUE,
+  created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+  updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
 );
 
--- IMPORTANT: Disable RLS so our custom auth can work
--- Our auth uses x-user-id header instead of Supabase Auth
-ALTER TABLE public.users DISABLE ROW LEVEL SECURITY;
-ALTER TABLE public.mood_entries DISABLE ROW LEVEL SECURITY;
-ALTER TABLE public.user_settings DISABLE ROW LEVEL SECURITY;
+CREATE INDEX IF NOT EXISTS idx_mood_entries_user_date ON public.mood_entries(user_id, date DESC);
+CREATE INDEX IF NOT EXISTS idx_users_username_lower ON public.users (LOWER(username));
 
--- Create indexes for faster queries
-CREATE INDEX idx_mood_entries_user_id ON public.mood_entries(user_id);
-CREATE INDEX idx_mood_entries_date ON public.mood_entries(date);
-CREATE INDEX idx_user_settings_user_id ON public.user_settings(user_id);
+ALTER TABLE public.users ENABLE ROW LEVEL SECURITY;
+ALTER TABLE public.mood_entries ENABLE ROW LEVEL SECURITY;
+ALTER TABLE public.user_settings ENABLE ROW LEVEL SECURITY;
+
+REVOKE ALL ON TABLE public.users FROM anon, authenticated;
+REVOKE ALL ON TABLE public.mood_entries FROM anon, authenticated;
+REVOKE ALL ON TABLE public.user_settings FROM anon, authenticated;

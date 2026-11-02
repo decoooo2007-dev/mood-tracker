@@ -1,52 +1,30 @@
 "use client";
 
-import { useState, useEffect } from "react";
 import { motion } from "framer-motion";
 import Link from "next/link";
-import { usePathname } from "next/navigation";
-import { Home, Clock, Settings, Wifi, WifiOff, LogOut, Globe, MessageSquare } from "lucide-react";
+import { usePathname, useRouter } from "next/navigation";
+import { Home, Clock, Settings, WifiOff, LogOut, Globe, MessageSquare } from "lucide-react";
 import { useSyncStore } from "@/hooks/useSyncStore";
-import { useAuth } from "@/lib/providers";
-import { useRouter } from "next/navigation";
-import { t, setLocale, translations, Locale } from "@/lib/i18n/translations";
+import { useAuth, useLanguage } from "@/lib/providers";
+import type { TranslationKey } from "@/lib/i18n/translations";
 
-const navItems = [
-  { href: "/", labelKey: "nav.home" as const, icon: Home },
-  { href: "/feedback", labelKey: "nav.feedback" as const, icon: MessageSquare },
-  { href: "/history", labelKey: "nav.history" as const, icon: Clock },
-  { href: "/settings", labelKey: "nav.settings" as const, icon: Settings },
+const navItems: { href: string; labelKey: TranslationKey; icon: React.ComponentType<{ className?: string }> }[] = [
+  { href: "/", labelKey: "nav.home", icon: Home },
+  { href: "/feedback", labelKey: "nav.feedback", icon: MessageSquare },
+  { href: "/history", labelKey: "nav.history", icon: Clock },
+  { href: "/settings", labelKey: "nav.settings", icon: Settings },
 ];
 
 export default function Navigation() {
   const pathname = usePathname();
-  const { isOnline } = useSyncStore();
-  const { signOut } = useAuth();
   const router = useRouter();
-  const [locale, setLocaleState] = useState<Locale>("en");
-  const [mounted, setMounted] = useState(false);
+  const { isOnline } = useSyncStore();
+  const { user, signOut } = useAuth();
+  const { locale, toggleLanguage, t } = useLanguage();
 
-  // Read locale from localStorage after mount to avoid hydration mismatch
-  useEffect(() => {
-    const stored = localStorage.getItem("moodflow-locale") as Locale;
-    if (stored === "en" || stored === "ar") {
-      setLocaleState(stored);
-    }
-    setMounted(true);
-  }, []);
-
-  const toggleLanguage = () => {
-    const newLocale = locale === "en" ? "ar" : "en";
-    setLocaleState(newLocale);
-    setLocale(newLocale);
-    localStorage.setItem("moodflow-locale", newLocale);
-    document.documentElement.dir = newLocale === "ar" ? "rtl" : "ltr";
-    router.refresh();
-  };
-
-  // Translation function using current state
-  const t = (key: string): string => {
-    return translations[locale][key as keyof typeof translations.en] || translations.en[key as keyof typeof translations.en] || key;
-  };
+  if (!user || pathname === "/login" || pathname === "/offline" || pathname.startsWith("/preview")) {
+    return null;
+  }
 
   const handleSignOut = () => {
     signOut();
@@ -54,16 +32,16 @@ export default function Navigation() {
   };
 
   return (
-    <nav className="fixed bottom-0 left-0 right-0 z-50 px-4 pb-6">
-      <div className="max-w-md mx-auto">
+    <nav className="fixed bottom-6 left-0 right-0 z-50 flex justify-center pointer-events-none px-2">
+      <div className="pointer-events-auto max-w-[calc(100vw-1.5rem)]">
         <motion.div
-          className="backdrop-blur-xl bg-white/10 rounded-2xl border border-white/20 shadow-2xl px-4 py-3 flex justify-between items-center"
+          className="glass rounded-full px-2 py-1.5 flex items-center gap-1 shadow-2xl"
           initial={{ y: 100, opacity: 0 }}
           animate={{ y: 0, opacity: 1 }}
-          transition={{ delay: 0.5 }}
+          transition={{ delay: 0.3 }}
         >
           {/* Navigation Items */}
-          <div className="flex items-center gap-1">
+          <div className="flex items-center">
             {navItems.map((item) => {
               const isActive = pathname === item.href;
               const Icon = item.icon;
@@ -72,15 +50,16 @@ export default function Navigation() {
                 <Link
                   key={item.href}
                   href={item.href}
-                  className={`relative flex flex-col items-center gap-1 px-4 py-2 rounded-xl transition-all ${
+                  aria-label={t(item.labelKey)}
+                  className={`relative flex flex-col items-center gap-0.5 px-2.5 sm:px-4 py-1.5 rounded-full transition-all min-w-[52px] sm:min-w-[64px] ${
                     isActive
                       ? "text-white"
-                      : "text-white/50 hover:text-white/80"
+                      : "text-white/60 hover:text-white"
                   }`}
                 >
                   {isActive && (
                     <motion.div
-                      className="absolute inset-0 bg-gradient-to-br from-purple-500/30 to-pink-500/30 rounded-xl"
+                      className="absolute inset-0 bg-gradient-to-br from-purple-500/40 to-pink-500/40 rounded-full"
                       initial={false}
                       animate={{ opacity: 1 }}
                       transition={{ duration: 0.15 }}
@@ -91,7 +70,7 @@ export default function Navigation() {
                       isActive ? "text-white" : ""
                     }`}
                   />
-                  <span className={`text-xs relative z-10 ${isActive ? "font-medium" : ""}`}>
+                  <span className={`text-[10px] relative z-10 ${isActive ? "font-semibold text-white" : ""}`}>
                     {t(item.labelKey)}
                   </span>
                 </Link>
@@ -99,31 +78,38 @@ export default function Navigation() {
             })}
           </div>
 
-          {/* Status indicator */}
-          <div className="flex items-center gap-3">
+          <div className="w-px h-6 bg-white/20 mx-0.5" />
+
+          {/* Actions */}
+          <div className="flex items-center gap-0.5">
             {/* Language Toggle */}
             <button
               onClick={toggleLanguage}
-              className="flex items-center gap-1.5 px-2.5 py-1.5 hover:bg-white/10 rounded-xl transition-colors"
-              title={locale === "en" ? "Switch to Arabic" : "Switch to English"}
+              className="flex items-center gap-1 px-2.5 py-1.5 hover:bg-white/10 rounded-full transition-colors"
+              aria-label={locale === "en" ? "تبديل إلى العربية" : "Switch to English"}
+              title={locale === "en" ? "العربية" : "English"}
             >
               <Globe className="w-4 h-4 text-white/80" />
-              <span className="text-xs font-medium text-white/80 uppercase">
+              <span className="text-[10px] font-semibold text-white/80 uppercase">
                 {locale === "en" ? "عربي" : "EN"}
               </span>
             </button>
 
+            {/* Sign Out */}
             <button
               onClick={handleSignOut}
-              className="p-2 hover:bg-white/10 rounded-xl transition-colors"
-              title="Sign out"
+              className="p-2 hover:bg-white/10 rounded-full transition-colors text-white/60 hover:text-white"
+              aria-label={t("settings.signOut")}
+              title={t("settings.signOut")}
             >
-              <LogOut className="w-4 h-4 text-white/60 hover:text-white/80" />
+              <LogOut className="w-4 h-4" />
             </button>
-            {isOnline ? (
-              <Wifi className="w-4 h-4 text-green-400" />
-            ) : (
-              <WifiOff className="w-4 h-4 text-orange-400" />
+
+            {/* Offline Indicator */}
+            {!isOnline && (
+              <div className="px-1" title={t("offline.title")}>
+                <WifiOff className="w-4 h-4 text-amber-400" />
+              </div>
             )}
           </div>
         </motion.div>

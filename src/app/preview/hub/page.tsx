@@ -1,4 +1,5 @@
 import Link from "next/link";
+import { notFound } from "next/navigation";
 
 const options = [
   {
@@ -44,6 +45,9 @@ const options = [
 ];
 
 export default function PreviewHub() {
+  if (process.env.NODE_ENV === "production") {
+    notFound();
+  }
   return (
     <div className="min-h-screen bg-gradient-to-br from-gray-900 via-gray-800 to-gray-900 py-16 px-6">
       <div className="max-w-6xl mx-auto">

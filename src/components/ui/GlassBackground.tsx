@@ -11,11 +11,14 @@ export default function GlassBackground({ children }: GlassBackgroundProps) {
     <div className="min-h-screen relative overflow-hidden">
       {/* Animated gradient mesh background */}
       <div className="absolute inset-0 overflow-hidden">
-        <div className="absolute inset-0 bg-gradient-to-br from-purple-900 via-indigo-900 to-blue-900" />
+        <div 
+          className="absolute inset-0" 
+          style={{ background: 'linear-gradient(to bottom right, var(--bg-gradient-start), var(--bg-gradient-mid), var(--bg-gradient-end))' }} 
+        />
         <motion.div
           className="absolute w-[800px] h-[800px] rounded-full"
           style={{
-            background: "radial-gradient(circle, rgba(139, 92, 246, 0.4) 0%, transparent 70%)",
+            background: "radial-gradient(circle, var(--blob-1) 0%, transparent 70%)",
             top: "-20%",
             left: "-10%",
           }}
@@ -28,7 +31,7 @@ export default function GlassBackground({ children }: GlassBackgroundProps) {
         <motion.div
           className="absolute w-[600px] h-[600px] rounded-full"
           style={{
-            background: "radial-gradient(circle, rgba(59, 130, 246, 0.3) 0%, transparent 70%)",
+            background: "radial-gradient(circle, var(--blob-2) 0%, transparent 70%)",
             bottom: "-10%",
             right: "-5%",
           }}
@@ -41,7 +44,7 @@ export default function GlassBackground({ children }: GlassBackgroundProps) {
         <motion.div
           className="absolute w-[500px] h-[500px] rounded-full"
           style={{
-            background: "radial-gradient(circle, rgba(236, 72, 153, 0.25) 0%, transparent 70%)",
+            background: "radial-gradient(circle, var(--blob-3) 0%, transparent 70%)",
             top: "50%",
             left: "50%",
           }}

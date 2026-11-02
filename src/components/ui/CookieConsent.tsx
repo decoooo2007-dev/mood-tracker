@@ -1,44 +1,51 @@
 "use client";
 
 import { useState, useEffect } from "react";
+import { usePathname } from "next/navigation";
 import { motion, AnimatePresence } from "framer-motion";
-import { Cookie, X, ExternalLink } from "lucide-react";
+import { Cookie, ExternalLink } from "lucide-react";
 import Link from "next/link";
-import { translations, Locale } from "@/lib/i18n/translations";
+import { useLanguage } from "@/lib/providers";
 
 export default function CookieConsent() {
+  const pathname = usePathname();
+  const { t, isRtl } = useLanguage();
   const [isVisible, setIsVisible] = useState(false);
-  const [locale, setLocale] = useState<Locale>("en");
 
   useEffect(() => {
-    // Check if user has already made a choice
-    const hasConsent = localStorage.getItem("moodflow-cookie-consent");
-    if (!hasConsent) {
-      setIsVisible(true);
-    }
+    const checkVisibility = () => {
+      const hasDisclaimer =
+        localStorage.getItem("moodflow-disclaimer-acknowledged") ||
+        localStorage.getItem("moodflow-disclaimer-accepted");
+      const hasConsent = localStorage.getItem("moodflow-cookie-consent");
 
-    // Get locale
-    const stored = localStorage.getItem("moodflow-locale") as Locale;
-    if (stored === "en" || stored === "ar") {
-      setLocale(stored);
-    }
+      if (hasDisclaimer && !hasConsent) {
+        setIsVisible(true);
+      }
+    };
+
+    checkVisibility();
+    window.addEventListener("moodflow-onboarding-step", checkVisibility);
+    return () => {
+      window.removeEventListener("moodflow-onboarding-step", checkVisibility);
+    };
   }, []);
 
   const handleAccept = () => {
     localStorage.setItem("moodflow-cookie-consent", "accepted");
     setIsVisible(false);
+    window.dispatchEvent(new Event("moodflow-onboarding-step"));
   };
 
   const handleDecline = () => {
     localStorage.setItem("moodflow-cookie-consent", "declined");
     setIsVisible(false);
+    window.dispatchEvent(new Event("moodflow-onboarding-step"));
   };
 
-  const t = (key: string): string => {
-    return translations[locale]?.[key as keyof typeof translations.en] || translations.en[key as keyof typeof translations.en] || key;
-  };
-
-  const isArabic = locale === "ar";
+  if (pathname === "/login" || pathname === "/offline") {
+    return null;
+  }
 
   return (
     <AnimatePresence>
@@ -50,21 +57,21 @@ export default function CookieConsent() {
           exit={{ y: 100, opacity: 0 }}
           transition={{ type: "spring", damping: 25 }}
         >
-          <div className="max-w-4xl mx-auto backdrop-blur-xl bg-black/80 rounded-2xl border border-white/20 p-4 md:p-6 shadow-2xl">
-            <div className={`flex flex-col md:flex-row items-start md:items-center gap-4 ${isArabic ? "md:flex-row-reverse" : ""}`}>
+          <div className="max-w-4xl mx-auto glass-modal rounded-2xl border border-white/20 p-4 md:p-6 shadow-2xl" dir={isRtl ? "rtl" : "ltr"}>
+            <div className="flex flex-col md:flex-row items-start md:items-center justify-between gap-4">
               {/* Icon & Content */}
-              <div className={`flex items-start gap-4 flex-1 ${isArabic ? "flex-row-reverse" : ""}`}>
+              <div className="flex items-start gap-4 flex-1">
                 <div className="w-10 h-10 rounded-xl bg-purple-500/20 flex items-center justify-center flex-shrink-0">
                   <Cookie className="w-5 h-5 text-purple-400" />
                 </div>
-                <div className={isArabic ? "text-right" : ""}>
+                <div>
                   <h3 className="text-white font-semibold mb-1">{t("cookies.title")}</h3>
-                  <p className="text-white/60 text-sm">{t("cookies.desc")}</p>
+                  <p className="text-white/60 text-sm leading-relaxed">{t("cookies.desc")}</p>
                 </div>
               </div>
 
               {/* Buttons */}
-              <div className={`flex items-center gap-3 w-full md:w-auto ${isArabic ? "md:flex-row-reverse" : ""}`}>
+              <div className="flex items-center gap-3 w-full md:w-auto">
                 <Link
                   href="/privacy"
                   className="flex items-center gap-1 px-4 py-2 text-white/60 hover:text-white text-sm transition-colors"

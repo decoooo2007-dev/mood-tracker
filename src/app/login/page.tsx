@@ -2,14 +2,16 @@
 
 import { useState, useEffect } from "react";
 import { motion } from "framer-motion";
-import { signUp, signIn, getSession } from "@/lib/auth";
+import { signUp, signIn, verifyServerSession } from "@/lib/auth";
 import { useRouter } from "next/navigation";
 import GlassBackground from "@/components/ui/GlassBackground";
 import { Heart, Loader2, Eye, EyeOff, Globe } from "lucide-react";
-import { translations, Locale } from "@/lib/i18n/translations";
+import { TranslationKey } from "@/lib/i18n/translations";
+import { useLanguage } from "@/lib/providers";
 
 export default function LoginPage() {
   const router = useRouter();
+  const { isRtl, locale, toggleLanguage, t } = useLanguage();
   const [isSignUp, setIsSignUp] = useState(false);
   const [username, setUsername] = useState("");
   const [password, setPassword] = useState("");
@@ -17,42 +19,23 @@ export default function LoginPage() {
   const [showPassword, setShowPassword] = useState(false);
   const [error, setError] = useState("");
   const [isLoading, setIsLoading] = useState(false);
-  const [isRtl, setIsRtl] = useState(false);
-  const [locale, setLocale] = useState<Locale>("en");
 
-  // Get locale from localStorage on mount
+  // Redirect if already logged in with a valid server session
   useEffect(() => {
-    const stored = localStorage.getItem("moodflow-locale") as Locale;
-    if (stored === "en" || stored === "ar") {
-      setLocale(stored);
-      setIsRtl(stored === "ar");
-    }
-  }, []);
-
-  // Translation function using current state
-  const t = (key: string): string => {
-    return translations[locale][key as keyof typeof translations.en] || translations.en[key as keyof typeof translations.en] || key;
-  };
-
-  const toggleLanguage = () => {
-    const newLocale = locale === "en" ? "ar" : "en";
-    setLocale(newLocale);
-    setIsRtl(newLocale === "ar");
-    localStorage.setItem("moodflow-locale", newLocale);
-    document.documentElement.dir = newLocale === "ar" ? "rtl" : "ltr";
-  };
-
-  // Redirect if already logged in
-  useEffect(() => {
-    const session = getSession();
-    if (session) {
-      router.push("/");
-    }
+    let active = true;
+    verifyServerSession().then((session) => {
+      if (active && session) {
+        router.push("/");
+      }
+    });
+    return () => {
+      active = false;
+    };
   }, [router]);
 
   const getError = (code: string): string => {
-    const key = `error.${code}` as const;
-    return t(key as any);
+    const key = `error.${code}` as TranslationKey;
+    return t(key);
   };
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -159,10 +142,12 @@ export default function LoginPage() {
             <form onSubmit={handleSubmit} className="space-y-4">
               {/* Username */}
               <div>
-                <label className={`block text-sm text-white/60 mb-2 ${isRtl ? "text-right" : ""}`}>
+                <label htmlFor="username" className={`block text-sm text-white/60 mb-2 ${isRtl ? "text-right" : ""}`}>
                   {t("auth.username")}
                 </label>
                 <input
+                  id="username"
+                  name="username"
                   type="text"
                   value={username}
                   onChange={(e) => setUsername(e.target.value.toLowerCase().replace(/\s/g, ""))}
@@ -170,17 +155,19 @@ export default function LoginPage() {
                   className={`w-full px-4 py-3 bg-white/10 rounded-xl border border-white/20 text-white placeholder-white/40 outline-none focus:border-white/40 focus:ring-2 focus:ring-white/20 transition-all ${isRtl ? "text-right" : ""}`}
                   autoComplete="username"
                   maxLength={20}
-                  dir={isRtl ? "ltr" : undefined}
+                  dir="auto"
                 />
               </div>
 
               {/* Password */}
               <div>
-                <label className={`block text-sm text-white/60 mb-2 ${isRtl ? "text-right" : ""}`}>
+                <label htmlFor="password" className={`block text-sm text-white/60 mb-2 ${isRtl ? "text-right" : ""}`}>
                   {t("auth.password")}
                 </label>
                 <div className="relative">
                   <input
+                    id="password"
+                    name="password"
                     type={showPassword ? "text" : "password"}
                     value={password}
                     onChange={(e) => setPassword(e.target.value)}
@@ -193,6 +180,7 @@ export default function LoginPage() {
                     type="button"
                     onClick={() => setShowPassword(!showPassword)}
                     className={`absolute top-1/2 -translate-y-1/2 text-white/40 hover:text-white/60 transition-colors ${isRtl ? "left-3 right-auto" : "right-3"}`}
+                    aria-label={showPassword ? "Hide password" : "Show password"}
                   >
                     {showPassword ? <EyeOff className="w-5 h-5" /> : <Eye className="w-5 h-5" />}
                   </button>
@@ -205,11 +193,13 @@ export default function LoginPage() {
                   initial={{ opacity: 0, height: 0 }}
                   animate={{ opacity: 1, height: "auto" }}
                 >
-                  <label className={`block text-sm text-white/60 mb-2 ${isRtl ? "text-right" : ""}`}>
+                  <label htmlFor="confirmPassword" className={`block text-sm text-white/60 mb-2 ${isRtl ? "text-right" : ""}`}>
                     {t("auth.confirmPassword")}
                   </label>
                   <input
-                    type="password"
+                    id="confirmPassword"
+                    name="confirmPassword"
+                    type={showPassword ? "text" : "password"}
                     value={confirmPassword}
                     onChange={(e) => setConfirmPassword(e.target.value)}
                     placeholder={t("auth.confirmPasswordPlaceholder")}

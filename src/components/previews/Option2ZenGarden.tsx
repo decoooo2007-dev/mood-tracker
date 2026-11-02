@@ -248,7 +248,7 @@ export default function Option2ZenGarden() {
               >
                 <div className="pt-6 border-t border-white/10">
                   <label className="block text-sm font-medium text-gray-400 mb-3">
-                    What's on your mind?
+                    What&apos;s on your mind?
                   </label>
                   <textarea
                     value={journalText}

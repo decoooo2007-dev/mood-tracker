@@ -2,6 +2,45 @@
 
 :root {
   --font-sans: 'Inter', system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', sans-serif;
+
+  /* Dark mode (default) */
+  --bg-primary: #0F0F14;
+  --bg-secondary: #1A1A24;
+  --bg-card: rgba(255, 255, 255, 0.1);
+  --text-primary: white;
+  --text-secondary: rgba(255, 255, 255, 0.6);
+  --text-tertiary: rgba(255, 255, 255, 0.4);
+  --border-color: rgba(255, 255, 255, 0.2);
+  --accent-purple: #7C3AED;
+  --accent-pink: #EC4899;
+  
+  /* Dark Mode blobs & background */
+  --bg-gradient-start: #581c87;
+  --bg-gradient-mid: #312e81;
+  --bg-gradient-end: #1e3a8a;
+  --blob-1: rgba(139, 92, 246, 0.4);
+  --blob-2: rgba(59, 130, 246, 0.3);
+  --blob-3: rgba(236, 72, 153, 0.25);
+}
+
+.light {
+  --bg-primary: #FFFFFF;
+  --bg-secondary: #F0EDF5;
+  --bg-card: #F0EDF5;
+  --text-primary: #0F172A;
+  --text-secondary: #334155;
+  --text-tertiary: #64748B;
+  --border-color: rgba(0, 0, 0, 0.1);
+  --accent-purple: #0EA5E9; /* Sky 500 */
+  --accent-pink: #EC4899;
+  
+  /* Cyan / Silver background & blobs for light mode */
+  --bg-gradient-start: #38bdf8;
+  --bg-gradient-mid: #f1f5f9;
+  --bg-gradient-end: #e2e8f0;
+  --blob-1: rgba(14, 165, 233, 0.3); /* Cyan/Sky */
+  --blob-2: rgba(56, 189, 248, 0.2); /* Light Sky */
+  --blob-3: rgba(203, 213, 225, 0.4); /* Silver/Slate */
 }
 
 * {
@@ -16,8 +55,83 @@ body {
   font-family: var(--font-sans);
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
-  background: #0F0F14;
-  color: white;
+  background: var(--bg-primary);
+  color: var(--text-primary);
+  transition: background-color 0.3s ease, color 0.3s ease;
+}
+
+/* Theme-specific body backgrounds - using :root for proper specificity */
+:root.dark body {
+  background: #0F0F14 !important;
+  color: white !important;
+}
+
+:root.light body {
+  background: var(--bg-primary) !important;
+  color: var(--text-primary) !important;
+}
+
+/* Theme-specific backgrounds for glassmorphism cards */
+:root.dark .glass,
+:root.dark .backdrop-blur-xl,
+:root.dark .backdrop-blur-sm {
+  background: rgba(255, 255, 255, 0.1) !important;
+  border-color: rgba(255, 255, 255, 0.2) !important;
+}
+
+:root.light .glass,
+:root.light .backdrop-blur-xl,
+:root.light .backdrop-blur-sm {
+  background: var(--bg-secondary) !important;
+  border: 1px solid var(--border-color) !important;
+  box-shadow: 0 8px 32px rgba(31, 22, 51, 0.04) !important;
+}
+
+:root.light .text-white:not(.keep-white) {
+  color: var(--text-primary) !important;
+}
+
+:root.light .text-white\/50:not(.keep-white),
+:root.light .text-white\/60:not(.keep-white),
+:root.light .text-white\/40:not(.keep-white),
+:root.light .text-white\/80:not(.keep-white),
+:root.light .text-white\/70:not(.keep-white),
+:root.light .text-white\/90:not(.keep-white) {
+  color: var(--text-secondary) !important;
+}
+
+:root.light .placeholder-white\/40::placeholder {
+  color: var(--text-tertiary) !important;
+}
+
+.keep-white,
+:root.light .from-purple-500.text-white,
+:root.light .bg-purple-500.text-white,
+:root.light .bg-red-500.text-white,
+:root.light .bg-emerald-500\/90.text-white {
+  color: white !important;
+}
+
+/* Light mode button overrides */
+:root.light .bg-white\/10 {
+  background: rgba(0, 0, 0, 0.05) !important;
+}
+
+:root.light .bg-white\/5 {
+  background: rgba(0, 0, 0, 0.03) !important;
+}
+
+:root.light .border-white\/10,
+:root.light .border-white\/20 {
+  border-color: rgba(0, 0, 0, 0.1) !important;
+}
+
+/* Light mode gradient buttons */
+:root.light .from-purple-500 {
+  --tw-gradient-from: #854EAC !important;
+}
+:root.light .to-pink-500 {
+  --tw-gradient-to: #E65C9C !important;
 }
 
 /* Hide scrollbar for Chrome, Safari and Opera */
@@ -76,6 +190,16 @@ input[type="time"] {
 
 input[type="time"]::-webkit-calendar-picker-indicator {
   filter: invert(1);
+  cursor: pointer;
+}
+
+/* Light mode time picker */
+.light input[type="time"] {
+  color-scheme: light;
+}
+
+.light input[type="time"]::-webkit-calendar-picker-indicator {
+  filter: none;
   cursor: pointer;
 }
 
@@ -138,6 +262,36 @@ input[type="time"]::-webkit-calendar-picker-indicator {
   background: rgba(255, 255, 255, 0.15);
   border: 1px solid rgba(255, 255, 255, 0.25);
 }
+
+.glass-modal {
+  backdrop-filter: blur(24px);
+  -webkit-backdrop-filter: blur(24px);
+  background: rgba(22, 21, 33, 0.95);
+  border: 1px solid rgba(255, 255, 255, 0.18);
+}
+
+:root.dark .glass-modal {
+  background: rgba(22, 21, 33, 0.95) !important;
+  border-color: rgba(255, 255, 255, 0.18) !important;
+}
+
+:root.light .glass-modal {
+  background: rgba(255, 250, 245, 0.97) !important;
+  border-color: rgba(147, 51, 234, 0.22) !important;
+  box-shadow: 0 20px 50px rgba(30, 20, 43, 0.18) !important;
+}
+
+/* Light mode specific mood button colors */
+:root.light .mood-button-bg {
+  background: #E2DFEB !important;
+  border-color: transparent !important;
+  box-shadow: none !important;
+}
+
+:root.light .mood-button-bg.active {
+  background: #D8D4E5 !important;
+}
+
 
 /* RTL Support */
 [dir="rtl"] {

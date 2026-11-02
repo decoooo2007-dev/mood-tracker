@@ -1,4 +1,5 @@
-import { MoodOption, MoodType } from "@/types/mood";
+import type { MoodEntry, MoodOption, MoodType } from "@/types/mood";
+import { currentLocale, ttag, type Locale } from "./i18n/translations";
 
 export const moodOptions: MoodOption[] = [
   { emoji: "😊", label: "Happy", color: "#4ADE80", gradient: "from-green-400/50 to-emerald-400/50" },
@@ -43,15 +44,28 @@ export const commonTags = [
   "Motivation",
 ];
 
-export const generateId = (): string => {
-  return `${Date.now()}-${Math.random().toString(36).substr(2, 9)}`;
+export const translateTag = (tag: string, locale: Locale = currentLocale): string => {
+  return ttag(tag, locale);
 };
 
-// Import currentLocale to determine date format
-import { currentLocale } from "./i18n/translations";
+export const generateId = (): string => {
+  return `${Date.now()}-${Math.random().toString(36).substring(2, 11)}`;
+};
 
-export const formatDate = (date: Date): string => {
-  const locale = currentLocale === "ar" ? "ar-SA" : "en-US";
+export function toLocalDateStr(d: Date = new Date()): string {
+  const year = d.getFullYear();
+  const month = String(d.getMonth() + 1).padStart(2, "0");
+  const day = String(d.getDate()).padStart(2, "0");
+  return `${year}-${month}-${day}`;
+}
+
+export function parseLocalDate(dateStr: string): Date {
+  const [y, m, d] = dateStr.split("-").map(Number);
+  return new Date(y, (m || 1) - 1, d || 1);
+}
+
+export const formatDate = (date: Date, localeOverride?: Locale): string => {
+  const locale = (localeOverride || currentLocale) === "ar" ? "ar-SA" : "en-US";
   return date.toLocaleDateString(locale, {
     weekday: "short",
     month: "short",
@@ -59,97 +73,116 @@ export const formatDate = (date: Date): string => {
   });
 };
 
-export const formatTime = (date: Date): string => {
-  const locale = currentLocale === "ar" ? "ar-SA" : "en-US";
+export const formatTime = (date: Date, localeOverride?: Locale): string => {
+  const locale = (localeOverride || currentLocale) === "ar" ? "ar-SA" : "en-US";
   return date.toLocaleTimeString(locale, {
     hour: "numeric",
     minute: "2-digit",
   });
 };
 
-export const getWeekDates = (): string[] => {
-  const isArabic = currentLocale === "ar";
-
-  // Day names - Saturday to Friday (correct order for both)
-  const arabicDays = ["سبت", "أحد", "إثنين", "ثلاثاء", "أربعاء", "خميس", "جمعة"];
-  const englishDays = ["Sat", "Sun", "Mon", "Tue", "Wed", "Thu", "Fri"];
-
-  const days = isArabic ? arabicDays : englishDays;
-
-  // Get today (0 = Sunday, 1 = Monday, ..., 6 = Saturday in JS)
-  // Convert to our index where 0 = Saturday
-  const today = new Date();
-  const todayIndex = (today.getDay() + 1) % 7; // 0-6, Saturday=0
-
-  // Build 7 days ending with today
-  const dates: string[] = [];
-  for (let i = 0; i < 7; i++) {
-    const dayIndex = (todayIndex - 6 + i + 7) % 7;
-    dates.push(days[dayIndex]);
-  }
-
-  return dates;
-};
-
 export const isToday = (dateString: string): boolean => {
-  const today = new Date();
-  const entryDate = new Date(dateString);
-  return (
-    entryDate.getDate() === today.getDate() &&
-    entryDate.getMonth() === today.getMonth() &&
-    entryDate.getFullYear() === today.getFullYear()
-  );
+  return dateString === toLocalDateStr(new Date());
 };
 
 export const isYesterday = (dateString: string): boolean => {
   const yesterday = new Date();
   yesterday.setDate(yesterday.getDate() - 1);
-  const entryDate = new Date(dateString);
-  return (
-    entryDate.getDate() === yesterday.getDate() &&
-    entryDate.getMonth() === yesterday.getMonth() &&
-    entryDate.getFullYear() === yesterday.getFullYear()
-  );
+  return dateString === toLocalDateStr(yesterday);
 };
 
-export const getRelativeDate = (dateString: string): string => {
+export const getRelativeDate = (dateString: string, localeOverride?: Locale): string => {
+  const activeLocale = localeOverride || currentLocale;
   if (isToday(dateString)) {
-    return currentLocale === "ar" ? "اليوم" : "Today";
+    return activeLocale === "ar" ? "اليوم" : "Today";
   }
   if (isYesterday(dateString)) {
-    return currentLocale === "ar" ? "أمس" : "Yesterday";
+    return activeLocale === "ar" ? "أمس" : "Yesterday";
   }
-  return formatDate(new Date(dateString));
+  return formatDate(parseLocalDate(dateString), activeLocale);
 };
 
 export const calculateStreak = (entries: { date: string }[]): number => {
   if (entries.length === 0) return 0;
 
-  const sortedDates = [...new Set(entries.map((e) => e.date))].sort().reverse();
-  let streak = 0;
+  const uniqueAsc = [...new Set(entries.map((e) => e.date))].sort();
+  const todayStr = toLocalDateStr(new Date());
+  const yesterday = new Date();
+  yesterday.setDate(yesterday.getDate() - 1);
+  const yesterdayStr = toLocalDateStr(yesterday);
 
-  // Use local date format (YYYY-MM-DD)
-  const getLocalDateStr = (d: Date) => {
-    const year = d.getFullYear();
-    const month = String(d.getMonth() + 1).padStart(2, "0");
-    const day = String(d.getDate()).padStart(2, "0");
-    return `${year}-${month}-${day}`;
-  };
+  // If there's no entry today or yesterday, streak is 0
+  const hasToday = uniqueAsc.includes(todayStr);
+  const hasYesterday = uniqueAsc.includes(yesterdayStr);
+  if (!hasToday && !hasYesterday) return 0;
 
-  const today = new Date();
-  today.setHours(0, 0, 0, 0);
+  let streak = 1;
+  const startDay = hasToday ? todayStr : yesterdayStr;
+  let currentDate = parseLocalDate(startDay);
 
-  for (let i = 0; i < sortedDates.length; i++) {
-    const checkDate = new Date(today);
-    checkDate.setDate(checkDate.getDate() - i);
-    const checkDateStr = getLocalDateStr(checkDate);
-
-    if (sortedDates.includes(checkDateStr)) {
-      streak++;
-    } else if (i > 0) {
+  while (true) {
+    const prevDate = new Date(currentDate);
+    prevDate.setDate(prevDate.getDate() - 1);
+    const prevStr = toLocalDateStr(prevDate);
+    if (uniqueAsc.includes(prevStr)) {
+      streak += 1;
+      currentDate = prevDate;
+    } else {
       break;
     }
   }
 
   return streak;
 };
+
+export function getLongestStreak(entries: { date: string }[]): number {
+  if (entries.length === 0) return 0;
+  const uniqueAsc = [...new Set(entries.map((e) => e.date))].sort();
+  let maxStreak = 1;
+  let current = 1;
+  for (let i = 1; i < uniqueAsc.length; i++) {
+    const prev = parseLocalDate(uniqueAsc[i - 1]);
+    const curr = parseLocalDate(uniqueAsc[i]);
+    const diffDays = Math.round((curr.getTime() - prev.getTime()) / 86_400_000);
+    if (diffDays === 1) {
+      current += 1;
+      if (current > maxStreak) maxStreak = current;
+    } else if (diffDays > 1) {
+      current = 1;
+    }
+  }
+  return maxStreak;
+}
+
+export function getWeeklyData(
+  entries: MoodEntry[],
+  localeOverride?: Locale
+): { day: string; score: number }[] {
+  const weekData: { day: string; score: number }[] = [];
+  const today = new Date();
+  const isArabic = (localeOverride || currentLocale) === "ar";
+
+  const arabicDays = ["أحد", "إثنين", "ثلاثاء", "أربعاء", "خميس", "جمعة", "سبت"];
+  const englishDays = ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"];
+
+  for (let i = 6; i >= 0; i--) {
+    const date = new Date(today);
+    date.setDate(today.getDate() - i);
+    const dateStr = toLocalDateStr(date);
+    const dayOfWeek = date.getDay(); // 0 = Sun
+    const dayName = isArabic ? arabicDays[dayOfWeek] : englishDays[dayOfWeek];
+
+    const dayEntries = entries.filter((e) => e.date === dateStr);
+    const avgScore =
+      dayEntries.length > 0
+        ? dayEntries.reduce((sum, e) => sum + (moodToScore[e.mood] || 3), 0) / dayEntries.length
+        : 0;
+
+    weekData.push({
+      day: dayName,
+      score: Math.round(avgScore * 10) / 10,
+    });
+  }
+
+  return weekData;
+}
