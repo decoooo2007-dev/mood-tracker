@@ -8,9 +8,6 @@ import {
   BookOpen,
   ChevronRight,
   Clock,
-  Smile,
-  Frown,
-  Meh,
 } from "lucide-react";
 import {
   BarChart,

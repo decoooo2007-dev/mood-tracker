@@ -9,14 +9,9 @@ import {
   TrendingUp,
   Plus,
   ChevronRight,
-  Moon,
-  Sun,
-  Cloud,
   Sparkles,
 } from "lucide-react";
 import {
-  LineChart,
-  Line,
   XAxis,
   YAxis,
   Tooltip,
@@ -67,11 +62,6 @@ export default function Option5Glassmorphism() {
       setJournalText("");
       setSelectedMood(null);
     }
-  };
-
-  const getMoodGradient = () => {
-    if (selectedMood === null) return "from-purple-500/20 to-blue-500/20";
-    return moods[selectedMood].gradient;
   };
 
   return (

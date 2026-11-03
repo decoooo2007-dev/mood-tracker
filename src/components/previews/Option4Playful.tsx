@@ -9,7 +9,6 @@ import {
   BookOpen,
   Flame,
   Heart,
-  ChevronRight,
   PartyPopper,
   Zap,
 } from "lucide-react";

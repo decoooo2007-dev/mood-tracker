@@ -4,18 +4,13 @@ import { useState, useEffect } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import {
   Moon,
-  Sun,
-  Cloud,
   Wind,
-  Droplets,
   LineChart,
   BookOpen,
   Plus,
   Heart,
 } from "lucide-react";
 import {
-  LineChart as RechartsLineChart,
-  Line,
   XAxis,
   YAxis,
   Tooltip,

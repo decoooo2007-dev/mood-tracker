@@ -63,7 +63,7 @@ export default function PreviewHub() {
 
         {/* Options Grid */}
         <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-6">
-          {options.map((option, index) => (
+          {options.map((option) => (
             <Link
               key={option.id}
               href={option.href}
