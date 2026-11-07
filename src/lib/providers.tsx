@@ -67,11 +67,18 @@ function AuthProvider({ children }: { children: ReactNode }) {
   const [isLoading, setIsLoading] = useState(true);
 
   useEffect(() => {
-    const session = getSession();
-    if (session) {
-      setUser({ id: session.userId || session.id || "", username: session.username });
-      setIsLoading(false);
-    }
+    const syncLocalSession = () => {
+      const session = getSession();
+      if (session) {
+        setUser({ id: session.userId || session.id || "", username: session.username });
+        setIsLoading(false);
+      } else {
+        setUser(null);
+      }
+    };
+
+    syncLocalSession();
+    window.addEventListener("moodflow-auth-change", syncLocalSession);
 
     // Verify session with server
     verifyServerSession()
@@ -86,6 +93,10 @@ function AuthProvider({ children }: { children: ReactNode }) {
       .finally(() => {
         setIsLoading(false);
       });
+
+    return () => {
+      window.removeEventListener("moodflow-auth-change", syncLocalSession);
+    };
   }, []);
 
   const signOut = () => {

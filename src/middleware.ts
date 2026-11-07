@@ -13,10 +13,34 @@ const PUBLIC_PATHS = new Set([
 ]);
 
 const PROTECTED_PAGE_PREFIXES = ["/history", "/settings"];
-const PROTECTED_API_PREFIXES = ["/api/entries", "/api/settings"];
+const PROTECTED_API_PREFIXES = ["/api/entries", "/api/settings", "/api/ai"];
+const MUTATING_METHODS = new Set(["POST", "PATCH", "PUT", "DELETE"]);
 
 export async function middleware(request: NextRequest) {
   const { pathname } = request.nextUrl;
+
+  // CSRF Origin Verification for mutating API requests
+  if (pathname.startsWith("/api/") && MUTATING_METHODS.has(request.method)) {
+    const origin = request.headers.get("origin");
+    const host =
+      request.headers.get("x-forwarded-host") || request.headers.get("host");
+    if (origin && host) {
+      try {
+        const originHost = new URL(origin).host;
+        if (originHost !== host) {
+          return NextResponse.json(
+            { error: "Cross-origin request forbidden", code: "CSRF_REJECTED" },
+            { status: 403, headers: { "Cache-Control": "no-store" } }
+          );
+        }
+      } catch {
+        return NextResponse.json(
+          { error: "Invalid Origin header", code: "CSRF_REJECTED" },
+          { status: 403, headers: { "Cache-Control": "no-store" } }
+        );
+      }
+    }
+  }
 
   const isProtectedPage =
     pathname === "/" ||

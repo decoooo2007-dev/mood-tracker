@@ -66,6 +66,9 @@ export async function signUp(username: string, password: string): Promise<{ succ
     };
     localStorage.setItem(SESSION_CACHE_KEY, JSON.stringify(user));
     await cacheUserVaultKey(user.userId, password);
+    if (typeof window !== "undefined") {
+      window.dispatchEvent(new Event("moodflow-auth-change"));
+    }
     return { success: true, user };
   } catch {
     return { success: false, error: "network error" };
@@ -92,6 +95,9 @@ export async function signIn(username: string, password: string): Promise<{ succ
     };
     localStorage.setItem(SESSION_CACHE_KEY, JSON.stringify(user));
     await cacheUserVaultKey(user.userId, password);
+    if (typeof window !== "undefined") {
+      window.dispatchEvent(new Event("moodflow-auth-change"));
+    }
     return { success: true, user };
   } catch {
     return { success: false, error: "network error" };

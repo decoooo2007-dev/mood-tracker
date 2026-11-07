@@ -41,8 +41,8 @@ export async function POST(request: Request) {
     const parsed = FeedbackSchema.safeParse(rawBody);
     if (!parsed.success) {
       return NextResponse.json(
-        { error: "Invalid feedback payload", details: parsed.error.flatten() },
-        { status: 400 }
+        { error: "Invalid feedback payload", code: "VALIDATION_ERROR" },
+        { status: 400, headers: { "Cache-Control": "no-store" } }
       );
     }
 

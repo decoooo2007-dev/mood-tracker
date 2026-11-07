@@ -68,7 +68,7 @@ export default function LoginPage() {
       if (isSignUp) {
         const result = await signUp(username.trim(), password);
         if (result.success) {
-          window.location.href = "/";
+          router.push("/");
         } else {
           const errorKey = result.error?.includes("taken") ? "usernameTaken" :
                           result.error?.includes("exists") ? "usernameTaken" :
@@ -79,7 +79,7 @@ export default function LoginPage() {
       } else {
         const result = await signIn(username.trim(), password);
         if (result.success) {
-          window.location.href = "/";
+          router.push("/");
         } else {
           const errorKey = result.error?.includes("not found") ? "signInFailed" :
                           result.error?.includes("Incorrect") ? "signInFailed" :

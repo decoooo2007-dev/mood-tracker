@@ -1,10 +1,12 @@
 "use client";
 
+import { useRouter } from "next/navigation";
 import { motion } from "framer-motion";
 import { WifiOff, RefreshCw } from "lucide-react";
 import { useLanguage } from "@/lib/providers";
 
 export default function OfflinePage() {
+  const router = useRouter();
   const { isRtl, t } = useLanguage();
 
   const handleRetry = () => {
@@ -12,7 +14,7 @@ export default function OfflinePage() {
       if (navigator.onLine) {
         window.location.reload();
       } else {
-        window.location.href = "/";
+        router.push("/");
       }
     }
   };

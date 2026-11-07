@@ -631,6 +631,38 @@ describe("Phase 2: Strict BiDi Purity on all Arabic Translations", () => {
   });
 });
 
+describe("Security Hardening: CSRF Origin & Middleware Protection", () => {
+  it("blocks cross-origin mutating API requests with 403 CSRF_REJECTED and blocks unauthenticated /api/ai", async () => {
+    const { NextRequest } = await import("next/server");
+    const { middleware } = await import("@/middleware");
+
+    // 1. Cross-origin POST to /api/entries must be blocked with 403
+    const crossOriginReq = new NextRequest("https://moodflow.example.com/api/entries", {
+      method: "POST",
+      headers: {
+        host: "moodflow.example.com",
+        origin: "https://evil-attacker.com",
+      },
+    });
+    const csrfRes = await middleware(crossOriginReq);
+    expect(csrfRes.status).toBe(403);
+    const csrfBody = await csrfRes.json();
+    expect(csrfBody.code).toBe("CSRF_REJECTED");
+
+    // 2. Same-origin unauthenticated POST to /api/ai/reflection must return 401
+    const unauthAiReq = new NextRequest("https://moodflow.example.com/api/ai/reflection", {
+      method: "POST",
+      headers: {
+        host: "moodflow.example.com",
+        origin: "https://moodflow.example.com",
+      },
+    });
+    const aiRes = await middleware(unauthAiReq);
+    expect(aiRes.status).toBe(401);
+  });
+});
+
+
 
 
 

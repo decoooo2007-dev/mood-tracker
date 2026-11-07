@@ -2,6 +2,7 @@ import { NextResponse } from "next/server";
 import { z } from "zod";
 import { supabaseAdmin } from "@/lib/server-supabase";
 import { getSessionFromRequest } from "@/lib/jwt";
+import { checkRateLimit } from "@/lib/rate-limit";
 
 export const dynamic = "force-dynamic";
 
@@ -90,6 +91,14 @@ async function handleUpsertSettings(request: Request) {
     );
   }
 
+  const rate = await checkRateLimit(`settings:${session.userId}`, 60, 60_000);
+  if (!rate.allowed) {
+    return NextResponse.json(
+      { error: "Too many requests", code: "RATE_LIMITED" },
+      { status: 429, headers: { "Cache-Control": "no-store" } }
+    );
+  }
+
   const rawBody = await request.json().catch(() => null);
   const parsed = UpdateSettingsSchema.safeParse(rawBody);
   if (!parsed.success) {
@@ -97,7 +106,6 @@ async function handleUpsertSettings(request: Request) {
       {
         error: "Invalid settings payload",
         code: "VALIDATION_ERROR",
-        details: parsed.error.flatten(),
       },
       { status: 400, headers: { "Cache-Control": "no-store" } }
     );

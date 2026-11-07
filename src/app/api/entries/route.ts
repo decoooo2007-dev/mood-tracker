@@ -2,6 +2,7 @@ import { NextResponse } from "next/server";
 import { z } from "zod";
 import { supabaseAdmin } from "@/lib/server-supabase";
 import { getSessionFromRequest } from "@/lib/jwt";
+import { checkRateLimit } from "@/lib/rate-limit";
 import { analyzeSentiment } from "@/lib/sentiment";
 import { formatTime } from "@/lib/moods";
 import type { MoodType } from "@/types/mood";
@@ -78,6 +79,14 @@ export async function GET(request: Request) {
     );
   }
 
+  const rate = await checkRateLimit(`entries:get:${session.userId}`, 120, 60_000);
+  if (!rate.allowed) {
+    return NextResponse.json(
+      { error: "Too many requests", code: "RATE_LIMITED" },
+      { status: 429, headers: { "Cache-Control": "no-store" } }
+    );
+  }
+
   const { data, error } = await supabaseAdmin
     .from("mood_entries")
     .select("*")
@@ -112,6 +121,14 @@ export async function POST(request: Request) {
     );
   }
 
+  const rate = await checkRateLimit(`entries:write:${session.userId}`, 120, 60_000);
+  if (!rate.allowed) {
+    return NextResponse.json(
+      { error: "Too many requests", code: "RATE_LIMITED" },
+      { status: 429, headers: { "Cache-Control": "no-store" } }
+    );
+  }
+
   const rawBody = await request.json().catch(() => null);
   const parsed = CreateEntrySchema.safeParse(rawBody);
   if (!parsed.success) {
@@ -119,7 +136,6 @@ export async function POST(request: Request) {
       {
         error: "Invalid mood entry payload",
         code: "VALIDATION_ERROR",
-        details: parsed.error.flatten(),
       },
       { status: 400, headers: { "Cache-Control": "no-store" } }
     );
@@ -200,6 +216,14 @@ export async function DELETE(request: Request) {
     return NextResponse.json(
       { error: "Not authenticated", code: "UNAUTHORIZED" },
       { status: 401, headers: { "Cache-Control": "no-store" } }
+    );
+  }
+
+  const rate = await checkRateLimit(`entries:delete-all:${session.userId}`, 10, 60_000);
+  if (!rate.allowed) {
+    return NextResponse.json(
+      { error: "Too many requests", code: "RATE_LIMITED" },
+      { status: 429, headers: { "Cache-Control": "no-store" } }
     );
   }
 

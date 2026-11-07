@@ -2,6 +2,7 @@ import { NextResponse } from "next/server";
 import { z } from "zod";
 import { supabaseAdmin } from "@/lib/server-supabase";
 import { getSessionFromRequest } from "@/lib/jwt";
+import { checkRateLimit } from "@/lib/rate-limit";
 import { analyzeSentiment } from "@/lib/sentiment";
 import { formatEntryRow, normalizeMoodValue } from "@/app/api/entries/route";
 
@@ -37,6 +38,14 @@ export async function PATCH(
     );
   }
 
+  const rate = await checkRateLimit(`entries:write:${session.userId}`, 120, 60_000);
+  if (!rate.allowed) {
+    return NextResponse.json(
+      { error: "Too many requests", code: "RATE_LIMITED" },
+      { status: 429, headers: { "Cache-Control": "no-store" } }
+    );
+  }
+
   const { id } = await context.params;
   if (!UUID_REGEX.test(id)) {
     return NextResponse.json(
@@ -52,7 +61,6 @@ export async function PATCH(
       {
         error: "Invalid update payload",
         code: "VALIDATION_ERROR",
-        details: parsed.error.flatten(),
       },
       { status: 400, headers: { "Cache-Control": "no-store" } }
     );
@@ -154,6 +162,14 @@ export async function DELETE(
     return NextResponse.json(
       { error: "Not authenticated", code: "UNAUTHORIZED" },
       { status: 401, headers: { "Cache-Control": "no-store" } }
+    );
+  }
+
+  const rate = await checkRateLimit(`entries:write:${session.userId}`, 120, 60_000);
+  if (!rate.allowed) {
+    return NextResponse.json(
+      { error: "Too many requests", code: "RATE_LIMITED" },
+      { status: 429, headers: { "Cache-Control": "no-store" } }
     );
   }
 
