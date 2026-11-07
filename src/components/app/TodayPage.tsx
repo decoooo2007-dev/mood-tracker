@@ -154,8 +154,19 @@ export default function TodayPage() {
   }, [selectedMood, locale]);
 
   const allAvailableTags = useMemo(() => {
-    return [...commonTags, ...customTags];
-  }, [customTags]);
+    const merged = [...commonTags, ...customTags];
+    const seen = new Set(merged.map((t) => t.toLowerCase()));
+    for (const entry of entries) {
+      for (const tag of entry.tags || []) {
+        const trimmed = tag.trim();
+        if (trimmed && !seen.has(trimmed.toLowerCase())) {
+          seen.add(trimmed.toLowerCase());
+          merged.push(trimmed);
+        }
+      }
+    }
+    return merged;
+  }, [customTags, entries]);
 
   const stats = getStats();
   const weeklyInsight = useMemo(
@@ -208,12 +219,38 @@ export default function TodayPage() {
       });
       if (res.ok) {
         const data = await res.json();
-        if (data.reflection) {
-          setDeepReflection(data.reflection);
+        const ref = data.reflection || data.data;
+        if (ref) {
+          setDeepReflection({
+            pattern: String(ref.pattern || ref.rhythm || ""),
+            booster: String(ref.booster || ""),
+            habit: String(ref.habit || ""),
+          });
+          return;
         }
       }
-    } catch (err) {
-      console.error("Deep reflection request failed:", err);
+      // Offline / guest heuristic fallback
+      const isAr = locale === "ar";
+      setDeepReflection({
+        pattern: weeklyInsight,
+        booster: isAr
+          ? "كانت لحظات التأمل الهادئة والامتنان هي الأكثر ارتباطاً بارتفاع مستوى الراحة."
+          : "Moments of gratitude and peaceful downtime were your strongest positive drivers.",
+        habit: isAr
+          ? "خصص خمس دقائق كل صباح للتنفس الواعي لتعزيز صفاء ذهنك طوال اليوم."
+          : "Dedicate 5 minutes each morning to mindful breathing to maintain your calm focus.",
+      });
+    } catch {
+      const isAr = locale === "ar";
+      setDeepReflection({
+        pattern: weeklyInsight,
+        booster: isAr
+          ? "كانت لحظات التأمل الهادئة والامتنان هي الأكثر ارتباطاً بارتفاع مستوى الراحة."
+          : "Moments of gratitude and peaceful downtime were your strongest positive drivers.",
+        habit: isAr
+          ? "خصص خمس دقائق كل صباح للتنفس الواعي لتعزيز صفاء ذهنك طوال اليوم."
+          : "Dedicate 5 minutes each morning to mindful breathing to maintain your calm focus.",
+      });
     } finally {
       setIsReflecting(false);
     }

@@ -672,9 +672,9 @@ export function getDirAttr(): { dir: "ltr" | "rtl" } {
 }
 
 // Translate mood labels
-export function tmood(mood: string): string {
+export function tmood(mood: string, locale: Locale = currentLocale): string {
   const key = `mood.${mood.toLowerCase()}` as TranslationKey;
-  const translated = translations[currentLocale][key];
+  const translated = translations[locale]?.[key] || translations.en?.[key];
   return translated || mood;
 }
 

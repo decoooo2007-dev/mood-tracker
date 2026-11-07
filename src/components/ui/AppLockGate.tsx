@@ -9,8 +9,9 @@ import {
   isAppLockEnabled,
   isSessionUnlocked,
   verifyPin,
-  markSessionUnlocked,
   isBiometricsAvailable,
+  hasRegisteredBiometrics,
+  authenticateBiometric,
 } from "@/lib/app-lock";
 
 interface AppLockGateProps {
@@ -47,7 +48,9 @@ export default function AppLockGate({ children }: AppLockGateProps) {
 
   useEffect(() => {
     checkLockState();
-    isBiometricsAvailable().then(setHasBiometrics).catch(() => {});
+    isBiometricsAvailable()
+      .then((avail) => setHasBiometrics(avail && hasRegisteredBiometrics()))
+      .catch(() => {});
   }, [checkLockState]);
 
   const handleDigit = async (digit: string) => {
@@ -78,10 +81,14 @@ export default function AppLockGate({ children }: AppLockGateProps) {
 
   const handleBiometricUnlock = async () => {
     try {
-      // Prompt user with simple credential challenge
-      markSessionUnlocked();
-      setIsLocked(false);
-      setPin("");
+      const verified = await authenticateBiometric();
+      if (verified) {
+        setIsLocked(false);
+        setPin("");
+      } else {
+        setError(true);
+        setTimeout(() => setError(false), 700);
+      }
     } catch {
       // Fall back to PIN
     }

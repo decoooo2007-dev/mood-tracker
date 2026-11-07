@@ -33,7 +33,9 @@ import {
   isAppLockEnabled,
   setAppLockPin,
   removeAppLock,
+  registerBiometricCredential,
 } from "@/lib/app-lock";
+import { saveCustomTag } from "@/lib/moods";
 import type { MoodType } from "@/types/mood";
 
 export default function SettingsPage() {
@@ -109,6 +111,8 @@ export default function SettingsPage() {
       setShowPinModal(false);
       setNewPin("");
       setConfirmPin("");
+      // Optionally register WebAuthn platform biometric credential if supported
+      registerBiometricCredential().catch(() => {});
     }
   };
 
@@ -124,15 +128,30 @@ export default function SettingsPage() {
         return;
       }
 
+      const validMoods = new Set(["Happy", "Calm", "Sad", "Frustrated", "Tired"]);
       let importedCount = 0;
       for (const item of parsed) {
         if (!item || typeof item !== "object") continue;
-        const mood = (item.mood || "Calm") as MoodType;
-        const intensity = typeof item.intensity === "number" ? item.intensity : 50;
+        const rawMood = String(item.mood || "Calm");
+        const mood = (validMoods.has(rawMood) ? rawMood : "Calm") as MoodType;
+        const intensity =
+          typeof item.intensity === "number"
+            ? Math.max(1, Math.min(100, Math.round(item.intensity)))
+            : 50;
         const entryText = typeof item.text === "string" ? item.text : "";
-        const tags = Array.isArray(item.tags) ? item.tags : [];
-        const date = typeof item.date === "string" ? item.date : "";
+        const tags = Array.isArray(item.tags)
+          ? item.tags.filter((tg: unknown): tg is string => typeof tg === "string")
+          : [];
+        const date =
+          typeof item.date === "string" && /^\d{4}-\d{2}-\d{2}$/.test(item.date)
+            ? item.date
+            : "";
         const time = typeof item.time === "string" ? item.time : "";
+
+        // Register any custom tags present in the imported entry
+        for (const tg of tags) {
+          saveCustomTag(tg);
+        }
 
         // Check for duplicates
         const exists = entries.some(
@@ -149,6 +168,8 @@ export default function SettingsPage() {
               intensity,
               text: entryText,
               tags,
+              date: date || undefined,
+              time: time || undefined,
             });
             importedCount++;
           } catch {

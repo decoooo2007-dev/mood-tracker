@@ -603,6 +603,15 @@ describe("Phase 2: App Lock Vault & PIN Security", () => {
     removeAppLock();
     expect(isAppLockEnabled()).toBe(false);
   });
+
+  it("rejects biometric authentication when no WebAuthn credential is registered (P0-1 regression)", async () => {
+    const { hasRegisteredBiometrics, authenticateBiometric, removeAppLock } =
+      await import("@/lib/app-lock");
+
+    removeAppLock();
+    expect(hasRegisteredBiometrics()).toBe(false);
+    expect(await authenticateBiometric()).toBe(false);
+  });
 });
 
 describe("Phase 2: Strict BiDi Purity on all Arabic Translations", () => {

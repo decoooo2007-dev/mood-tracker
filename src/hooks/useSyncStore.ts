@@ -290,11 +290,16 @@ export function useSyncStore() {
       intensity: number;
       text: string;
       tags: string[];
+      date?: string;
+      time?: string;
       _tempId?: string;
     }) => {
       const now = new Date();
-      const dateStr = toLocalDateStr(now);
-      const timeStr = formatTime(now);
+      const dateStr =
+        params.date && /^\d{4}-\d{2}-\d{2}$/.test(params.date)
+          ? params.date
+          : toLocalDateStr(now);
+      const timeStr = params.time?.trim() || formatTime(now);
       const plainText = params.text || "";
       const sentiment = analyzeSentiment(plainText);
       const encryptedText = await encryptJournalText(plainText, userId);

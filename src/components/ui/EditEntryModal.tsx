@@ -39,8 +39,17 @@ export default function EditEntryModal({
   const [newTagText, setNewTagText] = useState("");
 
   const allAvailableTags = useMemo(() => {
-    return [...commonTags, ...customTags];
-  }, [customTags]);
+    const merged = [...commonTags, ...customTags];
+    const seen = new Set(merged.map((t) => t.toLowerCase()));
+    for (const tag of entry?.tags || []) {
+      const trimmed = tag.trim();
+      if (trimmed && !seen.has(trimmed.toLowerCase())) {
+        seen.add(trimmed.toLowerCase());
+        merged.push(trimmed);
+      }
+    }
+    return merged;
+  }, [customTags, entry]);
 
   const handleSaveCustomTag = () => {
     const trimmed = newTagText.trim();
