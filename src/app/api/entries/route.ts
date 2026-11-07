@@ -52,7 +52,7 @@ export function formatEntryRow(row: Record<string, unknown>) {
 const CreateEntrySchema = z.object({
   mood: z.string().min(1),
   intensity: z.number().min(1).max(100).optional().default(50),
-  text: z.string().max(5000).optional().default(""),
+  text: z.string().max(15000).optional().default(""),
   tags: z.array(z.string().max(50)).max(20).optional().default([]),
   date: z
     .string()
@@ -144,7 +144,11 @@ export async function POST(request: Request) {
       .split("T")[0];
   const entryTime = parsed.data.time || formatTime(now);
   const entryText = parsed.data.text ?? "";
-  const computedSentiment = analyzeSentiment(entryText);
+  const isCiphertext =
+    entryText.startsWith("enc:v1:") || entryText.startsWith("enc:u1:");
+  const computedSentiment = isCiphertext
+    ? { score: 0, keywords: [] as string[] }
+    : analyzeSentiment(entryText);
 
   const sentimentScore =
     parsed.data.sentiment_score ??

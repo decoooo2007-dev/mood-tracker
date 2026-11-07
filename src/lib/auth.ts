@@ -1,3 +1,5 @@
+import { cacheUserVaultKey, clearUserVaultKey } from "@/lib/crypto-vault";
+
 export interface UserSession {
   id?: string;
   userId: string;
@@ -22,6 +24,7 @@ export async function verifyServerSession(): Promise<UserSession | null> {
     const res = await fetch("/api/auth/session", { credentials: "include", cache: "no-store" });
     if (!res.ok) {
       localStorage.removeItem(SESSION_CACHE_KEY);
+      clearUserVaultKey();
       return null;
     }
     const data = await res.json();
@@ -36,6 +39,7 @@ export async function verifyServerSession(): Promise<UserSession | null> {
       return user;
     }
     localStorage.removeItem(SESSION_CACHE_KEY);
+    clearUserVaultKey();
     return null;
   } catch {
     return getSession();
@@ -61,6 +65,7 @@ export async function signUp(username: string, password: string): Promise<{ succ
       createdAt: data.user.createdAt,
     };
     localStorage.setItem(SESSION_CACHE_KEY, JSON.stringify(user));
+    await cacheUserVaultKey(user.userId, password);
     return { success: true, user };
   } catch {
     return { success: false, error: "network error" };
@@ -86,6 +91,7 @@ export async function signIn(username: string, password: string): Promise<{ succ
       createdAt: data.user.createdAt,
     };
     localStorage.setItem(SESSION_CACHE_KEY, JSON.stringify(user));
+    await cacheUserVaultKey(user.userId, password);
     return { success: true, user };
   } catch {
     return { success: false, error: "network error" };
@@ -95,6 +101,7 @@ export async function signIn(username: string, password: string): Promise<{ succ
 export async function signOut(): Promise<void> {
   if (typeof window === "undefined") return;
   localStorage.removeItem(SESSION_CACHE_KEY);
+  clearUserVaultKey();
   try {
     await fetch("/api/auth/signout", { method: "POST", credentials: "include" });
     if ("serviceWorker" in navigator && navigator.serviceWorker.controller) {

@@ -325,4 +325,194 @@ describe("Score to Mood Mapping & Weekly Calculations", () => {
   });
 });
 
+describe("Argon Track 1.1: Client-Side E2EE Vault (crypto-vault.ts)", () => {
+  it("encrypts and decrypts English and Arabic journal text with password-derived AES-256-GCM key (enc:v1)", async () => {
+    const {
+      cacheUserVaultKey,
+      clearUserVaultKey,
+      encryptJournalText,
+      decryptJournalText,
+      isEncryptedJournal,
+    } = await import("@/lib/crypto-vault");
+
+    clearUserVaultKey();
+    const userId = "429ad010-e650-4c6f-a7d6-3d84fbd90893";
+    await cacheUserVaultKey(userId, "MyStrongPassword!2026");
+
+    const plainEn = "Today I felt grateful after finishing my exams.";
+    const cipherEn = await encryptJournalText(plainEn, userId);
+    expect(isEncryptedJournal(cipherEn)).toBe(true);
+    expect(cipherEn.startsWith("enc:v1:")).toBe(true);
+    expect(cipherEn).not.toContain("grateful");
+
+    const decryptedEn = await decryptJournalText(cipherEn, userId);
+    expect(decryptedEn).toBe(plainEn);
+
+    const plainAr = "شعرت اليوم بالهدوء والسكينة بعد الصلاة والمشي.";
+    const cipherAr = await encryptJournalText(plainAr, userId);
+    expect(cipherAr.startsWith("enc:v1:")).toBe(true);
+    const decryptedAr = await decryptJournalText(cipherAr, userId);
+    expect(decryptedAr).toBe(plainAr);
+
+    clearUserVaultKey();
+  });
+
+  it("falls back to per-user deterministic client key (enc:u1) when password key is not cached and preserves legacy plaintext", async () => {
+    const {
+      clearUserVaultKey,
+      encryptJournalText,
+      decryptJournalText,
+    } = await import("@/lib/crypto-vault");
+
+    clearUserVaultKey();
+    const userA = "11111111-2222-3333-4444-555555555555";
+    const userB = "99999999-8888-7777-6666-555555555555";
+
+    const secretNote = "Private reflection stored without password key cache";
+    const cipherU1 = await encryptJournalText(secretNote, userA);
+    expect(cipherU1.startsWith("enc:u1:")).toBe(true);
+    expect(await decryptJournalText(cipherU1, userA)).toBe(secretNote);
+
+    // Different user ID cannot decrypt userA's ciphertext
+    expect(await decryptJournalText(cipherU1, userB)).toBe("");
+
+    // Legacy plaintext entries in Supabase pass through unchanged
+    const legacyPlaintext = "Legacy unencrypted entry from v1.0";
+    expect(await decryptJournalText(legacyPlaintext, userA)).toBe(
+      legacyPlaintext
+    );
+  });
+});
+
+describe("Argon Track 4.1: Conflict-Free Offline Mutation Queue (offline-queue.ts)", () => {
+  it("coalesces CREATE + UPDATE on an offline tempId into a single CREATE mutation", async () => {
+    const { coalesceMutation } = await import("@/lib/offline-queue");
+    type QueueItem = import("@/lib/offline-queue").OfflineMutationItem;
+
+    let queue: QueueItem[] = [];
+    queue = coalesceMutation(queue, {
+      id: "op-1",
+      type: "CREATE",
+      tempId: "temp-101",
+      payload: {
+        mood: "Sad",
+        intensity: 40,
+        text: "enc:v1:iv1:cipher1",
+        tags: ["Work"],
+        date: "2026-11-07",
+        time: "10:00 AM",
+        sentiment_score: -0.5,
+        sentiment_keywords: ["stressed"],
+      },
+      createdAt: "2026-11-07T08:00:00Z",
+    });
+
+    queue = coalesceMutation(queue, {
+      id: "op-2",
+      type: "UPDATE",
+      targetId: "temp-101",
+      payload: {
+        mood: "Calm",
+        intensity: 75,
+        text: "enc:v1:iv2:cipher2",
+      },
+      createdAt: "2026-11-07T08:05:00Z",
+    });
+
+    expect(queue).toHaveLength(1);
+    expect(queue[0].type).toBe("CREATE");
+    if (queue[0].type === "CREATE") {
+      expect(queue[0].payload.mood).toBe("Calm");
+      expect(queue[0].payload.intensity).toBe(75);
+      expect(queue[0].payload.text).toBe("enc:v1:iv2:cipher2");
+      expect(queue[0].payload.tags).toEqual(["Work"]);
+    }
+  });
+
+  it("cancels pending CREATE completely when DELETE targets the same offline tempId", async () => {
+    const { coalesceMutation } = await import("@/lib/offline-queue");
+    type QueueItem = import("@/lib/offline-queue").OfflineMutationItem;
+
+    let queue: QueueItem[] = [];
+    queue = coalesceMutation(queue, {
+      id: "op-1",
+      type: "CREATE",
+      tempId: "temp-202",
+      payload: {
+        mood: "Happy",
+        intensity: 80,
+        text: "",
+        tags: [],
+        date: "2026-11-07",
+        time: "11:00 AM",
+        sentiment_score: 0,
+        sentiment_keywords: [],
+      },
+      createdAt: "2026-11-07T09:00:00Z",
+    });
+
+    queue = coalesceMutation(queue, {
+      id: "op-2",
+      type: "DELETE",
+      targetId: "temp-202",
+      createdAt: "2026-11-07T09:01:00Z",
+    });
+
+    expect(queue).toHaveLength(0);
+  });
+
+  it("merges consecutive UPDATEs on a server UUID and replaces UPDATE with DELETE when deleted", async () => {
+    const { coalesceMutation } = await import("@/lib/offline-queue");
+    type QueueItem = import("@/lib/offline-queue").OfflineMutationItem;
+
+    const serverUuid = "a1b2c3d4-e5f6-4a7b-8c9d-0e1f2a3b4c5d";
+    let queue: QueueItem[] = [];
+
+    queue = coalesceMutation(queue, {
+      id: "op-1",
+      type: "UPDATE",
+      targetId: serverUuid,
+      payload: { intensity: 60 },
+      createdAt: "2026-11-07T09:00:00Z",
+    });
+
+    queue = coalesceMutation(queue, {
+      id: "op-2",
+      type: "UPDATE",
+      targetId: serverUuid,
+      payload: { mood: "Happy", tags: ["Family"] },
+      createdAt: "2026-11-07T09:02:00Z",
+    });
+
+    expect(queue).toHaveLength(1);
+    if (queue[0].type === "UPDATE") {
+      expect(queue[0].payload).toEqual({
+        intensity: 60,
+        mood: "Happy",
+        tags: ["Family"],
+      });
+    }
+
+    queue = coalesceMutation(queue, {
+      id: "op-3",
+      type: "DELETE",
+      targetId: serverUuid,
+      createdAt: "2026-11-07T09:05:00Z",
+    });
+
+    expect(queue).toHaveLength(1);
+    expect(queue[0].type).toBe("DELETE");
+
+    queue = coalesceMutation(queue, {
+      id: "op-4",
+      type: "CLEAR_ALL",
+      createdAt: "2026-11-07T09:10:00Z",
+    });
+
+    expect(queue).toHaveLength(1);
+    expect(queue[0].type).toBe("CLEAR_ALL");
+  });
+});
+
+
 

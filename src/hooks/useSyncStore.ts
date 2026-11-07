@@ -14,11 +14,33 @@ import {
 import { analyzeSentiment } from "@/lib/sentiment";
 import { getSession } from "@/lib/auth";
 import { useAuth } from "@/lib/providers";
+import {
+  encryptJournalText,
+  decryptJournalText,
+  clearUserVaultKey,
+} from "@/lib/crypto-vault";
+import {
+  getOfflineQueue,
+  saveOfflineQueue,
+  enqueueOfflineMutation,
+  getCachedEntries,
+  saveCachedEntries,
+  clearCachedEntries,
+  type OfflineMutationItem,
+} from "@/lib/offline-queue";
+
+const UUID_REGEX =
+  /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
 
 async function bffFetch<T>(
   path: string,
   options: RequestInit = {}
-): Promise<{ data: T | null; error: Error | null }> {
+): Promise<{
+  data: T | null;
+  error: Error | null;
+  status?: number;
+  isNetworkError?: boolean;
+}> {
   try {
     const response = await fetch(path, {
       ...options,
@@ -31,21 +53,42 @@ async function bffFetch<T>(
     if (!response.ok) {
       if (response.status === 401 && typeof window !== "undefined") {
         localStorage.removeItem("mood-tracker-session");
+        clearUserVaultKey();
       }
       const errBody = await response.json().catch(() => ({}));
       return {
         data: null,
         error: new Error(errBody.error || `HTTP ${response.status}`),
+        status: response.status,
+        isNetworkError: false,
       };
     }
     const json = await response.json();
-    return { data: (json.data ?? json) as T, error: null };
+    return {
+      data: (json.data ?? json) as T,
+      error: null,
+      status: response.status,
+      isNetworkError: false,
+    };
   } catch (err) {
     return {
       data: null,
       error: err instanceof Error ? err : new Error("Network error"),
+      isNetworkError: true,
     };
   }
+}
+
+async function decryptEntriesList(
+  rawEntries: MoodEntry[],
+  userId: string
+): Promise<MoodEntry[]> {
+  return Promise.all(
+    rawEntries.map(async (entry) => ({
+      ...entry,
+      text: await decryptJournalText(entry.text || "", userId),
+    }))
+  );
 }
 
 export function sanitizeCsvCell(value: string): string {
@@ -58,7 +101,9 @@ export function useSyncStore() {
   const queryClient = useQueryClient();
   const { user: authUser } = useAuth();
   const [isOnline, setIsOnline] = useState(true);
+  const [pendingSyncCount, setPendingSyncCount] = useState(0);
   const isOnlineRef = useRef(true);
+  const isFlushingRef = useRef(false);
 
   const session = getSession();
   const userId = authUser?.id || session?.userId || "guest";
@@ -71,16 +116,96 @@ export function useSyncStore() {
     exportFormat: "json",
   });
 
-  // Detect online/offline
+  // Flush queued offline mutations in FIFO order when online
+  const flushOfflineQueue = useCallback(async () => {
+    if (
+      typeof window === "undefined" ||
+      userId === "guest" ||
+      !isOnlineRef.current ||
+      isFlushingRef.current
+    ) {
+      return;
+    }
+
+    const queue = getOfflineQueue(userId);
+    setPendingSyncCount(queue.length);
+    if (queue.length === 0) return;
+
+    isFlushingRef.current = true;
+    const remaining: OfflineMutationItem[] = [...queue];
+
+    try {
+      while (remaining.length > 0) {
+        const item = remaining[0];
+        let res: { error: Error | null; isNetworkError?: boolean } = {
+          error: null,
+        };
+
+        if (item.type === "CREATE") {
+          res = await bffFetch<MoodEntry>("/api/entries", {
+            method: "POST",
+            body: JSON.stringify(item.payload),
+          });
+        } else if (item.type === "UPDATE") {
+          if (UUID_REGEX.test(item.targetId)) {
+            res = await bffFetch<MoodEntry>(`/api/entries/${item.targetId}`, {
+              method: "PATCH",
+              body: JSON.stringify(item.payload),
+            });
+          }
+        } else if (item.type === "DELETE") {
+          if (UUID_REGEX.test(item.targetId)) {
+            res = await bffFetch(`/api/entries/${item.targetId}`, {
+              method: "DELETE",
+            });
+          }
+        } else if (item.type === "CLEAR_ALL") {
+          res = await bffFetch("/api/entries", {
+            method: "DELETE",
+          });
+        }
+
+        if (res.isNetworkError) {
+          // Stop flushing on network drop; preserve remaining queue
+          break;
+        }
+
+        // Remove processed item (even if 400/404 so a stale item never blocks the queue forever)
+        remaining.shift();
+        saveOfflineQueue(userId, remaining);
+        setPendingSyncCount(remaining.length);
+      }
+
+      if (remaining.length === 0) {
+        await queryClient.invalidateQueries({
+          queryKey: ["mood-entries", userId],
+        });
+      }
+    } finally {
+      isFlushingRef.current = false;
+    }
+  }, [queryClient, userId]);
+
+  // Detect online/offline and trigger automatic queue replay
   useEffect(() => {
-    setIsOnline(navigator.onLine);
-    isOnlineRef.current = navigator.onLine;
+    const onlineNow = typeof navigator !== "undefined" ? navigator.onLine : true;
+    setIsOnline(onlineNow);
+    isOnlineRef.current = onlineNow;
+
+    if (userId !== "guest") {
+      setPendingSyncCount(getOfflineQueue(userId).length);
+      if (onlineNow) {
+        flushOfflineQueue();
+      }
+    }
 
     const handleOnline = () => {
       setIsOnline(true);
       isOnlineRef.current = true;
-      queryClient.invalidateQueries({ queryKey: ["mood-entries", userId] });
-      queryClient.invalidateQueries({ queryKey: ["user-settings", userId] });
+      flushOfflineQueue().then(() => {
+        queryClient.invalidateQueries({ queryKey: ["mood-entries", userId] });
+        queryClient.invalidateQueries({ queryKey: ["user-settings", userId] });
+      });
     };
     const handleOffline = () => {
       setIsOnline(false);
@@ -94,9 +219,9 @@ export function useSyncStore() {
       window.removeEventListener("online", handleOnline);
       window.removeEventListener("offline", handleOffline);
     };
-  }, [queryClient, userId]);
+  }, [queryClient, userId, flushOfflineQueue]);
 
-  // Load entries from BFF API
+  // Load entries from BFF API (with E2EE decryption and offline cache fallback)
   const {
     data: entries = [],
     isLoading: entriesLoading,
@@ -107,9 +232,26 @@ export function useSyncStore() {
       const currentSession = getSession();
       if (!authUser && !currentSession) return [];
 
-      const { data, error } = await bffFetch<MoodEntry[]>("/api/entries");
-      if (error || !data) return [];
-      return data;
+      // If there are queued offline mutations and we are online, flush first
+      if (isOnlineRef.current && getOfflineQueue(userId).length > 0) {
+        await flushOfflineQueue();
+      }
+
+      if (isOnlineRef.current) {
+        const { data, error, isNetworkError } =
+          await bffFetch<MoodEntry[]>("/api/entries");
+        if (!error && data) {
+          saveCachedEntries(userId, data);
+          return decryptEntriesList(data, userId);
+        }
+        if (!isNetworkError) {
+          return [];
+        }
+      }
+
+      // Offline fallback: read encrypted cache and decrypt locally
+      const cached = getCachedEntries(userId);
+      return decryptEntriesList(cached, userId);
     },
     enabled: typeof window !== "undefined" && userId !== "guest",
     staleTime: 1000 * 30,
@@ -141,44 +283,108 @@ export function useSyncStore() {
 
   const settings = serverSettings || localSettings;
 
-  // Create entry mutation with optimistic update
+  // Create entry mutation with E2EE, optimistic update, and offline queue fallback
   const createEntryMutation = useMutation({
     mutationFn: async (params: {
       mood: MoodType;
       intensity: number;
       text: string;
       tags: string[];
+      _tempId?: string;
     }) => {
       const now = new Date();
-      const sentiment = analyzeSentiment(params.text);
+      const dateStr = toLocalDateStr(now);
+      const timeStr = formatTime(now);
+      const plainText = params.text || "";
+      const sentiment = analyzeSentiment(plainText);
+      const encryptedText = await encryptJournalText(plainText, userId);
+      const tempId = params._tempId || generateId();
+
       const payload = {
         mood: params.mood,
         intensity: params.intensity,
-        text: params.text || "",
+        text: encryptedText,
         tags: params.tags,
-        date: toLocalDateStr(now),
-        time: formatTime(now),
+        date: dateStr,
+        time: timeStr,
         sentiment_score: sentiment.score,
         sentiment_keywords: sentiment.keywords,
       };
 
-      const { data, error } = await bffFetch<MoodEntry>("/api/entries", {
-        method: "POST",
-        body: JSON.stringify(payload),
+      const buildLocalEntry = (id: string, rawOrDecryptedText: string): MoodEntry => ({
+        id,
+        date: dateStr,
+        time: timeStr,
+        mood: params.mood,
+        intensity: params.intensity,
+        text: rawOrDecryptedText,
+        tags: params.tags,
+        sentiment: {
+          score: sentiment.score,
+          keywords: sentiment.keywords,
+        },
       });
+
+      if (!isOnlineRef.current) {
+        const nextQueue = enqueueOfflineMutation(userId, {
+          id: generateId(),
+          type: "CREATE",
+          tempId,
+          payload,
+          createdAt: now.toISOString(),
+        });
+        setPendingSyncCount(nextQueue.length);
+        saveCachedEntries(userId, [
+          buildLocalEntry(tempId, encryptedText),
+          ...getCachedEntries(userId),
+        ]);
+        return buildLocalEntry(tempId, plainText);
+      }
+
+      const { data, error, isNetworkError } = await bffFetch<MoodEntry>(
+        "/api/entries",
+        {
+          method: "POST",
+          body: JSON.stringify(payload),
+        }
+      );
+
+      if (isNetworkError) {
+        const nextQueue = enqueueOfflineMutation(userId, {
+          id: generateId(),
+          type: "CREATE",
+          tempId,
+          payload,
+          createdAt: now.toISOString(),
+        });
+        setPendingSyncCount(nextQueue.length);
+        saveCachedEntries(userId, [
+          buildLocalEntry(tempId, encryptedText),
+          ...getCachedEntries(userId),
+        ]);
+        return buildLocalEntry(tempId, plainText);
+      }
 
       if (error || !data) {
         throw error || new Error("Failed to create mood entry");
       }
 
-      return data;
+      return {
+        ...data,
+        text: plainText,
+      };
     },
     onMutate: async (newParams) => {
       await queryClient.cancelQueries({ queryKey: ["mood-entries", userId] });
-      const previousEntries = queryClient.getQueryData<MoodEntry[]>(["mood-entries", userId]) || [];
+      const previousEntries =
+        queryClient.getQueryData<MoodEntry[]>(["mood-entries", userId]) || [];
+
+      const tempId = generateId();
+      newParams._tempId = tempId;
+      const sentiment = analyzeSentiment(newParams.text);
 
       const optimisticEntry: MoodEntry = {
-        id: generateId(),
+        id: tempId,
         date: toLocalDateStr(new Date()),
         time: formatTime(new Date()),
         mood: newParams.mood,
@@ -186,8 +392,8 @@ export function useSyncStore() {
         text: newParams.text || "",
         tags: newParams.tags,
         sentiment: {
-          score: analyzeSentiment(newParams.text).score,
-          keywords: analyzeSentiment(newParams.text).keywords,
+          score: sentiment.score,
+          keywords: sentiment.keywords,
         },
       };
 
@@ -200,26 +406,65 @@ export function useSyncStore() {
     },
     onError: (_err, _newParams, context) => {
       if (context?.previousEntries) {
-        queryClient.setQueryData(["mood-entries", userId], context.previousEntries);
+        queryClient.setQueryData(
+          ["mood-entries", userId],
+          context.previousEntries
+        );
       }
     },
     onSettled: () => {
-      queryClient.invalidateQueries({ queryKey: ["mood-entries", userId] });
+      if (isOnlineRef.current && getOfflineQueue(userId).length === 0) {
+        queryClient.invalidateQueries({ queryKey: ["mood-entries", userId] });
+      }
     },
   });
 
-  // Delete entry mutation with optimistic update
+  // Delete entry mutation with optimistic update & offline queue coalescing
   const deleteEntryMutation = useMutation({
     mutationFn: async (id: string) => {
-      const { error } = await bffFetch(`/api/entries/${id}`, {
+      if (!isOnlineRef.current || !UUID_REGEX.test(id)) {
+        const nextQueue = enqueueOfflineMutation(userId, {
+          id: generateId(),
+          type: "DELETE",
+          targetId: id,
+          createdAt: new Date().toISOString(),
+        });
+        setPendingSyncCount(nextQueue.length);
+        saveCachedEntries(
+          userId,
+          getCachedEntries(userId).filter((e) => e.id !== id)
+        );
+        return id;
+      }
+
+      const { error, isNetworkError } = await bffFetch(`/api/entries/${id}`, {
         method: "DELETE",
       });
+
+      if (isNetworkError) {
+        const nextQueue = enqueueOfflineMutation(userId, {
+          id: generateId(),
+          type: "DELETE",
+          targetId: id,
+          createdAt: new Date().toISOString(),
+        });
+        setPendingSyncCount(nextQueue.length);
+        saveCachedEntries(
+          userId,
+          getCachedEntries(userId).filter((e) => e.id !== id)
+        );
+        return id;
+      }
+
       if (error) throw error;
       return id;
     },
     onMutate: async (deletedId) => {
       await queryClient.cancelQueries({ queryKey: ["mood-entries", userId] });
-      const previousEntries = queryClient.getQueryData<MoodEntry[]>(["mood-entries", userId]);
+      const previousEntries = queryClient.getQueryData<MoodEntry[]>([
+        "mood-entries",
+        userId,
+      ]);
 
       queryClient.setQueryData<MoodEntry[]>(["mood-entries", userId], (old) =>
         old ? old.filter((entry) => entry.id !== deletedId) : []
@@ -229,15 +474,20 @@ export function useSyncStore() {
     },
     onError: (_err, _deletedId, context) => {
       if (context?.previousEntries) {
-        queryClient.setQueryData(["mood-entries", userId], context.previousEntries);
+        queryClient.setQueryData(
+          ["mood-entries", userId],
+          context.previousEntries
+        );
       }
     },
     onSettled: () => {
-      queryClient.invalidateQueries({ queryKey: ["mood-entries", userId] });
+      if (isOnlineRef.current && getOfflineQueue(userId).length === 0) {
+        queryClient.invalidateQueries({ queryKey: ["mood-entries", userId] });
+      }
     },
   });
 
-  // Update entry mutation with optimistic update
+  // Update entry mutation with E2EE, optimistic update, and offline queue coalescing
   const updateEntryMutation = useMutation({
     mutationFn: async (params: {
       id: string;
@@ -249,19 +499,116 @@ export function useSyncStore() {
       const body: Record<string, unknown> = {};
       if (params.mood !== undefined) body.mood = params.mood;
       if (params.intensity !== undefined) body.intensity = params.intensity;
-      if (params.text !== undefined) body.text = params.text;
       if (params.tags !== undefined) body.tags = params.tags;
 
-      const { data, error } = await bffFetch<MoodEntry>(`/api/entries/${params.id}`, {
-        method: "PATCH",
-        body: JSON.stringify(body),
-      });
+      let encryptedText: string | undefined;
+      if (params.text !== undefined) {
+        const sentiment = analyzeSentiment(params.text);
+        encryptedText = await encryptJournalText(params.text, userId);
+        body.text = encryptedText;
+        body.sentiment_score = sentiment.score;
+        body.sentiment_keywords = sentiment.keywords;
+      }
+
+      const queueUpdate = () => {
+        const nextQueue = enqueueOfflineMutation(userId, {
+          id: generateId(),
+          type: "UPDATE",
+          targetId: params.id,
+          payload: {
+            ...(params.mood !== undefined && { mood: params.mood }),
+            ...(params.intensity !== undefined && {
+              intensity: params.intensity,
+            }),
+            ...(encryptedText !== undefined && { text: encryptedText }),
+            ...(params.tags !== undefined && { tags: params.tags }),
+            ...(typeof body.sentiment_score === "number" && {
+              sentiment_score: body.sentiment_score,
+            }),
+            ...(Array.isArray(body.sentiment_keywords) && {
+              sentiment_keywords: body.sentiment_keywords as string[],
+            }),
+          },
+          createdAt: new Date().toISOString(),
+        });
+        setPendingSyncCount(nextQueue.length);
+        saveCachedEntries(
+          userId,
+          getCachedEntries(userId).map((e) =>
+            e.id === params.id
+              ? {
+                  ...e,
+                  ...(params.mood !== undefined && { mood: params.mood }),
+                  ...(params.intensity !== undefined && {
+                    intensity: params.intensity,
+                  }),
+                  ...(encryptedText !== undefined && { text: encryptedText }),
+                  ...(params.tags !== undefined && { tags: params.tags }),
+                }
+              : e
+          )
+        );
+      };
+
+      if (!isOnlineRef.current || !UUID_REGEX.test(params.id)) {
+        queueUpdate();
+        const currentList =
+          queryClient.getQueryData<MoodEntry[]>(["mood-entries", userId]) || [];
+        return (
+          currentList.find((e) => e.id === params.id) ||
+          ({
+            id: params.id,
+            date: toLocalDateStr(new Date()),
+            time: formatTime(new Date()),
+            mood: params.mood || "Calm",
+            intensity: params.intensity ?? 50,
+            text: params.text ?? "",
+            tags: params.tags ?? [],
+          } as MoodEntry)
+        );
+      }
+
+      const { data, error, isNetworkError } = await bffFetch<MoodEntry>(
+        `/api/entries/${params.id}`,
+        {
+          method: "PATCH",
+          body: JSON.stringify(body),
+        }
+      );
+
+      if (isNetworkError) {
+        queueUpdate();
+        const currentList =
+          queryClient.getQueryData<MoodEntry[]>(["mood-entries", userId]) || [];
+        return (
+          currentList.find((e) => e.id === params.id) ||
+          ({
+            id: params.id,
+            date: toLocalDateStr(new Date()),
+            time: formatTime(new Date()),
+            mood: params.mood || "Calm",
+            intensity: params.intensity ?? 50,
+            text: params.text ?? "",
+            tags: params.tags ?? [],
+          } as MoodEntry)
+        );
+      }
+
       if (error || !data) throw error || new Error("Failed to update entry");
-      return data;
+      return {
+        ...data,
+        text:
+          params.text !== undefined
+            ? params.text
+            : await decryptJournalText(data.text || "", userId),
+      };
     },
     onMutate: async (updatedParams) => {
       await queryClient.cancelQueries({ queryKey: ["mood-entries", userId] });
-      const previousEntries = queryClient.getQueryData<MoodEntry[]>(["mood-entries", userId]);
+      const previousEntries = queryClient.getQueryData<MoodEntry[]>([
+        "mood-entries",
+        userId,
+      ]);
 
       queryClient.setQueryData<MoodEntry[]>(["mood-entries", userId], (old) =>
         old
@@ -269,10 +616,19 @@ export function useSyncStore() {
               entry.id === updatedParams.id
                 ? {
                     ...entry,
-                    ...(updatedParams.mood !== undefined && { mood: updatedParams.mood }),
-                    ...(updatedParams.intensity !== undefined && { intensity: updatedParams.intensity }),
-                    ...(updatedParams.text !== undefined && { text: updatedParams.text }),
-                    ...(updatedParams.tags !== undefined && { tags: updatedParams.tags }),
+                    ...(updatedParams.mood !== undefined && {
+                      mood: updatedParams.mood,
+                    }),
+                    ...(updatedParams.intensity !== undefined && {
+                      intensity: updatedParams.intensity,
+                    }),
+                    ...(updatedParams.text !== undefined && {
+                      text: updatedParams.text,
+                      sentiment: analyzeSentiment(updatedParams.text),
+                    }),
+                    ...(updatedParams.tags !== undefined && {
+                      tags: updatedParams.tags,
+                    }),
                   }
                 : entry
             )
@@ -283,11 +639,16 @@ export function useSyncStore() {
     },
     onError: (_err, _updatedParams, context) => {
       if (context?.previousEntries) {
-        queryClient.setQueryData(["mood-entries", userId], context.previousEntries);
+        queryClient.setQueryData(
+          ["mood-entries", userId],
+          context.previousEntries
+        );
       }
     },
     onSettled: () => {
-      queryClient.invalidateQueries({ queryKey: ["mood-entries", userId] });
+      if (isOnlineRef.current && getOfflineQueue(userId).length === 0) {
+        queryClient.invalidateQueries({ queryKey: ["mood-entries", userId] });
+      }
     },
   });
 
@@ -309,10 +670,13 @@ export function useSyncStore() {
       const currentSession = getSession();
       const currentUserId = currentSession?.userId ?? "guest";
 
-      queryClient.setQueryData(["user-settings", currentUserId], (old: UserSettings | undefined) => ({
-        ...(old || localSettings),
-        theme,
-      }));
+      queryClient.setQueryData(
+        ["user-settings", currentUserId],
+        (old: UserSettings | undefined) => ({
+          ...(old || localSettings),
+          theme,
+        })
+      );
 
       if (currentSession) {
         bffFetch("/api/settings", {
@@ -332,7 +696,8 @@ export function useSyncStore() {
       }
 
       const body: Record<string, unknown> = {};
-      if (updates.notifications !== undefined) body.notifications = updates.notifications;
+      if (updates.notifications !== undefined)
+        body.notifications = updates.notifications;
       if (updates.reminderTime !== undefined) {
         body.reminder_time = updates.reminderTime;
         body.reminderTime = updates.reminderTime;
@@ -343,10 +708,13 @@ export function useSyncStore() {
         body.exportFormat = updates.exportFormat;
       }
 
-      const { data, error } = await bffFetch<Record<string, unknown>>("/api/settings", {
-        method: "PATCH",
-        body: JSON.stringify(body),
-      });
+      const { data, error } = await bffFetch<Record<string, unknown>>(
+        "/api/settings",
+        {
+          method: "PATCH",
+          body: JSON.stringify(body),
+        }
+      );
 
       if (error) throw error;
       return data;
@@ -356,13 +724,39 @@ export function useSyncStore() {
     },
   });
 
-  // Clear all data
+  // Clear all data (with offline queue support)
   const clearAllData = useCallback(async () => {
-    const { error } = await bffFetch("/api/entries", {
+    if (!isOnlineRef.current) {
+      const nextQueue = enqueueOfflineMutation(userId, {
+        id: generateId(),
+        type: "CLEAR_ALL",
+        createdAt: new Date().toISOString(),
+      });
+      setPendingSyncCount(nextQueue.length);
+      clearCachedEntries(userId);
+      queryClient.setQueryData(["mood-entries", userId], []);
+      return;
+    }
+
+    const { error, isNetworkError } = await bffFetch("/api/entries", {
       method: "DELETE",
     });
+
+    if (isNetworkError) {
+      const nextQueue = enqueueOfflineMutation(userId, {
+        id: generateId(),
+        type: "CLEAR_ALL",
+        createdAt: new Date().toISOString(),
+      });
+      setPendingSyncCount(nextQueue.length);
+      clearCachedEntries(userId);
+      queryClient.setQueryData(["mood-entries", userId], []);
+      return;
+    }
+
     if (error) throw error;
 
+    clearCachedEntries(userId);
     queryClient.setQueryData(["mood-entries", userId], []);
     queryClient.invalidateQueries({ queryKey: ["mood-entries", userId] });
   }, [queryClient, userId]);
@@ -379,7 +773,13 @@ export function useSyncStore() {
         averageMood: 0,
         mostCommonMood: "Calm" as MoodType,
         entriesThisWeek: 0,
-        moodDistribution: { Happy: 0, Calm: 0, Sad: 0, Frustrated: 0, Tired: 0 },
+        moodDistribution: {
+          Happy: 0,
+          Calm: 0,
+          Sad: 0,
+          Frustrated: 0,
+          Tired: 0,
+        },
       };
     }
 
@@ -400,10 +800,9 @@ export function useSyncStore() {
     });
 
     const averageMood = totalScore / data.length;
-    const mostCommonMood = Object.entries(moodDistribution).reduce<[MoodType, number]>(
-      (a, b) => (b[1] > a[1] ? (b as [MoodType, number]) : a),
-      ["Calm", 0]
-    )[0];
+    const mostCommonMood = Object.entries(moodDistribution).reduce<
+      [MoodType, number]
+    >((a, b) => (b[1] > a[1] ? (b as [MoodType, number]) : a), ["Calm", 0])[0];
 
     const currentStreak = calculateStreak(data);
     const longestStreak = Math.max(currentStreak, getLongestStreak(data));
@@ -433,7 +832,15 @@ export function useSyncStore() {
         ? document.documentElement.dir === "rtl"
         : false;
 
-    const arabicDays = ["أحد", "إثنين", "ثلاثاء", "أربعاء", "خميس", "جمعة", "سبت"];
+    const arabicDays = [
+      "أحد",
+      "إثنين",
+      "ثلاثاء",
+      "أربعاء",
+      "خميس",
+      "جمعة",
+      "سبت",
+    ];
     const englishDays = ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"];
 
     for (let i = 6; i >= 0; i--) {
@@ -468,7 +875,15 @@ export function useSyncStore() {
         content = JSON.stringify(entries, null, 2);
         mimeType = "application/json";
       } else {
-        const headers = ["Date", "Time", "Mood", "Intensity", "Text", "Tags", "Sentiment Score"];
+        const headers = [
+          "Date",
+          "Time",
+          "Mood",
+          "Intensity",
+          "Text",
+          "Tags",
+          "Sentiment Score",
+        ];
         const rows = entries.map((e) => [
           e.date,
           e.time,
@@ -478,7 +893,9 @@ export function useSyncStore() {
           sanitizeCsvCell((e.tags || []).join("; ")),
           String(e.sentiment?.score ?? ""),
         ]);
-        content = "\uFEFF" + [headers.join(","), ...rows.map((r) => r.join(","))].join("\n");
+        content =
+          "\uFEFF" +
+          [headers.join(","), ...rows.map((r) => r.join(","))].join("\n");
         mimeType = "text/csv;charset=utf-8;";
       }
 
@@ -501,6 +918,8 @@ export function useSyncStore() {
     isLoading: entriesLoading || settingsLoading,
     error: entriesError,
     isOnline,
+    pendingSyncCount,
+    flushOfflineQueue,
     addEntry: createEntryMutation.mutate,
     createEntry: createEntryMutation.mutateAsync,
     deleteEntry: deleteEntryMutation.mutateAsync,

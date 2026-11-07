@@ -13,7 +13,7 @@ const UUID_REGEX =
 const UpdateEntrySchema = z.object({
   mood: z.string().min(1).optional(),
   intensity: z.number().min(1).max(100).optional(),
-  text: z.string().max(5000).optional(),
+  text: z.string().max(15000).optional(),
   tags: z.array(z.string().max(50)).max(20).optional(),
   sentiment_score: z.number().optional(),
   sentiment_keywords: z.array(z.string()).optional(),
@@ -82,7 +82,12 @@ export async function PATCH(
 
   if (parsed.data.text !== undefined) {
     updates.text = parsed.data.text;
-    const computed = analyzeSentiment(parsed.data.text);
+    const isCiphertext =
+      parsed.data.text.startsWith("enc:v1:") ||
+      parsed.data.text.startsWith("enc:u1:");
+    const computed = isCiphertext
+      ? { score: 0, keywords: [] as string[] }
+      : analyzeSentiment(parsed.data.text);
     updates.sentiment_score =
       parsed.data.sentiment_score ??
       parsed.data.sentiment?.score ??
