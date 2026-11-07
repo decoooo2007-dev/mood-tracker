@@ -3,6 +3,8 @@ import { Providers } from "@/lib/providers";
 import CookieConsent from "@/components/ui/CookieConsent";
 import InstallPrompt from "@/components/ui/InstallPrompt";
 import ServiceWorkerRegistration from "@/components/ui/ServiceWorkerRegistration";
+import AppLockGate from "@/components/ui/AppLockGate";
+import NotificationScheduler from "@/components/ui/NotificationScheduler";
 import ThemeScript from "@/components/ThemeScript";
 import "./globals.css";
 
@@ -86,12 +88,15 @@ export default function RootLayout({
       <body className="font-sans antialiased min-h-screen">
         <ThemeScript />
         <Providers>
-          <main className="min-h-screen pb-24 md:pb-28">
-            {children}
-          </main>
+          <AppLockGate>
+            <main className="min-h-screen pb-24 md:pb-28">
+              {children}
+            </main>
+          </AppLockGate>
           <CookieConsent />
           <InstallPrompt />
           <ServiceWorkerRegistration />
+          <NotificationScheduler />
         </Providers>
       </body>
     </html>

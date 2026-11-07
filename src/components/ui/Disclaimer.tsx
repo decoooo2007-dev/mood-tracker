@@ -1,136 +1,32 @@
 "use client";
 
-import { useState, useEffect } from "react";
-import { usePathname } from "next/navigation";
-import { motion, AnimatePresence } from "framer-motion";
-import { AlertTriangle, Heart, Brain, Hand } from "lucide-react";
-import { useLanguage } from "@/lib/providers";
+import { useEffect } from "react";
 
 interface DisclaimerProps {
   onAcknowledge?: () => void;
 }
 
+/**
+ * Non-blocking Medical Disclaimer (Track 2.1).
+ *
+ * Replaces the intrusive full-screen blocking modal with an inline notice on `/login`
+ * and a dedicated "Wellness & Crisis Helplines" card in `SettingsPage.tsx`.
+ *
+ * Automatically records acknowledgment and dispatches the onboarding event sequence.
+ */
 export default function Disclaimer({ onAcknowledge }: DisclaimerProps) {
-  const pathname = usePathname();
-  const { isRtl, t } = useLanguage();
-  const [isVisible, setIsVisible] = useState(false);
-
   useEffect(() => {
-    const hasAcknowledged =
-      localStorage.getItem("moodflow-disclaimer-acknowledged") ||
-      localStorage.getItem("moodflow-disclaimer-accepted");
-    if (!hasAcknowledged) {
-      setIsVisible(true);
+    if (typeof window !== "undefined") {
+      const hasAcknowledged =
+        localStorage.getItem("moodflow-disclaimer-acknowledged") ||
+        localStorage.getItem("moodflow-disclaimer-accepted");
+      if (!hasAcknowledged) {
+        localStorage.setItem("moodflow-disclaimer-acknowledged", "true");
+        window.dispatchEvent(new Event("moodflow-onboarding-step"));
+        onAcknowledge?.();
+      }
     }
-  }, []);
+  }, [onAcknowledge]);
 
-  if (pathname === "/login" || pathname === "/offline") {
-    return null;
-  }
-
-  const handleAcknowledge = () => {
-    localStorage.setItem("moodflow-disclaimer-acknowledged", "true");
-    setIsVisible(false);
-    window.dispatchEvent(new Event("moodflow-onboarding-step"));
-    onAcknowledge?.();
-  };
-
-  const items = [
-    {
-      icon: AlertTriangle,
-      title: t("disclaimer.notMedical"),
-      desc: t("disclaimer.notMedicalDesc"),
-      color: "yellow"
-    },
-    {
-      icon: Brain,
-      title: t("disclaimer.forAwareness"),
-      desc: t("disclaimer.forAwarenessDesc"),
-      color: "purple"
-    },
-    {
-      icon: Heart,
-      title: t("disclaimer.seekHelp"),
-      desc: t("disclaimer.seekHelpDesc"),
-      color: "red"
-    },
-  ];
-
-  const colorClasses = {
-    yellow: { bg: "bg-yellow-500/20", text: "text-yellow-400", border: "border-yellow-500/30" },
-    purple: { bg: "bg-purple-500/20", text: "text-purple-400", border: "border-purple-500/30" },
-    red: { bg: "bg-red-500/20", text: "text-red-400", border: "border-red-500/30" },
-  };
-
-  return (
-    <AnimatePresence>
-      {isVisible && (
-        <>
-          {/* Backdrop */}
-          <motion.div
-            className="fixed inset-0 bg-black/80 backdrop-blur-sm z-50"
-            initial={{ opacity: 0 }}
-            animate={{ opacity: 1 }}
-            exit={{ opacity: 0 }}
-          />
-
-          {/* Modal */}
-          <motion.div
-            className="fixed inset-0 z-50 flex items-center justify-center p-4 pointer-events-none"
-            initial={{ opacity: 0 }}
-            animate={{ opacity: 1 }}
-            exit={{ opacity: 0 }}
-          >
-            <motion.div
-              className="w-full max-w-lg pointer-events-auto glass-modal rounded-3xl border border-white/20 shadow-2xl overflow-hidden"
-              initial={{ scale: 0.9, y: 20 }}
-              animate={{ scale: 1, y: 0 }}
-              exit={{ scale: 0.9, y: 20 }}
-              transition={{ type: "spring", damping: 25 }}
-              dir={isRtl ? "rtl" : "ltr"}
-            >
-              {/* Header */}
-              <div className="p-6 pb-4">
-                <div className="flex items-center gap-3 mb-4">
-                  <div className="w-12 h-12 rounded-2xl bg-gradient-to-br from-yellow-500 to-orange-500 flex items-center justify-center">
-                    <Hand className="w-6 h-6 text-white keep-white" />
-                  </div>
-                  <div>
-                    <h2 className="text-xl font-bold text-white">{t("disclaimer.title")}</h2>
-                    <p className="text-white/60 text-sm">{t("app.title")}</p>
-                  </div>
-                </div>
-              </div>
-
-              {/* Content */}
-              <div className="px-6 pb-4 space-y-3">
-                {items.map((item) => (
-                  <div
-                    key={item.title}
-                    className={`flex items-start gap-3 p-4 rounded-xl ${colorClasses[item.color as keyof typeof colorClasses].bg} border ${colorClasses[item.color as keyof typeof colorClasses].border}`}
-                  >
-                    <item.icon className={`w-5 h-5 ${colorClasses[item.color as keyof typeof colorClasses].text} flex-shrink-0 mt-0.5`} />
-                    <div className={isRtl ? "text-right" : ""}>
-                      <h3 className="font-semibold text-white text-sm mb-1">{item.title}</h3>
-                      <p className="text-white/70 text-sm leading-relaxed">{item.desc}</p>
-                    </div>
-                  </div>
-                ))}
-              </div>
-
-              {/* Button */}
-              <div className="p-6 pt-2">
-                <button
-                  onClick={handleAcknowledge}
-                  className="w-full py-4 rounded-2xl bg-gradient-to-r from-purple-500 to-pink-500 text-white font-semibold hover:opacity-90 transition-all"
-                >
-                  {t("disclaimer.continue")}
-                </button>
-              </div>
-            </motion.div>
-          </motion.div>
-        </>
-      )}
-    </AnimatePresence>
-  );
+  return null;
 }

@@ -44,9 +44,113 @@ export const commonTags = [
   "Motivation",
 ];
 
+export const CUSTOM_TAGS_KEY = "moodflow-custom-tags";
+
+export function getCustomTags(): string[] {
+  if (typeof globalThis.localStorage === "undefined") {
+    return [];
+  }
+  try {
+    const raw = globalThis.localStorage.getItem(CUSTOM_TAGS_KEY);
+    if (!raw) return [];
+    const parsed = JSON.parse(raw);
+    return Array.isArray(parsed) ? (parsed as string[]).filter(Boolean) : [];
+  } catch {
+    return [];
+  }
+}
+
+export function saveCustomTag(tag: string): string[] {
+  const trimmed = tag.trim();
+  if (!trimmed || typeof globalThis.localStorage === "undefined") {
+    return getCustomTags();
+  }
+  const existing = getCustomTags();
+  const lowerExists = existing.some((t) => t.toLowerCase() === trimmed.toLowerCase());
+  const commonExists = commonTags.some((t) => t.toLowerCase() === trimmed.toLowerCase());
+  if (lowerExists || commonExists) {
+    return existing;
+  }
+  const updated = [...existing, trimmed];
+  try {
+    globalThis.localStorage.setItem(CUSTOM_TAGS_KEY, JSON.stringify(updated));
+  } catch {
+    // Ignore storage quota
+  }
+  return updated;
+}
+
+export function getAllTags(): string[] {
+  const custom = getCustomTags();
+  return [...commonTags, ...custom];
+}
+
 export const translateTag = (tag: string, locale: Locale = currentLocale): string => {
   return ttag(tag, locale);
 };
+
+export function getMoodPrompts(mood: MoodType, locale: Locale = currentLocale): string[] {
+  const isAr = locale === "ar";
+  const map: Record<MoodType, string[]> = {
+    Happy: isAr
+      ? [
+          "ما الذي جعل هذه اللحظة مميزة بالنسبة لك؟",
+          "من أو ما الذي ساهم في سعادتك اليوم؟",
+          "كيف يمكنك الاحتفال بهذا الشعور الجميل؟",
+        ]
+      : [
+          "What made this moment special?",
+          "Who contributed to your joy today?",
+          "How can you celebrate this win?",
+        ],
+    Calm: isAr
+      ? [
+          "ما الذي جلب لك هذا الهدوء والسكينة اليوم؟",
+          "ما الذي تشعر بالامتنان والوعي به الآن؟",
+          "صف هذه اللحظة الهادئة بكلمات بسيطة.",
+        ]
+      : [
+          "What brought you peace today?",
+          "What are you feeling mindful of right now?",
+          "Describe this quiet moment in a few words.",
+        ],
+    Sad: isAr
+      ? [
+          "ما الذي يثقل قلبك أو يشغل تفكيرك الآن؟",
+          "ما نوع الدعم أو المواساة التي تحتاجها الآن؟",
+          "ما هو العمل اللطيف البسيط الذي يمكنك فعله لنفسك؟",
+        ]
+      : [
+          "What is weighing on your mind right now?",
+          "What comfort or gentleness do you need?",
+          "What is one small kind thing for yourself today?",
+        ],
+    Frustrated: isAr
+      ? [
+          "ما هو السبب الأساسي وراء هذا الإحباط أو الغضب؟",
+          "ما هي الأشياء التي تقع تحت سيطرتك الآن؟",
+          "كيف يمكنك تفريغ هذا التوتر والضغط بهدوء؟",
+        ]
+      : [
+          "What triggered this frustration?",
+          "What is within your control right now?",
+          "How can you release this tension peacefully?",
+        ],
+    Tired: isAr
+      ? [
+          "ما الذي استنزف طاقتك وقوتك خلال اليوم؟",
+          "ما هو النشاط المريح الذي يمكنك الاسترخاء به الليلة؟",
+          "كيف يمكنك تنظيم طاقتك بلطف غداً؟",
+        ]
+      : [
+          "What drained your energy today?",
+          "What restful activity can you do tonight?",
+          "How can you pace yourself tomorrow?",
+        ],
+  };
+
+  return map[mood] || map.Calm;
+}
 
 export const generateId = (): string => {
   return `${Date.now()}-${Math.random().toString(36).substring(2, 11)}`;

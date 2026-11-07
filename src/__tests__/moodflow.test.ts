@@ -514,5 +514,114 @@ describe("Argon Track 4.1: Conflict-Free Offline Mutation Queue (offline-queue.t
   });
 });
 
+describe("Phase 2: Custom Tags Management", () => {
+  beforeEach(() => {
+    const store = new Map<string, string>();
+    globalThis.localStorage = {
+      getItem: (key: string) => store.get(key) ?? null,
+      setItem: (key: string, val: string) => {
+        store.set(key, String(val));
+      },
+      removeItem: (key: string) => {
+        store.delete(key);
+      },
+      clear: () => {
+        store.clear();
+      },
+      key: (i: number) => Array.from(store.keys())[i] ?? null,
+      length: 0,
+    } as Storage;
+  });
+
+  it("handles custom tags persistence, deduplication, and case-insensitivity", async () => {
+    const { getCustomTags, saveCustomTag, getAllTags, commonTags } = await import("@/lib/moods");
+
+    expect(getCustomTags()).toEqual([]);
+
+    const updated = saveCustomTag("Deep Meditation");
+    expect(updated).toContain("Deep Meditation");
+    expect(getCustomTags()).toEqual(["Deep Meditation"]);
+
+    // Deduplication check
+    const dedup = saveCustomTag("deep meditation");
+    expect(dedup).toHaveLength(1);
+
+    // Common tags collision check
+    const commonCollision = saveCustomTag(commonTags[0]);
+    expect(commonCollision).toHaveLength(1);
+
+    // getAllTags contains both common and custom
+    const all = getAllTags();
+    expect(all).toContain(commonTags[0]);
+    expect(all).toContain("Deep Meditation");
+  });
+});
+
+describe("Phase 2: Guided Journaling Prompts", () => {
+  it("returns 3 distinct prompts per mood in EN and AR", async () => {
+    const { getMoodPrompts, moodOptions } = await import("@/lib/moods");
+
+    for (const option of moodOptions) {
+      const enPrompts = getMoodPrompts(option.label, "en");
+      expect(enPrompts).toHaveLength(3);
+      for (const p of enPrompts) {
+        expect(p.length).toBeGreaterThan(5);
+      }
+
+      const arPrompts = getMoodPrompts(option.label, "ar");
+      expect(arPrompts).toHaveLength(3);
+      for (const p of arPrompts) {
+        expect(p.length).toBeGreaterThan(5);
+        // Strict BiDi: No English letters
+        expect(/[a-zA-Z]/.test(p)).toBe(false);
+      }
+    }
+  });
+});
+
+describe("Phase 2: App Lock Vault & PIN Security", () => {
+  it("hashes PIN using Web Crypto SHA-256 and verifies accurately", async () => {
+    const { hashPin, setAppLockPin, verifyPin, isAppLockEnabled, removeAppLock } =
+      await import("@/lib/app-lock");
+
+    const pin = "1357";
+    const hashed = await hashPin(pin);
+    expect(hashed).toHaveLength(64); // SHA-256 hex is 64 chars
+
+    // Enable PIN lock
+    const enabled = await setAppLockPin(pin);
+    expect(enabled).toBe(true);
+    expect(isAppLockEnabled()).toBe(true);
+
+    const isValid = await verifyPin("1357");
+    expect(isValid).toBe(true);
+
+    const isInvalid = await verifyPin("9999");
+    expect(isInvalid).toBe(false);
+
+    // Remove lock
+    removeAppLock();
+    expect(isAppLockEnabled()).toBe(false);
+  });
+});
+
+describe("Phase 2: Strict BiDi Purity on all Arabic Translations", () => {
+  it("enforces zero Latin ASCII letters across all translations.ar keys", () => {
+    const arKeys = Object.entries(translations.ar);
+    expect(arKeys.length).toBeGreaterThan(60);
+
+    for (const [key, value] of arKeys) {
+      if (typeof value === "string") {
+        const hasLatin = /[a-zA-Z]/.test(value);
+        if (hasLatin) {
+          throw new Error(`Arabic key "${key}" contains Latin characters: "${value}"`);
+        }
+        expect(hasLatin).toBe(false);
+      }
+    }
+  });
+});
+
+
 
 

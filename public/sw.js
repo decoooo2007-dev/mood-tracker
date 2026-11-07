@@ -34,7 +34,34 @@ self.addEventListener("activate", (event) => {
 self.addEventListener("message", (event) => {
   if (event.data && event.data.type === "CLEAR_AUTH_CACHE") {
     event.waitUntil(caches.delete(CACHE_NAME));
+  } else if (event.data && event.data.type === "SHOW_REMINDER") {
+    const { title, body, icon } = event.data;
+    event.waitUntil(
+      self.registration.showNotification(title || "MoodFlow", {
+        body: body || "Take a mindful moment to log your mood today.",
+        icon: icon || "/icons/icon.svg",
+        badge: "/icons/icon.svg",
+        tag: "moodflow-daily-reminder",
+        data: { url: "/" },
+      })
+    );
   }
+});
+
+self.addEventListener("notificationclick", (event) => {
+  event.notification.close();
+  event.waitUntil(
+    self.clients.matchAll({ type: "window", includeUncontrolled: true }).then((clientList) => {
+      for (const client of clientList) {
+        if (client.url && "focus" in client) {
+          return client.focus();
+        }
+      }
+      if (self.clients.openWindow) {
+        return self.clients.openWindow(event.notification.data?.url || "/");
+      }
+    })
+  );
 });
 
 self.addEventListener("fetch", (event) => {

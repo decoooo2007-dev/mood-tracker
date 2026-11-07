@@ -249,9 +249,12 @@ export default function LoginPage() {
             </div>
           </motion.div>
 
-          {/* Info */}
+          {/* Info & Medical Disclaimer */}
           <p className={`text-center text-white/40 text-xs mt-6 ${isRtl ? "rtl" : ""}`}>
             {t("auth.syncInfo")}
+          </p>
+          <p className={`text-center text-white/30 text-[11px] mt-2 max-w-sm mx-auto leading-relaxed ${isRtl ? "rtl" : ""}`}>
+            {t("disclaimer.footerNotice")}
           </p>
         </motion.div>
       </div>

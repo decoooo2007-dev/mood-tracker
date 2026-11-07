@@ -359,3 +359,38 @@ input[type="time"]::-webkit-calendar-picker-indicator {
     height: 28px;
   }
 }
+
+/* Print Media Styles for Monthly Wellness Report (Track 5.2) */
+@media print {
+  body {
+    background: #ffffff !important;
+    color: #111827 !important;
+  }
+
+  nav,
+  header,
+  footer,
+  .no-print,
+  #navigation-bar,
+  [data-no-print="true"] {
+    display: none !important;
+  }
+
+  .printable-report {
+    position: static !important;
+    width: 100% !important;
+    max-width: 100% !important;
+    box-shadow: none !important;
+    background: #ffffff !important;
+    color: #111827 !important;
+    border: none !important;
+    padding: 0 !important;
+    margin: 0 !important;
+  }
+
+  .printable-report * {
+    color: #111827 !important;
+    border-color: #e5e7eb !important;
+    background-color: transparent !important;
+  }
+}

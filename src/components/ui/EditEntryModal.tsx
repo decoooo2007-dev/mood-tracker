@@ -1,10 +1,10 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, useMemo } from "react";
 import { motion, AnimatePresence } from "framer-motion";
-import { X, Loader2 } from "lucide-react";
+import { X, Loader2, Plus } from "lucide-react";
 import { MoodEntry, MoodType } from "@/types/mood";
-import { moodOptions, commonTags } from "@/lib/moods";
+import { moodOptions, commonTags, getCustomTags, saveCustomTag } from "@/lib/moods";
 import { useLanguage } from "@/lib/providers";
 
 interface EditEntryModalProps {
@@ -34,6 +34,25 @@ export default function EditEntryModal({
   const [intensity, setIntensity] = useState(50);
   const [text, setText] = useState("");
   const [selectedTags, setSelectedTags] = useState<string[]>([]);
+  const [customTags, setCustomTags] = useState<string[]>(() => getCustomTags());
+  const [isAddingTag, setIsAddingTag] = useState(false);
+  const [newTagText, setNewTagText] = useState("");
+
+  const allAvailableTags = useMemo(() => {
+    return [...commonTags, ...customTags];
+  }, [customTags]);
+
+  const handleSaveCustomTag = () => {
+    const trimmed = newTagText.trim();
+    if (!trimmed) return;
+    const updated = saveCustomTag(trimmed);
+    setCustomTags(updated);
+    if (!selectedTags.includes(trimmed)) {
+      setSelectedTags((prev) => [...prev, trimmed]);
+    }
+    setNewTagText("");
+    setIsAddingTag(false);
+  };
 
   useEffect(() => {
     if (entry) {
@@ -180,13 +199,13 @@ export default function EditEntryModal({
                   </div>
                 </div>
 
-                {/* All 12 Tags */}
+                {/* Tags (Preset + Custom) */}
                 <div>
                   <label className="block text-xs text-white/70 font-medium mb-2">
                     {t("entry.tags")}
                   </label>
-                  <div className="flex flex-wrap gap-1.5">
-                    {commonTags.map((tag) => (
+                  <div className="flex flex-wrap items-center gap-1.5">
+                    {allAvailableTags.map((tag) => (
                       <button
                         key={tag}
                         type="button"
@@ -200,6 +219,52 @@ export default function EditEntryModal({
                         {ttag(tag)}
                       </button>
                     ))}
+
+                    {/* Add Custom Tag Chip */}
+                    {!isAddingTag ? (
+                      <button
+                        type="button"
+                        onClick={() => setIsAddingTag(true)}
+                        className="px-2.5 py-1 rounded-full text-xs font-medium bg-white/10 text-purple-300 hover:bg-white/20 border border-purple-500/30 flex items-center gap-1 transition-all"
+                      >
+                        <Plus className="w-3 h-3" />
+                        <span>{t("tag.addCustom")}</span>
+                      </button>
+                    ) : (
+                      <div className="flex items-center gap-1.5">
+                        <input
+                          type="text"
+                          value={newTagText}
+                          onChange={(e) => setNewTagText(e.target.value)}
+                          placeholder={t("tag.newPlaceholder")}
+                          className="px-2 py-0.5 bg-white/15 rounded-lg text-xs text-white placeholder-white/40 border border-white/20 outline-none focus:border-purple-400"
+                          onKeyDown={(e) => {
+                            if (e.key === "Enter") {
+                              e.preventDefault();
+                              handleSaveCustomTag();
+                            }
+                          }}
+                          autoFocus
+                        />
+                        <button
+                          type="button"
+                          onClick={handleSaveCustomTag}
+                          className="px-2 py-0.5 bg-purple-500 text-white rounded-lg text-xs font-semibold hover:bg-purple-600 transition-colors"
+                        >
+                          {t("tag.save")}
+                        </button>
+                        <button
+                          type="button"
+                          onClick={() => {
+                            setIsAddingTag(false);
+                            setNewTagText("");
+                          }}
+                          className="px-1.5 py-0.5 bg-white/10 text-white/60 hover:text-white rounded-lg text-xs transition-colors"
+                        >
+                          {t("tag.cancel")}
+                        </button>
+                      </div>
+                    )}
                   </div>
                 </div>
 

@@ -25,6 +25,9 @@ import {
   getRelativeDate,
   isToday,
   getWeeklyData,
+  getCustomTags,
+  saveCustomTag,
+  getMoodPrompts,
 } from "@/lib/moods";
 import { analyzeSentiment, generateWeeklyInsight } from "@/lib/sentiment";
 import GlassBackground from "@/components/ui/GlassBackground";
@@ -134,6 +137,26 @@ export default function TodayPage() {
   const [showSuccess, setShowSuccess] = useState(false);
   const [isBreathingOpen, setIsBreathingOpen] = useState(false);
 
+  // Phase 2: Custom tags & Guided prompts & Deep reflection state
+  const [customTags, setCustomTags] = useState<string[]>(() => getCustomTags());
+  const [isAddingTag, setIsAddingTag] = useState(false);
+  const [newTagText, setNewTagText] = useState("");
+  const [isReflecting, setIsReflecting] = useState(false);
+  const [deepReflection, setDeepReflection] = useState<{
+    pattern: string;
+    booster: string;
+    habit: string;
+  } | null>(null);
+
+  const moodPrompts = useMemo(() => {
+    if (selectedMood === null) return [];
+    return getMoodPrompts(moodOptions[selectedMood].label, locale);
+  }, [selectedMood, locale]);
+
+  const allAvailableTags = useMemo(() => {
+    return [...commonTags, ...customTags];
+  }, [customTags]);
+
   const stats = getStats();
   const weeklyInsight = useMemo(
     () => generateWeeklyInsight(entries, locale),
@@ -160,6 +183,40 @@ export default function TodayPage() {
     setSelectedTags((prev) =>
       prev.includes(tag) ? prev.filter((t) => t !== tag) : [...prev, tag]
     );
+  };
+
+  const handleSaveCustomTag = () => {
+    const trimmed = newTagText.trim();
+    if (!trimmed) return;
+    const updated = saveCustomTag(trimmed);
+    setCustomTags(updated);
+    if (!selectedTags.includes(trimmed)) {
+      setSelectedTags((prev) => [...prev, trimmed]);
+    }
+    setNewTagText("");
+    setIsAddingTag(false);
+  };
+
+  const handleRequestDeepReflection = async () => {
+    if (isReflecting) return;
+    setIsReflecting(true);
+    try {
+      const res = await fetch("/api/ai/reflection", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ locale }),
+      });
+      if (res.ok) {
+        const data = await res.json();
+        if (data.reflection) {
+          setDeepReflection(data.reflection);
+        }
+      }
+    } catch (err) {
+      console.error("Deep reflection request failed:", err);
+    } finally {
+      setIsReflecting(false);
+    }
   };
 
   const handleSaveMood = async () => {
@@ -437,13 +494,13 @@ export default function TodayPage() {
                 className="overflow-hidden"
               >
                 <div className="pt-4 border-t border-white/10">
-                  {/* All 12 Tags */}
+                  {/* Tags (Preset + Custom) */}
                   <div className="mb-4">
                     <span className="text-xs text-white/60 mb-2 block">
                       {t("entry.tags")}
                     </span>
-                    <div className="flex flex-wrap gap-1.5">
-                      {commonTags.map((tag) => (
+                    <div className="flex flex-wrap items-center gap-1.5">
+                      {allAvailableTags.map((tag) => (
                         <button
                           key={tag}
                           type="button"
@@ -457,8 +514,80 @@ export default function TodayPage() {
                           {ttag(tag)}
                         </button>
                       ))}
+
+                      {/* Add Custom Tag Chip */}
+                      {!isAddingTag ? (
+                        <button
+                          type="button"
+                          onClick={() => setIsAddingTag(true)}
+                          className="px-3 py-1 rounded-full text-xs font-medium bg-white/10 text-purple-300 hover:bg-white/20 border border-purple-500/30 flex items-center gap-1 transition-all"
+                        >
+                          <Plus className="w-3 h-3" />
+                          <span>{t("tag.addCustom")}</span>
+                        </button>
+                      ) : (
+                        <div className="flex items-center gap-1.5">
+                          <input
+                            type="text"
+                            value={newTagText}
+                            onChange={(e) => setNewTagText(e.target.value)}
+                            placeholder={t("tag.newPlaceholder")}
+                            className="px-2.5 py-1 bg-white/15 rounded-lg text-xs text-white placeholder-white/40 border border-white/20 outline-none focus:border-purple-400"
+                            onKeyDown={(e) => {
+                              if (e.key === "Enter") {
+                                e.preventDefault();
+                                handleSaveCustomTag();
+                              }
+                            }}
+                            autoFocus
+                          />
+                          <button
+                            type="button"
+                            onClick={handleSaveCustomTag}
+                            className="px-2.5 py-1 bg-purple-500 text-white rounded-lg text-xs font-semibold hover:bg-purple-600 transition-colors"
+                          >
+                            {t("tag.save")}
+                          </button>
+                          <button
+                            type="button"
+                            onClick={() => {
+                              setIsAddingTag(false);
+                              setNewTagText("");
+                            }}
+                            className="px-2 py-1 bg-white/10 text-white/60 hover:text-white rounded-lg text-xs transition-colors"
+                          >
+                            {t("tag.cancel")}
+                          </button>
+                        </div>
+                      )}
                     </div>
                   </div>
+
+                  {/* Phase 2: Guided Prompts */}
+                  {moodPrompts.length > 0 && (
+                    <div className="mb-3">
+                      <span className="text-xs text-white/60 mb-1.5 flex items-center gap-1">
+                        <Sparkles className="w-3 h-3 text-purple-300" />
+                        <span>{t("prompt.header")}</span>
+                      </span>
+                      <div className="flex flex-wrap gap-1.5">
+                        {moodPrompts.map((p, idx) => (
+                          <button
+                            key={idx}
+                            type="button"
+                            onClick={() => {
+                              setJournalText((prev) =>
+                                prev.trim() ? `${prev.trim()}\n\n${p} ` : `${p} `
+                              );
+                            }}
+                            className="px-2.5 py-1 rounded-xl text-[11px] bg-purple-500/15 hover:bg-purple-500/25 border border-purple-400/25 text-purple-200 transition-colors text-start"
+                          >
+                            {p}
+                          </button>
+                        ))}
+                      </div>
+                    </div>
+                  )}
 
                   <textarea
                     value={journalText}
@@ -543,16 +672,77 @@ export default function TodayPage() {
           )}
         </AnimatePresence>
 
-        {/* Weekly AI Insight Bubble */}
+        {/* Weekly AI Insight Bubble & Deep Reflection Card */}
         <motion.div
-          className="glass rounded-2xl px-5 py-3.5 mb-6 text-center shadow-md"
+          className="glass rounded-2xl p-4 md:p-5 mb-6 shadow-md"
           initial={{ opacity: 0, y: 15 }}
           animate={{ opacity: 1, y: 0 }}
           transition={{ delay: 0.4 }}
         >
+          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 mb-2.5">
+            <div className="flex items-center gap-2">
+              <Sparkles className="w-4 h-4 text-purple-400" />
+              <span className="text-xs font-semibold text-white/90">
+                {t("ai.deepReflection")}
+              </span>
+            </div>
+            <button
+              type="button"
+              onClick={handleRequestDeepReflection}
+              disabled={isReflecting}
+              className="inline-flex items-center gap-1.5 px-3 py-1.5 bg-gradient-to-r from-purple-500 to-pink-500 hover:opacity-95 text-white rounded-xl text-xs font-medium shadow transition-all disabled:opacity-50 self-start sm:self-auto"
+            >
+              {isReflecting ? (
+                <Loader2 className="w-3.5 h-3.5 animate-spin" />
+              ) : (
+                <Sparkles className="w-3.5 h-3.5" />
+              )}
+              <span>{isReflecting ? t("ai.generating") : t("ai.generateReflection")}</span>
+            </button>
+          </div>
+
           <p className="text-white/80 text-xs font-medium leading-relaxed">
             {weeklyInsight}
           </p>
+
+          {/* Deep Reflection 3-point structured output */}
+          <AnimatePresence>
+            {deepReflection && (
+              <motion.div
+                initial={{ opacity: 0, height: 0 }}
+                animate={{ opacity: 1, height: "auto" }}
+                exit={{ opacity: 0, height: 0 }}
+                className="overflow-hidden mt-3.5 pt-3.5 border-t border-white/10"
+              >
+                <div className="grid grid-cols-1 md:grid-cols-3 gap-2.5">
+                  <div className="p-3 bg-white/5 rounded-xl border border-white/10">
+                    <p className="text-[11px] font-semibold text-purple-300 mb-1">
+                      {t("ai.reflectionPattern")}
+                    </p>
+                    <p className="text-xs text-white/80 leading-relaxed">
+                      {deepReflection.pattern}
+                    </p>
+                  </div>
+                  <div className="p-3 bg-white/5 rounded-xl border border-white/10">
+                    <p className="text-[11px] font-semibold text-pink-300 mb-1">
+                      {t("ai.reflectionBooster")}
+                    </p>
+                    <p className="text-xs text-white/80 leading-relaxed">
+                      {deepReflection.booster}
+                    </p>
+                  </div>
+                  <div className="p-3 bg-white/5 rounded-xl border border-white/10">
+                    <p className="text-[11px] font-semibold text-emerald-300 mb-1">
+                      {t("ai.reflectionHabit")}
+                    </p>
+                    <p className="text-xs text-white/80 leading-relaxed">
+                      {deepReflection.habit}
+                    </p>
+                  </div>
+                </div>
+              </motion.div>
+            )}
+          </AnimatePresence>
         </motion.div>
 
         {/* Success Toast */}

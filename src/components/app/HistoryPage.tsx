@@ -14,6 +14,9 @@ import {
   BookOpen,
   Pencil,
   AlertTriangle,
+  FileText,
+  Printer,
+  X,
 } from "lucide-react";
 import { MoodType } from "@/types/mood";
 import { moodOptions, getRelativeDate, getMoodByLabel } from "@/lib/moods";
@@ -68,8 +71,75 @@ export default function HistoryPage() {
   const [selectedEntry, setSelectedEntry] = useState<string | null>(null);
   const [editingEntry, setEditingEntry] = useState<string | null>(null);
   const [entryToDelete, setEntryToDelete] = useState<string | null>(null);
+  const [isReportOpen, setIsReportOpen] = useState(false);
 
   const stats = getStats();
+
+  const currentMonthName = useMemo(() => {
+    const now = new Date();
+    return now.toLocaleDateString(locale === "ar" ? "ar-EG" : "en-US", {
+      month: "long",
+      year: "numeric",
+    });
+  }, [locale]);
+
+  const currentMonthEntries = useMemo(() => {
+    const now = new Date();
+    const currentYear = now.getFullYear();
+    const currentMonth = now.getMonth();
+    return entries.filter((e) => {
+      const d = new Date(e.date);
+      return d.getFullYear() === currentYear && d.getMonth() === currentMonth;
+    });
+  }, [entries]);
+
+  const monthlyStats = useMemo(() => {
+    if (currentMonthEntries.length === 0) {
+      return {
+        count: 0,
+        avgIntensity: 0,
+        moodCounts: {
+          Happy: 0,
+          Calm: 0,
+          Sad: 0,
+          Frustrated: 0,
+          Tired: 0,
+        } as Record<MoodType, number>,
+        topTags: [] as { tag: string; count: number }[],
+      };
+    }
+    const moodCounts: Record<MoodType, number> = {
+      Happy: 0,
+      Calm: 0,
+      Sad: 0,
+      Frustrated: 0,
+      Tired: 0,
+    };
+    let totalIntensity = 0;
+    const tagFrequency: Record<string, number> = {};
+
+    for (const e of currentMonthEntries) {
+      if (moodCounts[e.mood] !== undefined) {
+        moodCounts[e.mood]++;
+      }
+      totalIntensity += e.intensity ?? 50;
+      (e.tags || []).forEach((tag) => {
+        tagFrequency[tag] = (tagFrequency[tag] || 0) + 1;
+      });
+    }
+
+    const sortedTags = Object.entries(tagFrequency)
+      .sort((a, b) => b[1] - a[1])
+      .slice(0, 6)
+      .map(([tag, count]) => ({ tag, count }));
+
+    return {
+      count: currentMonthEntries.length,
+      avgIntensity: Math.round(totalIntensity / currentMonthEntries.length),
+      moodCounts,
+      topTags: sortedTags,
+    };
+  }, [currentMonthEntries]);
 
   const allTags = useMemo(() => {
     const tags = new Set<string>();
@@ -161,14 +231,24 @@ export default function HistoryPage() {
         <motion.div
           initial={{ opacity: 0, y: -20 }}
           animate={{ opacity: 1, y: 0 }}
-          className="mb-6"
+          className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 mb-6"
         >
-          <h1 className="text-3xl font-extrabold text-white mb-1 tracking-tight">
-            {t("history.title")}
-          </h1>
-          <p className="text-white/60 text-sm">
-            {stats.totalEntries} {t("history.entriesRecorded")}
-          </p>
+          <div>
+            <h1 className="text-3xl font-extrabold text-white mb-1 tracking-tight">
+              {t("history.title")}
+            </h1>
+            <p className="text-white/60 text-sm">
+              {stats.totalEntries} {t("history.entriesRecorded")}
+            </p>
+          </div>
+          <button
+            type="button"
+            onClick={() => setIsReportOpen(true)}
+            className="inline-flex items-center gap-2 px-4 py-2 bg-purple-500/20 hover:bg-purple-500/30 border border-purple-500/40 rounded-2xl text-xs font-semibold text-purple-200 transition-all shadow-sm self-start sm:self-auto"
+          >
+            <FileText className="w-4 h-4 text-purple-300" />
+            <span>{t("report.button")}</span>
+          </button>
         </motion.div>
 
         {/* Competitor Feature: Milestone Badges */}
@@ -561,6 +641,147 @@ export default function HistoryPage() {
                 >
                   {t("history.delete")}
                 </button>
+              </div>
+            </motion.div>
+          </div>
+        )}
+      </AnimatePresence>
+
+      {/* Track 5.2: Monthly Wellness Report Modal */}
+      <AnimatePresence>
+        {isReportOpen && (
+          <div
+            className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm"
+            role="dialog"
+            aria-modal="true"
+          >
+            <motion.div
+              initial={{ scale: 0.95, opacity: 0 }}
+              animate={{ scale: 1, opacity: 1 }}
+              exit={{ scale: 0.95, opacity: 0 }}
+              className="printable-report w-full max-w-xl glass-modal border border-white/20 rounded-3xl p-6 shadow-2xl text-white max-h-[90vh] overflow-y-auto"
+              dir={isRtl ? "rtl" : "ltr"}
+            >
+              {/* Modal Top Actions (no-print) */}
+              <div className="flex items-center justify-between pb-4 mb-4 border-b border-white/10 no-print">
+                <div className="flex items-center gap-2">
+                  <FileText className="w-5 h-5 text-purple-400" />
+                  <span className="font-bold text-sm text-white">
+                    {t("report.title")}
+                  </span>
+                </div>
+                <div className="flex items-center gap-2">
+                  <button
+                    type="button"
+                    onClick={() => window.print()}
+                    className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-purple-500 hover:bg-purple-600 text-white text-xs font-semibold shadow transition-colors"
+                  >
+                    <Printer className="w-3.5 h-3.5" />
+                    <span>{t("report.print")}</span>
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => setIsReportOpen(false)}
+                    className="p-1.5 rounded-xl bg-white/10 hover:bg-white/20 text-white/70 hover:text-white transition-colors"
+                    aria-label={t("report.close")}
+                  >
+                    <X className="w-4 h-4" />
+                  </button>
+                </div>
+              </div>
+
+              {/* Printable Content Header */}
+              <div className="mb-6 text-center">
+                <h2 className="text-2xl font-extrabold text-white mb-1">
+                  {t("report.title")}
+                </h2>
+                <p className="text-purple-300 text-sm font-medium">
+                  {currentMonthName}
+                </p>
+                <p className="text-white/60 text-xs mt-1">
+                  {t("report.monthOverview")}
+                </p>
+              </div>
+
+              {/* Key Metrics Grid */}
+              <div className="grid grid-cols-2 gap-3 mb-6">
+                <div className="p-3.5 bg-white/5 rounded-2xl border border-white/10 text-center">
+                  <p className="text-xs text-white/60 mb-1">
+                    {t("report.totalCheckins")}
+                  </p>
+                  <p className="text-2xl font-bold text-white">
+                    {monthlyStats.count}
+                  </p>
+                </div>
+                <div className="p-3.5 bg-white/5 rounded-2xl border border-white/10 text-center">
+                  <p className="text-xs text-white/60 mb-1">
+                    {t("report.avgScore")}
+                  </p>
+                  <p className="text-2xl font-bold text-purple-300">
+                    {monthlyStats.count > 0 ? `${monthlyStats.avgIntensity}%` : "-"}
+                  </p>
+                </div>
+              </div>
+
+              {/* Mood Distribution Breakdown */}
+              <div className="mb-6 p-4 bg-white/5 rounded-2xl border border-white/10">
+                <h3 className="text-xs font-semibold text-white/80 uppercase tracking-wider mb-3">
+                  {t("history.moodDistribution")}
+                </h3>
+                <div className="space-y-2">
+                  {moodOptions.map((mood) => {
+                    const count = monthlyStats.moodCounts[mood.label as MoodType] || 0;
+                    const pct =
+                      monthlyStats.count > 0
+                        ? Math.round((count / monthlyStats.count) * 100)
+                        : 0;
+                    return (
+                      <div
+                        key={mood.label}
+                        className="flex items-center justify-between text-xs"
+                      >
+                        <div className="flex items-center gap-2">
+                          <span className="text-base">{mood.emoji}</span>
+                          <span className="text-white/80 font-medium">
+                            {tmood(mood.label)}
+                          </span>
+                        </div>
+                        <div className="flex items-center gap-3">
+                          <span className="text-white/50">{count}</span>
+                          <span className="font-semibold text-white w-10 text-end">
+                            {pct}%
+                          </span>
+                        </div>
+                      </div>
+                    );
+                  })}
+                </div>
+              </div>
+
+              {/* Top Tags */}
+              {monthlyStats.topTags.length > 0 && (
+                <div className="mb-6 p-4 bg-white/5 rounded-2xl border border-white/10">
+                  <h3 className="text-xs font-semibold text-white/80 uppercase tracking-wider mb-3">
+                    {t("report.topTags")}
+                  </h3>
+                  <div className="flex flex-wrap gap-2">
+                    {monthlyStats.topTags.map(({ tag, count }) => (
+                      <span
+                        key={tag}
+                        className="px-3 py-1 bg-purple-500/20 text-purple-200 border border-purple-500/30 rounded-xl text-xs font-medium"
+                      >
+                        #{ttag(tag)} ({count})
+                      </span>
+                    ))}
+                  </div>
+                </div>
+              )}
+
+              {/* Footer Note */}
+              <div className="pt-3 border-t border-white/10 text-center">
+                <p className="text-[11px] text-white/50">
+                  {t("disclaimer.footerNotice")}
+                </p>
               </div>
             </motion.div>
           </div>
