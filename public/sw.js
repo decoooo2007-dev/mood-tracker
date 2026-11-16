@@ -1,4 +1,4 @@
-const CACHE_NAME = "moodflow-v2";
+const CACHE_NAME = "moodflow-v3";
 const OFFLINE_URL = "/offline";
 
 const PRECACHE_ASSETS = [
@@ -69,7 +69,11 @@ self.addEventListener("fetch", (event) => {
   if (!event.request.url.startsWith(self.location.origin)) return;
 
   const url = new URL(event.request.url);
-  if (url.pathname.startsWith("/api/") || url.pathname.startsWith("/login")) {
+  if (
+    url.pathname.startsWith("/api/") ||
+    url.pathname.startsWith("/login") ||
+    url.pathname.startsWith("/_next/")
+  ) {
     return;
   }
 

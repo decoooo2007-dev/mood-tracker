@@ -16,6 +16,20 @@ export default function ErrorBoundary({
 
   useEffect(() => {
     console.error("App error boundary caught:", error);
+
+    // Self-heal cross-deployment Next.js chunk skew (ChunkLoadError) with a guarded single reload
+    const msg = String(error?.message || "");
+    if (
+      typeof window !== "undefined" &&
+      (/ChunkLoadError|Loading chunk [\d]+ failed|Failed to fetch dynamically imported module/i.test(msg) ||
+        error?.name === "ChunkLoadError")
+    ) {
+      const key = "moodflow-chunk-reload-attempted";
+      if (!sessionStorage.getItem(key)) {
+        sessionStorage.setItem(key, "1");
+        window.location.reload();
+      }
+    }
   }, [error]);
 
   return (

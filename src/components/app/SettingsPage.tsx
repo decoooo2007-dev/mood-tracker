@@ -27,17 +27,10 @@ import {
   CheckCircle2,
   AlertCircle,
   Palette,
-  Sparkles,
-  Crown,
 } from "lucide-react";
 import GlassBackground from "@/components/ui/GlassBackground";
 import Navigation from "@/components/ui/Navigation";
 import MembershipBadge from "@/components/ui/MembershipBadge";
-import {
-  SUBSCRIPTION_PLANS,
-  SUBSCRIPTION_TIERS,
-  PAYWALL_ENFORCEMENT_ENABLED,
-} from "@/lib/subscription";
 import {
   isAppLockEnabled,
   setAppLockPin,
@@ -50,9 +43,8 @@ import {
   DEFAULT_PALETTE_ID,
   getStoredAppearance,
   setStoredPaletteId,
-  setStoredMoodReactive,
 } from "@/lib/theme";
-import type { MoodType, SubscriptionTier } from "@/types/mood";
+import type { MoodType } from "@/types/mood";
 
 export default function SettingsPage() {
   const router = useRouter();
@@ -84,20 +76,14 @@ export default function SettingsPage() {
   } | null>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
 
-  // Appearance state (Curated Flagship Palettes + Mode-Aware Aura)
+  // Appearance state (Curated Flagship Palettes; Mode-Aware Aura runs automatically)
   const [paletteId, setPaletteId] = useState<number>(DEFAULT_PALETTE_ID);
-  const [moodReactive, setMoodReactive] = useState<boolean>(false);
-
-  // Membership badge visual preview state (client preview only; never overrides DB tier)
-  const [showBadgePreview, setShowBadgePreview] = useState(false);
-  const [previewTier, setPreviewTier] = useState<SubscriptionTier | null>(null);
 
   useEffect(() => {
     setAppLockEnabled(isAppLockEnabled());
     const syncAppearance = () => {
       const app = getStoredAppearance();
       setPaletteId(app.paletteId);
-      setMoodReactive(app.moodReactive);
     };
     syncAppearance();
     window.addEventListener("moodflow-appearance-change", syncAppearance);
@@ -116,8 +102,6 @@ export default function SettingsPage() {
 
   const handleThemeSwitch = (mode: "dark" | "light") => {
     changeTheme(mode);
-    // Automatic Mode-Aware Aura Rule feedback in local state
-    setMoodReactive(mode === "light");
   };
 
   const handleToggleNotifications = () => {
@@ -289,153 +273,47 @@ export default function SettingsPage() {
         </motion.div>
 
         {/* Account Card */}
-        {user && (() => {
-          const accountTier: SubscriptionTier = user.subscriptionTier || "free";
-          const displayedTier: SubscriptionTier = previewTier || accountTier;
-          const isPreviewing = previewTier !== null && previewTier !== accountTier;
-
-          return (
-            <motion.div
-              className="mb-6"
-              initial={{ opacity: 0, y: 20 }}
-              animate={{ opacity: 1, y: 0 }}
-              transition={{ delay: 0.05 }}
-            >
-              <h2 className="text-xs font-semibold theme-text-muted uppercase tracking-wider mb-2.5">
-                {t("settings.account")}
-              </h2>
-              <div className="glass rounded-2xl overflow-hidden shadow-sm divide-y divide-white/10">
-                <div className="p-4 flex flex-wrap items-center justify-between gap-3">
-                  <div className="flex items-center gap-3 min-w-0">
-                    <div className="w-10 h-10 rounded-full accent-avatar flex items-center justify-center text-white font-bold text-sm shadow-md shrink-0">
-                      <User className="w-5 h-5" />
-                    </div>
-                    <div className="min-w-0">
-                      <div className="flex flex-wrap items-center gap-2">
-                        <p className="theme-text-primary font-semibold text-sm truncate">
-                          @{user.username}
-                        </p>
-                        <MembershipBadge tier={displayedTier} size="sm" />
-                        {isPreviewing && (
-                          <span className="text-[10px] px-1.5 py-0.5 rounded-full accent-pill font-medium">
-                            {t("plan.previewing")}
-                          </span>
-                        )}
-                      </div>
-                      <p className="theme-text-muted text-xs mt-0.5">
-                        {stats.totalEntries} {t("history.entriesRecorded")}
-                      </p>
-                    </div>
-                  </div>
-
-                  <div className="flex items-center gap-2 shrink-0">
-                    <button
-                      type="button"
-                      onClick={() => setShowBadgePreview((v) => !v)}
-                      className={`flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-xs font-medium transition-all ${
-                        showBadgePreview
-                          ? "accent-pill ring-1 ring-[var(--accent-solid)]"
-                          : "recessed-well theme-text-secondary hover:opacity-95"
-                      }`}
-                    >
-                      <Crown className="w-3.5 h-3.5" style={{ color: "var(--accent-solid)" }} />
-                      <span>{t("plan.badgesPreview")}</span>
-                    </button>
-
-                    <button
-                      type="button"
-                      onClick={handleSignOut}
-                      className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl recessed-well theme-text-primary text-xs font-medium transition-opacity hover:opacity-90"
-                    >
-                      <LogOut className="w-3.5 h-3.5" />
-                      <span>{t("settings.signOut")}</span>
-                    </button>
-                  </div>
+        {user && (
+          <motion.div
+            className="mb-6"
+            initial={{ opacity: 0, y: 20 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ delay: 0.05 }}
+          >
+            <h2 className="text-xs font-semibold theme-text-muted uppercase tracking-wider mb-2.5">
+              {t("settings.account")}
+            </h2>
+            <div className="glass rounded-2xl p-4 flex flex-wrap items-center justify-between gap-3 shadow-sm">
+              <div className="flex items-center gap-3 min-w-0">
+                <div className="w-10 h-10 rounded-full accent-avatar flex items-center justify-center text-white font-bold text-sm shadow-md shrink-0">
+                  <User className="w-5 h-5" />
                 </div>
-
-                {/* Expandable Membership Badges & Tier Architecture Preview (Zero Paywall Enforcement Yet) */}
-                <AnimatePresence>
-                  {showBadgePreview && (
-                    <motion.div
-                      initial={{ opacity: 0, height: 0 }}
-                      animate={{ opacity: 1, height: "auto" }}
-                      exit={{ opacity: 0, height: 0 }}
-                      className="overflow-hidden"
-                    >
-                      <div className="p-4 space-y-3 bg-white/[0.02]">
-                        <div className="flex flex-wrap items-center justify-between gap-2">
-                          <div>
-                            <p className="theme-text-primary text-xs font-semibold">
-                              {t("plan.previewTitle")}
-                            </p>
-                            <p className="theme-text-muted text-[11px] mt-0.5">
-                              {t("plan.previewDesc")}
-                            </p>
-                          </div>
-                          {isPreviewing && (
-                            <button
-                              type="button"
-                              onClick={() => setPreviewTier(null)}
-                              className="px-2.5 py-1 rounded-lg accent-gradient-btn text-[11px] font-semibold"
-                            >
-                              {t("plan.resetTier")}
-                            </button>
-                          )}
-                        </div>
-
-                        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-2">
-                          {SUBSCRIPTION_TIERS.map((tierId) => {
-                            const meta = SUBSCRIPTION_PLANS[tierId];
-                            const selectedForPreview = displayedTier === tierId;
-                            const isAccountActual = accountTier === tierId;
-
-                            return (
-                              <button
-                                key={tierId}
-                                type="button"
-                                onClick={() => setPreviewTier(tierId === accountTier ? null : tierId)}
-                                className={`p-3 rounded-xl text-start transition-all flex flex-col justify-between gap-2 ${
-                                  selectedForPreview
-                                    ? "accent-pill ring-1 ring-[var(--accent-solid)]"
-                                    : "recessed-well hover:opacity-95"
-                                }`}
-                              >
-                                <div className="flex items-center justify-between gap-1.5">
-                                  <MembershipBadge tier={tierId} size="sm" />
-                                  {isAccountActual && (
-                                    <span className="text-[9px] font-semibold theme-text-muted uppercase">
-                                      {t("plan.activeAccountTier")}
-                                    </span>
-                                  )}
-                                </div>
-                                <div>
-                                  <p className="theme-text-primary text-xs font-semibold">
-                                    {isRtl ? meta.priceEgpAr : `${meta.priceEgpEn} · ${meta.priceUsd}`}
-                                  </p>
-                                  <p className="theme-text-muted text-[10px] leading-snug mt-0.5">
-                                    {isRtl ? meta.summaryAr : meta.summaryEn}
-                                  </p>
-                                </div>
-                              </button>
-                            );
-                          })}
-                        </div>
-
-                        {!PAYWALL_ENFORCEMENT_ENABLED && (
-                          <p className="text-[10px] theme-text-muted">
-                            {t("plan.paymentsPending")}
-                          </p>
-                        )}
-                      </div>
-                    </motion.div>
-                  )}
-                </AnimatePresence>
+                <div className="min-w-0">
+                  <div className="flex flex-wrap items-center gap-2">
+                    <p className="theme-text-primary font-semibold text-sm truncate">
+                      @{user.username}
+                    </p>
+                    <MembershipBadge tier={user.subscriptionTier || "free"} size="sm" />
+                  </div>
+                  <p className="theme-text-muted text-xs mt-0.5">
+                    {stats.totalEntries} {t("history.entriesRecorded")}
+                  </p>
+                </div>
               </div>
-            </motion.div>
-          );
-        })()}
 
-        {/* Appearance (Curated Flagship: Theme + Atmospheric Palettes + Mode-Aware Aura) */}
+              <button
+                type="button"
+                onClick={handleSignOut}
+                className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl recessed-well theme-text-primary text-xs font-medium transition-opacity hover:opacity-90 shrink-0"
+              >
+                <LogOut className="w-3.5 h-3.5" />
+                <span>{t("settings.signOut")}</span>
+              </button>
+            </div>
+          </motion.div>
+        )}
+
+        {/* Appearance (Curated Flagship: Theme + Atmospheric Palettes) */}
         <motion.div
           className="mb-6"
           initial={{ opacity: 0, y: 20 }}
@@ -538,42 +416,6 @@ export default function SettingsPage() {
                   );
                 })}
               </div>
-            </div>
-
-            {/* Mood-Reactive Background Aura Toggle (dir="ltr" enforced) */}
-            <div className="p-4 flex items-center justify-between gap-3">
-              <div className="flex items-center gap-3">
-                <Sparkles className="w-5 h-5" style={{ color: "var(--accent-solid)" }} />
-                <div>
-                  <p className="theme-text-primary font-medium text-sm">
-                    {t("appearance.moodReactive")}
-                  </p>
-                  <p className="theme-text-secondary text-xs">
-                    {t("appearance.moodReactiveDesc")}
-                  </p>
-                </div>
-              </div>
-              <button
-                type="button"
-                dir="ltr"
-                onClick={() => {
-                  const next = !moodReactive;
-                  setMoodReactive(next);
-                  setStoredMoodReactive(next);
-                }}
-                className={`w-11 h-6 rounded-full transition-colors relative shrink-0 ${
-                  moodReactive ? "accent-gradient-btn" : "bg-white/20"
-                }`}
-                aria-label="Toggle Mood-Reactive Aura"
-              >
-                <motion.div
-                  className="absolute top-0.5 w-5 h-5 bg-white rounded-full shadow"
-                  animate={{
-                    left: moodReactive ? "22px" : "2px",
-                  }}
-                  transition={{ type: "spring", stiffness: 500, damping: 30 }}
-                />
-              </button>
             </div>
           </div>
         </motion.div>

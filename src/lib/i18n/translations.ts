@@ -238,9 +238,9 @@ export const translations = {
     "tag.motivation": "Motivation",
     // Error & 404 Pages
     "error.boundaryTitle": "Something went wrong",
-    "error.boundaryDesc": "An unexpected error occurred. Please try again or return to the main dashboard.",
+    "error.boundaryDesc": "An unexpected error occurred. Please try again or return to the home page.",
     "error.tryAgain": "Try Again",
-    "error.dashboard": "Dashboard",
+    "error.dashboard": "Home",
     "notFound.title": "Page Not Found",
     "notFound.desc": "The page you are looking for doesn't exist or has been moved.",
     "notFound.returnHome": "Return Home",

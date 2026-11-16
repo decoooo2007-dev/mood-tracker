@@ -23,6 +23,7 @@ const nextConfig: NextConfig = {
       "style-src 'self' 'unsafe-inline'",
       "img-src 'self' blob: data: https:",
       "font-src 'self' data: https://fonts.gstatic.com",
+      "worker-src 'self' blob:",
       "connect-src 'self' https://*.supabase.co",
       "frame-ancestors 'none'",
       "base-uri 'self'",
