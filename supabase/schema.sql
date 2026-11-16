@@ -74,3 +74,51 @@ DROP POLICY IF EXISTS "service_role_all_user_settings" ON public.user_settings;
 CREATE POLICY "service_role_all_user_settings"
   ON public.user_settings FOR ALL TO service_role
   USING (true) WITH CHECK (true);
+
+-- ============================================================================
+-- Supabase Vault (Encrypted Secrets Hardening — cybersecurity-hub Standard)
+-- ============================================================================
+-- Stores third-party provider keys (e.g., GEMINI_API_KEY, RESEND_API_KEY,
+-- KEEP_ALIVE_SECRET, future PAYMOB_API_KEY) encrypted at rest via pgsodium /
+-- supabase_vault. Strictly locked to service_role; anon & authenticated roles
+-- have ZERO access to vault tables or secret reader functions.
+
+DO $$
+BEGIN
+  IF EXISTS (
+    SELECT 1 FROM pg_available_extensions WHERE name = 'supabase_vault'
+  ) THEN
+    CREATE EXTENSION IF NOT EXISTS "supabase_vault" WITH SCHEMA vault;
+  END IF;
+EXCEPTION
+  WHEN OTHERS THEN
+    -- Gracefully skip if running on a local Postgres instance without supabase_vault
+    NULL;
+END $$;
+
+CREATE OR REPLACE FUNCTION public.get_vault_secret(secret_name TEXT)
+RETURNS TEXT
+LANGUAGE plpgsql
+SECURITY DEFINER
+SET search_path = public, pg_temp
+AS $$
+DECLARE
+  secret_value TEXT;
+BEGIN
+  IF EXISTS (
+    SELECT 1
+    FROM information_schema.tables
+    WHERE table_schema = 'vault'
+      AND table_name = 'decrypted_secrets'
+  ) THEN
+    EXECUTE
+      'SELECT decrypted_secret FROM vault.decrypted_secrets WHERE name = $1 LIMIT 1'
+      INTO secret_value
+      USING secret_name;
+  END IF;
+  RETURN secret_value;
+END;
+$$;
+
+REVOKE ALL ON FUNCTION public.get_vault_secret(TEXT) FROM PUBLIC, anon, authenticated;
+GRANT EXECUTE ON FUNCTION public.get_vault_secret(TEXT) TO service_role;

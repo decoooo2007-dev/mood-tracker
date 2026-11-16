@@ -153,11 +153,22 @@ Yes, within 7 days of purchase if you're not satisfied.
 
 ## Privacy & Security
 
-- Passwords hashed with SHA-256
-- Data encrypted in transit (HTTPS)
-- No third-party tracking
-- No data sold
-- Delete anytime
+- **Password Security**: Hashed with `bcrypt` (cost factor 12) + constant-time verification
+- **Client-Side E2EE Vault**: Journal text encrypted in your browser with `AES-256-GCM` (`PBKDF2-HMAC-SHA256`, 100,000 iterations) before reaching the cloud
+- **Session Protection**: `HS256` signed `HttpOnly`, `Secure`, `SameSite=Lax` cookies + strict CSRF Origin verification
+- **Database Isolation**: Supabase PostgreSQL with `FORCE ROW LEVEL SECURITY` and `Supabase Vault` encrypted secrets readiness
+- **Data Control**: Export to JSON, CSV (formula-injection protected), or Printable PDF report anytime; delete entries anytime
+
+---
+
+## Planned Regional Pricing (Egypt-First & Global)
+
+| Tier | Egypt Local Pricing (`Paymob / Kashier / InstaPay / Vodafone Cash` — Planned) | Global Pricing |
+|------|:-----------------------------------------------------------------------------:|:--------------:|
+| **Free Forever** | `0 EGP` | `$0` |
+| **MoodFlow Pro (Monthly)** | `79 EGP / month` | `$4.99 / month` |
+| **MoodFlow Pro (Annual — Save 37%)** | `599 EGP / year` (`~49.9 EGP/mo`) | `$39.99 / year` |
+| **Founding Member Lifetime** | `1,499 EGP` one-time | `$79` one-time |
 
 ---
 

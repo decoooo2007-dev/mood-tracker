@@ -53,6 +53,14 @@ export async function GET(request: Request) {
     );
   }
 
+  const rate = await checkRateLimit(`settings:get:${session.userId}`, 120, 60_000);
+  if (!rate.allowed) {
+    return NextResponse.json(
+      { error: "Too many requests", code: "RATE_LIMITED" },
+      { status: 429, headers: { "Cache-Control": "no-store" } }
+    );
+  }
+
   const { data, error } = await supabaseAdmin
     .from("user_settings")
     .select("*")

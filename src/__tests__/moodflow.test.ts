@@ -1,4 +1,7 @@
-import { describe, it, expect, beforeEach } from "vitest";
+import { describe, it, expect, beforeEach, vi } from "vitest";
+
+vi.mock("server-only", () => ({}));
+
 import {
   toLocalDateStr,
   parseLocalDate,
@@ -932,7 +935,134 @@ describe("Track 2: Nile Sapphire Default Palette & BiDi Purity", () => {
       expect(/[a-zA-Z]/.test(pal.nameAr)).toBe(false);
     }
   });
+
+  it("enforces the Automatic Mode-Aware Aura Rule (moodReactive OFF in Dark Mode, ON in Light Mode by default)", async () => {
+    const { getStoredAppearance, MOOD_REACTIVE_STORAGE_KEY } = await import("@/lib/theme");
+    const store = new Map<string, string>();
+    globalThis.window = globalThis as unknown as Window & typeof globalThis;
+    globalThis.localStorage = {
+      getItem: (key: string) => store.get(key) ?? null,
+      setItem: (key: string, val: string) => {
+        store.set(key, String(val));
+      },
+      removeItem: (key: string) => {
+        store.delete(key);
+      },
+      clear: () => {
+        store.clear();
+      },
+      key: (i: number) => Array.from(store.keys())[i] ?? null,
+      length: 0,
+    } as Storage;
+
+    // 1. Default Dark Mode -> moodReactive is automatically false (OFF)
+    store.set("moodflow-theme", "dark");
+    store.delete(MOOD_REACTIVE_STORAGE_KEY);
+    const darkAppearance = getStoredAppearance();
+    expect(darkAppearance.theme).toBe("dark");
+    expect(darkAppearance.paletteId).toBe(4);
+    expect(darkAppearance.moodStyle).toBe("hybrid");
+    expect(darkAppearance.moodReactive).toBe(false);
+
+    // 2. Light Mode -> moodReactive is automatically true (ON)
+    store.set("moodflow-theme", "light");
+    store.delete(MOOD_REACTIVE_STORAGE_KEY);
+    const lightAppearance = getStoredAppearance();
+    expect(lightAppearance.theme).toBe("light");
+    expect(lightAppearance.moodReactive).toBe(true);
+
+    // 3. Explicit override is respected
+    store.set(MOOD_REACTIVE_STORAGE_KEY, "true");
+    store.set("moodflow-theme", "dark");
+    expect(getStoredAppearance().moodReactive).toBe(true);
+  });
 });
+
+describe("Gate 3 (test-guard): Auth, JWT, Time Classifier & API Row Validation", () => {
+  it("classifies English, Arabic, and Eastern-Arabic numeral timestamps into morning, afternoon, and evening", async () => {
+    const { classifyTimeWindow } = await import("@/app/api/ai/reflection/route");
+
+    expect(classifyTimeWindow("08:30 AM")).toBe("morning");
+    expect(classifyTimeWindow("٠٧:١٥ ص")).toBe("morning");
+    expect(classifyTimeWindow("02:45 PM")).toBe("afternoon");
+    expect(classifyTimeWindow("٠٣:٠٠ م")).toBe("afternoon");
+    expect(classifyTimeWindow("09:15 PM")).toBe("evening");
+    expect(classifyTimeWindow("١٠:٣٠ م")).toBe("evening");
+    expect(classifyTimeWindow("12:00 AM")).toBe("evening");
+    expect(classifyTimeWindow("12:30 PM")).toBe("afternoon");
+    expect(classifyTimeWindow("")).toBe("unknown");
+    expect(classifyTimeWindow(null)).toBe("unknown");
+  });
+
+  it("normalizes Arabic/English usernames and performs constant-time SHA-256 verification", async () => {
+    const {
+      normalizeUsername,
+      USERNAME_REGEX,
+      computeSha256Hex,
+      verifyTimingSafeSha256,
+    } = await import("@/lib/server-auth");
+
+    expect(normalizeUsername("  Abdelrhman_2026  ")).toBe("abdelrhman_2026");
+    expect(USERNAME_REGEX.test("abdelrhman_2026")).toBe(true);
+    expect(USERNAME_REGEX.test("عبدالرحمن_٢٠٢٦")).toBe(true);
+    expect(USERNAME_REGEX.test("ab")).toBe(false); // < 3 chars
+    expect(USERNAME_REGEX.test("bad<script>")).toBe(false);
+
+    const hash = computeSha256Hex("SecretPass123!");
+    expect(verifyTimingSafeSha256("SecretPass123!", hash)).toBe(true);
+    expect(verifyTimingSafeSha256("WrongPass", hash)).toBe(false);
+    expect(verifyTimingSafeSha256("SecretPass123!", "not-a-valid-hex")).toBe(false);
+  });
+
+  it("normalizes mood values case-insensitively and formats database entry rows safely", async () => {
+    const { normalizeMoodValue, formatEntryRow } = await import("@/app/api/entries/route");
+
+    expect(normalizeMoodValue("  happy ")).toBe("Happy");
+    expect(normalizeMoodValue("FRUSTRATED")).toBe("Frustrated");
+    expect(normalizeMoodValue("invalid_mood")).toBeNull();
+
+    const formatted = formatEntryRow({
+      id: "123",
+      user_id: "u-1",
+      date: "2026-11-16",
+      time: "09:00 PM",
+      mood: "Calm",
+      intensity: 80,
+      text: "enc:v1:iv:cipher",
+      tags: ["Prayer", "Reading"],
+      sentiment_score: 0.72,
+      sentiment_keywords: ["calm", "peace"],
+    });
+
+    expect(formatted.id).toBe("123");
+    expect(formatted.mood).toBe("Calm");
+    expect(formatted.sentiment.score).toBe(0.72);
+    expect(formatted.sentiment.keywords).toEqual(["calm", "peace"]);
+  });
+
+  it("signs and verifies HS256 session JWTs and rejects tampered tokens", async () => {
+    process.env.JWT_SECRET = "unit-test-jwt-secret-key-minimum-32-bytes-long!!";
+    const { signSessionToken, verifySessionToken } = await import("@/lib/jwt");
+
+    const token = await signSessionToken({
+      userId: "429ad010-e650-4c6f-a7d6-3d84fbd90893",
+      username: "deco",
+    });
+    expect(typeof token).toBe("string");
+    expect(token.split(".")).toHaveLength(3);
+
+    const verified = await verifySessionToken(token);
+    expect(verified).toEqual({
+      userId: "429ad010-e650-4c6f-a7d6-3d84fbd90893",
+      username: "deco",
+    });
+
+    const tampered = `${token.slice(0, -4)}xxxx`;
+    expect(await verifySessionToken(tampered)).toBeNull();
+    expect(await verifySessionToken("")).toBeNull();
+  });
+});
+
 
 
 

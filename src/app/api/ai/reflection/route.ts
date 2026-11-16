@@ -22,9 +22,9 @@ interface ReflectionResponse {
   source: "gemini" | "heuristic";
 }
 
-function classifyTimeWindow(timeStr: unknown): "morning" | "afternoon" | "evening" | "unknown" {
+export function classifyTimeWindow(timeStr: unknown): "morning" | "afternoon" | "evening" | "unknown" {
   if (typeof timeStr !== "string" || !timeStr.trim()) return "unknown";
-  const s = timeStr.trim();
+  const s = timeStr.trim().replace(/[٠-٩]/g, (d) => String("٠١٢٣٤٥٦٧٨٩".indexOf(d)));
   const isPm = /pm|م/i.test(s);
   const isAm = /am|ص/i.test(s);
   const match = s.match(/(\d{1,2})/);
@@ -227,11 +227,14 @@ export async function POST(request: Request) {
               habit: hText,
               source: "gemini",
             };
-            return NextResponse.json({
-              success: true,
-              data: payload,
-              reflection: payload,
-            });
+            return NextResponse.json(
+              {
+                success: true,
+                data: payload,
+                reflection: payload,
+              },
+              { status: 200, headers: { "Cache-Control": "no-store" } }
+            );
           }
         }
       }
@@ -341,9 +344,12 @@ export async function POST(request: Request) {
     source: "heuristic",
   };
 
-  return NextResponse.json({
-    success: true,
-    data: payload,
-    reflection: payload,
-  });
+  return NextResponse.json(
+    {
+      success: true,
+      data: payload,
+      reflection: payload,
+    },
+    { status: 200, headers: { "Cache-Control": "no-store" } }
+  );
 }

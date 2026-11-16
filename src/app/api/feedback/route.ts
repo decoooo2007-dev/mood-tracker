@@ -32,8 +32,8 @@ export async function POST(request: Request) {
     const rateLimit = await checkRateLimit(`feedback:${ip}`, 5, 15 * 60_000);
     if (!rateLimit.allowed) {
       return NextResponse.json(
-        { error: "Too many feedback submissions. Please try again later." },
-        { status: 429 }
+        { error: "Too many feedback submissions. Please try again later.", code: "RATE_LIMITED" },
+        { status: 429, headers: { "Cache-Control": "no-store" } }
       );
     }
 
@@ -54,8 +54,8 @@ export async function POST(request: Request) {
     const apiKey = process.env.RESEND_API_KEY;
     if (!apiKey) {
       return NextResponse.json(
-        { error: "Email service is not configured on the server." },
-        { status: 503 }
+        { error: "Email service is not configured on the server.", code: "SERVICE_UNAVAILABLE" },
+        { status: 503, headers: { "Cache-Control": "no-store" } }
       );
     }
 
@@ -83,21 +83,24 @@ export async function POST(request: Request) {
     if (error) {
       console.error("[Feedback API] Resend error:", error);
       return NextResponse.json(
-        { error: "Failed to deliver feedback email." },
-        { status: 502 }
+        { error: "Failed to deliver feedback email.", code: "EMAIL_ERROR" },
+        { status: 502, headers: { "Cache-Control": "no-store" } }
       );
     }
 
-    return NextResponse.json({
-      success: true,
-      id: data?.id ?? null,
-      message: "Feedback submitted successfully",
-    });
+    return NextResponse.json(
+      {
+        success: true,
+        id: data?.id ?? null,
+        message: "Feedback submitted successfully",
+      },
+      { status: 200, headers: { "Cache-Control": "no-store" } }
+    );
   } catch (error) {
     console.error("[Feedback API] Unexpected error:", error);
     return NextResponse.json(
-      { error: "Failed to submit feedback" },
-      { status: 500 }
+      { error: "Failed to submit feedback", code: "INTERNAL_ERROR" },
+      { status: 500, headers: { "Cache-Control": "no-store" } }
     );
   }
 }
