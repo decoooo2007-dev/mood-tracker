@@ -8,94 +8,42 @@ MoodFlow is a personal emotional intelligence companion that combines beautiful 
 
 ---
 
-## Free Forever — Core Features
+## Free Forever — Core Growth Tier (`0 EGP` / `$0`)
 
-No credit card, no phone number, no invasion of privacy.
+No credit card, no phone number, no invasion of privacy. Built generously so anyone can build a lifelong journaling habit.
 
-### 🔐 **Instant Access**
-- Sign up in seconds with just username & password
-- No email verification required
-- Works on any device with internet
-- Data syncs across all your devices
-
-### 📊 **Mood Tracking**
-- Track 5 core emotions: Happy, Calm, Sad, Frustrated, Tired
-- Intensity slider (0-100%)
-- Personal journal entries
-- Custom tags for organization
-
-### 🔥 **Streak System**
-- Track consecutive journaling days
-- Build healthy habits
-- Visual flame indicator
-- Weekly mood trend chart
-
-### 📈 **Basic Analytics**
-- Mood distribution breakdown
-- Average mood score
-- Entries this week counter
-- Historical view
-
-### 🎨 **Beautiful Design**
-- Stunning glassmorphism UI
-- Smooth animations
-- Dark mode
-- Fully responsive
-
-### 💾 **Data Control**
-- Export to JSON
-- Export to CSV
-- Delete data anytime
+- **Unlimited Daily Check-Ins**: 5 core emotions (`Happy`, `Calm`, `Sad`, `Frustrated`, `Tired`), `1–100%` intensity slider, private E2EE journal notes, and guided prompts.
+- **Tags & Analytics**: 12 preset tags + up to 3 custom tags, active & longest streaks, 7-day trend chart, and **30-day Mood Heatmap**.
+- **Wellness Tools & Community**: 4-7-8 Guided Breathing Exercise, 5 Milestone Achievement Badges, Crisis Helplines (`16328`, `123`, `988`), and **Anonymous Community Achievement Board** participation.
+- **Appearance & Privacy**: 2 curated themes (`Nile Sapphire` & `Obsidian Pearl`), PIN App Lock, and `JSON` + `CSV` export.
 
 ---
 
-## Pro — $4.99/month
+## Pro Monthly — Personal Mastery (`79 EGP / month` | `$4.99 / month`)
 
-**Unlock the full power of your emotional data.**
-
-*Or $39.99/year (save 33%)*
-
-### 🤖 **Advanced AI Insights**
-- Deep sentiment analysis
-- Emotional pattern detection
-- Personalized weekly summaries
-- Mood trend predictions
-
-### 🔍 **Correlation Engine**
-- Discover what affects your mood
-- Tag-based mood patterns
-- Time-of-day analysis
-- Activity correlations
-
-### 🎯 **Goals & Achievements**
-- Daily/weekly journaling goals
-- Achievement badges
-- Progress milestones
-- Consistency rewards
-
-### 📱 **Enhanced Experience**
-- Priority support
-- Early access to new features
-- Unlimited export history
-- Custom reminder sounds
-
-### 💡 **Smart Reminders**
-- Adaptive reminder times
-- Gentle nudges based on patterns
-- Missed entry reminders
-- Streak protection alerts
+- Everything in **Free Forever**.
+- **All 8 Curated Color Palettes** (Dark & Light Mode).
+- **Unlimited Custom Tags** + Full **Editable "What Lifts vs. Drains Your Mood"** factors (add, rename, pin, hide).
+- **90-Day Mood Heatmap** + Tag & Text History Search.
+- **3 Deep Weekly AI Reflections / week** + **Biometric (FaceID / TouchID) Unlock** + **Printable PDF Monthly Report**.
 
 ---
 
-## Team — $9.99/month (Coming Soon)
+## Pro Yearly — Deep Transformation (`599 EGP / year` | `$39.99 / year` — Save 37%)
 
-**For couples, families, and support groups.**
+- Everything in **Pro Monthly**.
+- **Full 365-Day Year-Round Mood Heatmap**.
+- **Unlimited Deep AI Reflections** & Time-of-Day Rhythm Analysis.
+- **2 Streak Freeze Shields / month** + **Annual Year-in-Review PDF**.
+- **Early Access** to new seasonal palettes & Aurora **`Pro Yearly`** Badge.
 
-- Shared mood sharing (opt-in)
-- See loved ones' moods (with permission)
-- Group insights
-- Private group journals
-- Shared goals
+---
+
+## Founding Lifetime — VIP Vault (`1,499 EGP one-time` | `$79 one-time`)
+
+- Everything in **Pro Yearly Forever** with zero recurring fees.
+- **All Future Flagship Modules Included Forever**: Dedicated Fine-Tuned AI Model Insights, Camera PPG Heart-Rate Variability (`HRV`), Voice Tone Analysis, CBT Socratic Reframer, Comfort Vault, and Unlimited Streak Freeze Shields.
+- **Exclusive Gold Crown Badge (`Founding Lifetime`)** across your account and Anonymous Community Board.
 
 ---
 

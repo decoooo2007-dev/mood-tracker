@@ -84,6 +84,48 @@ CREATE POLICY "service_role_all_user_settings"
   USING (true) WITH CHECK (true);
 
 -- ============================================================================
+-- Anonymous Community Achievement Board (Zero-PII Public Projection)
+-- ============================================================================
+-- Stores ONLY opt-in anonymous handles and numeric aggregated wellness deltas.
+-- Real usernames, emails, and encrypted journal notes are NEVER stored here or
+-- exposed by any public leaderboard endpoint.
+
+CREATE TABLE IF NOT EXISTS public.leaderboard_profiles (
+  user_id UUID PRIMARY KEY REFERENCES public.users(id) ON DELETE CASCADE,
+  anonymous_alias TEXT UNIQUE NOT NULL,
+  is_opted_in BOOLEAN NOT NULL DEFAULT FALSE,
+  consistency_entries INTEGER NOT NULL DEFAULT 0,
+  active_days INTEGER NOT NULL DEFAULT 0,
+  current_streak INTEGER NOT NULL DEFAULT 0,
+  baseline_wellness DOUBLE PRECISION NOT NULL DEFAULT 50,
+  recent_wellness DOUBLE PRECISION NOT NULL DEFAULT 50,
+  improvement_delta DOUBLE PRECISION NOT NULL DEFAULT 0,
+  qualified_for_growth BOOLEAN NOT NULL DEFAULT FALSE,
+  updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+  CONSTRAINT leaderboard_alias_length CHECK (char_length(btrim(anonymous_alias)) BETWEEN 3 AND 20)
+);
+
+CREATE UNIQUE INDEX IF NOT EXISTS idx_leaderboard_alias_lower
+  ON public.leaderboard_profiles (LOWER(anonymous_alias));
+
+CREATE INDEX IF NOT EXISTS idx_leaderboard_opted_entries
+  ON public.leaderboard_profiles (is_opted_in, consistency_entries DESC, current_streak DESC);
+
+CREATE INDEX IF NOT EXISTS idx_leaderboard_opted_growth
+  ON public.leaderboard_profiles (is_opted_in, qualified_for_growth, improvement_delta DESC);
+
+ALTER TABLE public.leaderboard_profiles ENABLE ROW LEVEL SECURITY;
+ALTER TABLE public.leaderboard_profiles FORCE ROW LEVEL SECURITY;
+
+REVOKE ALL ON public.leaderboard_profiles FROM anon, authenticated;
+GRANT ALL ON public.leaderboard_profiles TO service_role;
+
+DROP POLICY IF EXISTS "service_role_all_leaderboard_profiles" ON public.leaderboard_profiles;
+CREATE POLICY "service_role_all_leaderboard_profiles"
+  ON public.leaderboard_profiles FOR ALL TO service_role
+  USING (true) WITH CHECK (true);
+
+-- ============================================================================
 -- Supabase Vault (Encrypted Secrets Hardening — cybersecurity-hub Standard)
 -- ============================================================================
 -- Stores third-party provider keys (e.g., GEMINI_API_KEY, RESEND_API_KEY,

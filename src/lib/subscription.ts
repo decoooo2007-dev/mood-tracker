@@ -17,13 +17,6 @@ export const SUBSCRIPTION_TIERS: readonly SubscriptionTier[] = [
   "lifetime",
 ] as const;
 
-/** Primary 3 tiers highlighted in the Plan Badges & Design Showcase */
-export const PRIMARY_BADGE_TIERS: readonly SubscriptionTier[] = [
-  "free",
-  "yearly",
-  "lifetime",
-] as const;
-
 export const TIER_RANK: Record<SubscriptionTier, number> = {
   free: 0,
   monthly: 1,
@@ -51,26 +44,32 @@ export const SUBSCRIPTION_PLANS: Record<SubscriptionTier, SubscriptionPlanMeta> 
   free: {
     id: "free",
     rank: 0,
-    labelEn: "Free Starter",
+    labelEn: "Free Forever",
     labelAr: "الباقة المجانية",
     badgeEn: "Free",
     badgeAr: "مجاني",
     priceEgpEn: "0 EGP",
     priceEgpAr: "٠ ج.م",
     priceUsd: "$0",
-    summaryEn: "Core daily mood check-ins, streaks, and basic local analytics.",
-    summaryAr: "تسجيل المشاعر اليومي والسلسلة المتواصلة والإحصاءات الأساسية.",
+    summaryEn:
+      "Generous daily tracking built for growth: unlimited check-ins, streaks, breathing, community board, and core insights.",
+    summaryAr:
+      "تتبع يومي شامل ومجاني: تسجيل غير محدود، السلسلة المتواصلة، تمارين التنفس، ولوحة المنافسة.",
     featuresEn: [
-      "Daily 5-mood check-ins & notes",
-      "Active streak & weekly chart",
-      "Default Nile Sapphire theme",
-      "JSON & CSV data export",
+      "Unlimited 5-mood check-ins, notes & streaks",
+      "12 preset tags + up to 3 custom tags",
+      "7-day trend chart & 30-day Mood Heatmap",
+      "4-7-8 Breathing Modal & 5 Achievement Badges",
+      "Anonymous Community Board participation",
+      "2 Themes (Nile Sapphire & Obsidian Pearl) + JSON/CSV Export",
     ],
     featuresAr: [
-      "تسجيل المشاعر اليومية والملاحظات",
-      "سلسلة الأيام المتواصلة والرسم الأسبوعي",
-      "سمة ياقوت النيل الافتراضية",
-      "تصدير البيانات بصيغتي الجدول والنص",
+      "تسجيل مشاعر يومي غير محدود مع الملاحظات والسلسلة",
+      "١٢ وسماً جاهزاً مع ٣ وسوم مخصصة",
+      "الرسم البياني الأسبوعي وخريطة ٣٠ يوماً الحرارية",
+      "تمرين التنفس الهادئ وشارات الإنجاز الخمس",
+      "المشاركة الكاملة في لوحة الإنجاز المجهولة",
+      "سمتان لونيتان وتصدير البيانات بملفات النص والجداول",
     ],
   },
   monthly: {
@@ -83,19 +82,23 @@ export const SUBSCRIPTION_PLANS: Record<SubscriptionTier, SubscriptionPlanMeta> 
     priceEgpEn: "79 EGP / mo",
     priceEgpAr: "٧٩ ج.م / شهرياً",
     priceUsd: "$4.99 / mo",
-    summaryEn: "Full themes, AI deep reflections, and automated mood correlations.",
-    summaryAr: "كافة السمات اللونية والتحليلات الذكية وارتباط العوامل.",
+    summaryEn:
+      "Flexible monthly upgrade unlocking all 8 themes, custom factor editing, biometric lock, and printable PDF reports.",
+    summaryAr:
+      "ترقية شهرية مرنة تفتح كافة السمات الثماني وتعديل العوامل وقفل البصمة والتقارير.",
     featuresEn: [
-      "All 8 atmospheric color palettes",
-      "Weekly deep reflection synthesis",
-      "What Lifts vs. Drains correlations",
-      "Printable monthly wellness PDF report",
+      "Everything in Free Forever",
+      "All 8 curated Dark & Light color palettes",
+      "Unlimited custom tags & editable Lifts/Drains factors",
+      "90-day Mood Heatmap + 3 Deep Weekly AI Reflections/wk",
+      "Biometric (FaceID / TouchID) Lock & Printable PDF Reports",
     ],
     featuresAr: [
-      "جميع لوحات الألوان الثماني",
-      "تحليل أسبوعي عميق للمشاعر",
-      "تحليل العوامل الرافعة والمستنزفة للمزاج",
-      "تقرير شهري جاهز للطباعة",
+      "جميع مزايا الباقة المجانية",
+      "فتح كافة لوحات الألوان الثماني للوضعين الداكن والفاتح",
+      "وسوم مخصصة غير محدودة وتعديل عوامل رفع وخفض المزاج",
+      "خريطة ٩٠ يوماً الحرارية و٣ تحليلات عميقة أسبوعياً",
+      "قفل البصمة الحيوية وتقارير شهرية قابلة للطباعة",
     ],
   },
   yearly: {
@@ -108,19 +111,23 @@ export const SUBSCRIPTION_PLANS: Record<SubscriptionTier, SubscriptionPlanMeta> 
     priceEgpEn: "599 EGP / yr",
     priceEgpAr: "٥٩٩ ج.م / سنوياً",
     priceUsd: "$39.99 / yr",
-    summaryEn: "Best recurring value (save 37%) with unlimited historical heatmap ranges.",
-    summaryAr: "أفضل قيمة متكررة بتوفير ٣٧٪ مع خريطة حرارية شاملة لجميع الفترات.",
+    summaryEn:
+      "Full annual mastery (save 37%) with 365-day full-year heatmap analytics, unlimited AI reflections, and streak shields.",
+    summaryAr:
+      "إتقان سنوي كامل بتوفير ٣٧٪ مع خريطة ٣٦٥ يوماً الكاملة وتحليلات ذكية غير محدودة.",
     featuresEn: [
-      "Everything in Pro Monthly (Save 37%)",
-      "30D / 90D / 365D Mood Heatmap analytics",
-      "Custom editable Lift/Drain factors",
-      "Zero-knowledge E2EE cloud sync",
+      "Everything in Pro Monthly (Save 37% yearly)",
+      "Full 365-day year-round Mood Heatmap",
+      "Unlimited Deep Weekly AI Reflections & Time-of-Day insights",
+      "2 Streak Freeze Shields/month + Annual Year-in-Review PDF",
+      "Early access to new seasonal themes & Aurora Pro Badge",
     ],
     featuresAr: [
       "جميع مزايا الباقة الشهرية بتوفير ٣٧٪",
-      "خريطة المزاج الحرارية الكاملة لمدة سنة",
-      "تخصيص وتعديل عوامل رفع وخفض المزاج",
-      "مزامنة سحابية مشفرة بالكامل",
+      "خريطة المزاج الحرارية الكاملة لمدة ٣٦٥ يوماً",
+      "تحليلات ذكية عميقة غير محدودة حسب أوقات اليوم",
+      "درعان لحماية السلسلة شهرياً وتقرير مراجعة العام",
+      "أولوية الوصول للسمات الجديدة وشارة البرو السنوية",
     ],
   },
   lifetime: {
@@ -133,19 +140,21 @@ export const SUBSCRIPTION_PLANS: Record<SubscriptionTier, SubscriptionPlanMeta> 
     priceEgpEn: "1,499 EGP once",
     priceEgpAr: "١٤٩٩ ج.م لمرة واحدة",
     priceUsd: "$79 once",
-    summaryEn: "Permanent Founding Member status unlocking every current and future module.",
-    summaryAr: "عضوية دائمة مدى الحياة تفتح جميع المزايا الحالية والمستقبلية.",
+    summaryEn:
+      "One-time VIP Founder status unlocking every current and future MoodFlow flagship AI & wellness module forever.",
+    summaryAr:
+      "عضوية تأسيسية دائمة تفتح كافة المزايا الحالية ووحدات الذكاء المستقبلية مدى الحياة.",
     featuresEn: [
-      "Permanent Founding Crown Badge",
-      "All 8 themes & Mode-Reactive Aura unlocked",
-      "Priority access to future AI & wellness modules",
-      "Lifetime updates with zero recurring fees",
+      "Everything in Pro Yearly Forever (Zero recurring fees)",
+      "All Future Flagship Modules Free (Fine-Tuned AI, Camera HRV, Voice Prosody, CBT Reframer & Comfort Vault)",
+      "Unlimited Streak Freeze Shields + Encrypted Backup Restore Priority",
+      "Exclusive Royal Gold Crown Badge across App & Anonymous Board",
     ],
     featuresAr: [
-      "شارة التاج الذهبية الدائمة للمؤسسين",
-      "فتح جميع السمات والتوهج التفاعلي",
-      "أولوية الوصول لوحدات الذكاء المستقبلية",
-      "تحديثات دائمة بدون أي رسوم متكررة",
+      "جميع مزايا الباقة السنوية مدى الحياة بدون اشتراك متكرر",
+      "فتح جميع الوحدات المستقبلية والنماذج الذكية المتقدمة مجاناً",
+      "دروع حماية غير محدودة للسلسلة وأولوية الاستعادة المشفرة",
+      "شارة التاج الذهبية الحصرية في التطبيق ولوحة المنافسة",
     ],
   },
 };
@@ -153,12 +162,16 @@ export const SUBSCRIPTION_PLANS: Record<SubscriptionTier, SubscriptionPlanMeta> 
 export interface TierCapabilities {
   tier: SubscriptionTier;
   paywallActive: boolean;
-  allPalettes: boolean;
-  deepAiReflections: boolean;
+  paletteLimit: number;
+  customTagsLimit: number;
+  heatmapMaxDays: 30 | 90 | 365;
+  weeklyDeepReflectionLimit: number;
   editableFactors: boolean;
-  fullYearHeatmap: boolean;
   pdfReportExport: boolean;
-  futureModulesPriority: boolean;
+  biometricLock: boolean;
+  streakShieldsPerMonth: number;
+  futureModulesIncluded: boolean;
+  founderBoardFlair: boolean;
 }
 
 /**
@@ -186,8 +199,8 @@ export function normalizeSubscriptionTier(raw: unknown): SubscriptionTier {
 
 /**
  * Evaluates whether a user tier satisfies a required tier.
- * When `enforcePaywall` is `false` (pre-payment launch), returns `true` cleanly
- * so features remain open while tier badges & contracts are tested.
+ * When `enforcePaywall` is `false` (pre-payment growth phase), returns `true`
+ * cleanly so features remain open while tier badges & contracts are tested.
  */
 export function hasTierAccess(
   userTier: SubscriptionTier | string | null | undefined,
@@ -202,21 +215,93 @@ export function hasTierAccess(
 }
 
 /**
- * Computes planned feature entitlements for a tier.
+ * Computes clearly separated feature capabilities across Free, Pro Monthly, Pro Yearly, and Founding Lifetime.
  */
 export function getTierCapabilities(
   userTier: SubscriptionTier | string | null | undefined,
   enforcePaywall: boolean = PAYWALL_ENFORCEMENT_ENABLED
 ): TierCapabilities {
   const tier = normalizeSubscriptionTier(userTier);
+  if (!enforcePaywall) {
+    return {
+      tier,
+      paywallActive: false,
+      paletteLimit: 8,
+      customTagsLimit: Number.POSITIVE_INFINITY,
+      heatmapMaxDays: 365,
+      weeklyDeepReflectionLimit: Number.POSITIVE_INFINITY,
+      editableFactors: true,
+      pdfReportExport: true,
+      biometricLock: true,
+      streakShieldsPerMonth: Number.POSITIVE_INFINITY,
+      futureModulesIncluded: true,
+      founderBoardFlair: tier === "lifetime",
+    };
+  }
+
+  if (tier === "lifetime") {
+    return {
+      tier,
+      paywallActive: true,
+      paletteLimit: 8,
+      customTagsLimit: Number.POSITIVE_INFINITY,
+      heatmapMaxDays: 365,
+      weeklyDeepReflectionLimit: Number.POSITIVE_INFINITY,
+      editableFactors: true,
+      pdfReportExport: true,
+      biometricLock: true,
+      streakShieldsPerMonth: Number.POSITIVE_INFINITY,
+      futureModulesIncluded: true,
+      founderBoardFlair: true,
+    };
+  }
+
+  if (tier === "yearly") {
+    return {
+      tier,
+      paywallActive: true,
+      paletteLimit: 8,
+      customTagsLimit: Number.POSITIVE_INFINITY,
+      heatmapMaxDays: 365,
+      weeklyDeepReflectionLimit: Number.POSITIVE_INFINITY,
+      editableFactors: true,
+      pdfReportExport: true,
+      biometricLock: true,
+      streakShieldsPerMonth: 2,
+      futureModulesIncluded: false,
+      founderBoardFlair: false,
+    };
+  }
+
+  if (tier === "monthly") {
+    return {
+      tier,
+      paywallActive: true,
+      paletteLimit: 8,
+      customTagsLimit: Number.POSITIVE_INFINITY,
+      heatmapMaxDays: 90,
+      weeklyDeepReflectionLimit: 3,
+      editableFactors: true,
+      pdfReportExport: true,
+      biometricLock: true,
+      streakShieldsPerMonth: 0,
+      futureModulesIncluded: false,
+      founderBoardFlair: false,
+    };
+  }
+
   return {
-    tier,
-    paywallActive: enforcePaywall,
-    allPalettes: hasTierAccess(tier, "monthly", enforcePaywall),
-    deepAiReflections: hasTierAccess(tier, "monthly", enforcePaywall),
-    editableFactors: hasTierAccess(tier, "yearly", enforcePaywall),
-    fullYearHeatmap: hasTierAccess(tier, "yearly", enforcePaywall),
-    pdfReportExport: hasTierAccess(tier, "monthly", enforcePaywall),
-    futureModulesPriority: hasTierAccess(tier, "lifetime", enforcePaywall),
+    tier: "free",
+    paywallActive: true,
+    paletteLimit: 2,
+    customTagsLimit: 3,
+    heatmapMaxDays: 30,
+    weeklyDeepReflectionLimit: 0,
+    editableFactors: false,
+    pdfReportExport: false,
+    biometricLock: false,
+    streakShieldsPerMonth: 0,
+    futureModulesIncluded: false,
+    founderBoardFlair: false,
   };
 }

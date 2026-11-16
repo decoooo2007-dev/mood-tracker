@@ -12,8 +12,8 @@ const PUBLIC_PATHS = new Set([
   "/favicon.ico",
 ]);
 
-const PROTECTED_PAGE_PREFIXES = ["/history", "/settings"];
-const PROTECTED_API_PREFIXES = ["/api/entries", "/api/settings", "/api/ai"];
+const PROTECTED_PAGE_PREFIXES = ["/history", "/board", "/settings"];
+const PROTECTED_API_PREFIXES = ["/api/entries", "/api/settings", "/api/ai", "/api/leaderboard"];
 const MUTATING_METHODS = new Set(["POST", "PATCH", "PUT", "DELETE"]);
 
 export async function middleware(request: NextRequest) {

@@ -1083,20 +1083,59 @@ describe("Subscription Tiers, Entitlements & BiDi Purity (Pre-Payment Architectu
     expect(normalizeSubscriptionTier(undefined)).toBe("free");
   });
 
-  it("keeps features unlocked when paywall is disabled and strictly enforces rank hierarchy when enabled", async () => {
+  it("keeps features unlocked when paywall is disabled and strictly enforces 4-tier differentiation when enabled", async () => {
     const { hasTierAccess, getTierCapabilities } = await import("@/lib/subscription");
 
     // Pre-payment phase: enforcePaywall = false -> everything unlocked while testing
     expect(hasTierAccess("free", "lifetime", false)).toBe(true);
-    expect(getTierCapabilities("free", false).futureModulesPriority).toBe(true);
+    const freePrePaywall = getTierCapabilities("free", false);
+    expect(freePrePaywall.paywallActive).toBe(false);
+    expect(freePrePaywall.paletteLimit).toBe(8);
+    expect(freePrePaywall.heatmapMaxDays).toBe(365);
+    expect(freePrePaywall.futureModulesIncluded).toBe(true);
+    expect(freePrePaywall.founderBoardFlair).toBe(false);
+    expect(getTierCapabilities("lifetime", false).founderBoardFlair).toBe(true);
 
-    // Post-payment phase: enforcePaywall = true -> strict rank check (lifetime > yearly > monthly > free)
+    // Post-payment phase: enforcePaywall = true -> strict rank & capability differentiation
     expect(hasTierAccess("free", "monthly", true)).toBe(false);
     expect(hasTierAccess("monthly", "yearly", true)).toBe(false);
     expect(hasTierAccess("yearly", "yearly", true)).toBe(true);
     expect(hasTierAccess("yearly", "lifetime", true)).toBe(false);
     expect(hasTierAccess("lifetime", "lifetime", true)).toBe(true);
     expect(hasTierAccess("lifetime", "monthly", true)).toBe(true);
+
+    const freeCaps = getTierCapabilities("free", true);
+    expect(freeCaps.paletteLimit).toBe(2);
+    expect(freeCaps.customTagsLimit).toBe(3);
+    expect(freeCaps.heatmapMaxDays).toBe(30);
+    expect(freeCaps.weeklyDeepReflectionLimit).toBe(0);
+    expect(freeCaps.editableFactors).toBe(false);
+    expect(freeCaps.pdfReportExport).toBe(false);
+    expect(freeCaps.biometricLock).toBe(false);
+    expect(freeCaps.streakShieldsPerMonth).toBe(0);
+
+    const monthlyCaps = getTierCapabilities("monthly", true);
+    expect(monthlyCaps.paletteLimit).toBe(8);
+    expect(monthlyCaps.customTagsLimit).toBe(Number.POSITIVE_INFINITY);
+    expect(monthlyCaps.heatmapMaxDays).toBe(90);
+    expect(monthlyCaps.weeklyDeepReflectionLimit).toBe(3);
+    expect(monthlyCaps.editableFactors).toBe(true);
+    expect(monthlyCaps.pdfReportExport).toBe(true);
+    expect(monthlyCaps.biometricLock).toBe(true);
+    expect(monthlyCaps.streakShieldsPerMonth).toBe(0);
+
+    const yearlyCaps = getTierCapabilities("yearly", true);
+    expect(yearlyCaps.heatmapMaxDays).toBe(365);
+    expect(yearlyCaps.weeklyDeepReflectionLimit).toBe(Number.POSITIVE_INFINITY);
+    expect(yearlyCaps.streakShieldsPerMonth).toBe(2);
+    expect(yearlyCaps.futureModulesIncluded).toBe(false);
+    expect(yearlyCaps.founderBoardFlair).toBe(false);
+
+    const lifetimeCaps = getTierCapabilities("lifetime", true);
+    expect(lifetimeCaps.heatmapMaxDays).toBe(365);
+    expect(lifetimeCaps.streakShieldsPerMonth).toBe(Number.POSITIVE_INFINITY);
+    expect(lifetimeCaps.futureModulesIncluded).toBe(true);
+    expect(lifetimeCaps.founderBoardFlair).toBe(true);
   });
 
   it("enforces zero ASCII Latin letters in all Arabic subscription plan copy", async () => {
@@ -1202,6 +1241,81 @@ describe("Cross-Device Performance Track 2 & 6: O(1) E2EE Decryption Cache (cryp
     unsubscribe();
   });
 });
+
+describe("Anonymous Community Board & Anti-Cheat Engine (leaderboard.ts & Middleware)", () => {
+  it("validates bilingual anonymous aliases safely and rejects XSS or invalid lengths", async () => {
+    const { ANONYMOUS_ALIAS_REGEX, normalizeAnonymousAlias } = await import(
+      "@/lib/leaderboard"
+    );
+
+    expect(ANONYMOUS_ALIAS_REGEX.test(normalizeAnonymousAlias("  NileVoyager_99 "))).toBe(true);
+    expect(ANONYMOUS_ALIAS_REGEX.test(normalizeAnonymousAlias("نيل_هادئ"))).toBe(true);
+    expect(ANONYMOUS_ALIAS_REGEX.test("ab")).toBe(false);
+    expect(ANONYMOUS_ALIAS_REGEX.test("<script>alert(1)</script>")).toBe(false);
+    expect(ANONYMOUS_ALIAS_REGEX.test("user with spaces")).toBe(false);
+  });
+
+  it("caps daily consistency credit at 2 entries/day and disqualifies single-day spam from Growth ranking", async () => {
+    const { computeLeaderboardMetrics, MAX_CREDITED_ENTRIES_PER_DAY } = await import(
+      "@/lib/leaderboard"
+    );
+
+    const sameDaySpam = Array.from({ length: 12 }, (_, idx) => ({
+      date: "2026-11-10T10:00:00.000Z",
+      mood: idx < 6 ? ("Sad" as const) : ("Happy" as const),
+      intensity: 80,
+      tags: [],
+    }));
+
+    const metrics = computeLeaderboardMetrics(sameDaySpam);
+    expect(metrics.totalRawEntries).toBe(12);
+    expect(metrics.activeDays).toBe(1);
+    expect(metrics.consistencyEntries).toBe(MAX_CREDITED_ENTRIES_PER_DAY);
+    expect(metrics.qualifiedForGrowth).toBe(false);
+  });
+
+  it("computes genuine multi-day Life Growth improvement across >= 10 entries and >= 7 active days", async () => {
+    const { computeLeaderboardMetrics } = await import("@/lib/leaderboard");
+
+    const entries = [
+      // First 5 days: stressed/sad baseline
+      { date: "2026-11-01T09:00:00Z", mood: "Sad" as const, intensity: 75, tags: ["stress"] },
+      { date: "2026-11-02T09:00:00Z", mood: "Frustrated" as const, intensity: 70, tags: ["work"] },
+      { date: "2026-11-03T09:00:00Z", mood: "Sad" as const, intensity: 65, tags: ["tired"] },
+      { date: "2026-11-04T09:00:00Z", mood: "Tired" as const, intensity: 60, tags: [] },
+      { date: "2026-11-05T09:00:00Z", mood: "Tired" as const, intensity: 50, tags: [] },
+      // Recent 5 days: happier/calm progress (10 days total, 12 entries)
+      { date: "2026-11-06T09:00:00Z", mood: "Calm" as const, intensity: 75, tags: ["grateful"] },
+      { date: "2026-11-07T09:00:00Z", mood: "Happy" as const, intensity: 80, tags: ["exercise"] },
+      { date: "2026-11-08T09:00:00Z", mood: "Happy" as const, intensity: 85, tags: ["sleep"] },
+      { date: "2026-11-08T20:00:00Z", mood: "Calm" as const, intensity: 85, tags: ["reading"] },
+      { date: "2026-11-09T09:00:00Z", mood: "Happy" as const, intensity: 90, tags: ["family"] },
+      { date: "2026-11-10T09:00:00Z", mood: "Happy" as const, intensity: 92, tags: ["nature"] },
+      { date: "2026-11-10T20:00:00Z", mood: "Calm" as const, intensity: 88, tags: ["focus"] },
+    ];
+
+    const metrics = computeLeaderboardMetrics(entries);
+    expect(metrics.totalRawEntries).toBe(12);
+    expect(metrics.activeDays).toBe(10);
+    expect(metrics.consistencyEntries).toBe(12);
+    expect(metrics.qualifiedForGrowth).toBe(true);
+    expect(metrics.recentWellness).toBeGreaterThan(metrics.baselineWellness);
+    expect(metrics.improvementDelta).toBeGreaterThan(20);
+  });
+
+  it("blocks unauthenticated requests to /board and /api/leaderboard in middleware", async () => {
+    const { middleware } = await import("@/middleware");
+    const { NextRequest } = await import("next/server");
+
+    const boardRes = await middleware(new NextRequest("http://localhost:3000/board"));
+    expect(boardRes.status).toBe(307);
+    expect(boardRes.headers.get("location")).toContain("/login");
+
+    const apiRes = await middleware(new NextRequest("http://localhost:3000/api/leaderboard"));
+    expect(apiRes.status).toBe(401);
+  });
+});
+
 
 
 

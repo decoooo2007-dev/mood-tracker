@@ -137,10 +137,11 @@ export default function HistoryPage() {
   const [editingEntry, setEditingEntry] = useState<string | null>(null);
   const [entryToDelete, setEntryToDelete] = useState<string | null>(null);
   const [isReportOpen, setIsReportOpen] = useState(false);
-  const [visibleCount, setVisibleCount] = useState(25);
+  const ENTRIES_PER_PAGE = 10;
+  const [visibleCount, setVisibleCount] = useState(ENTRIES_PER_PAGE);
 
   useEffect(() => {
-    setVisibleCount(25);
+    setVisibleCount(ENTRIES_PER_PAGE);
   }, [searchQuery, filterMood, filterTag]);
 
   // Editable What Lifts vs. Drains Your Mood state
@@ -872,10 +873,15 @@ export default function HistoryPage() {
             <h2 className="text-sm sm:text-base font-semibold theme-text-primary flex items-center gap-2">
               <BookOpen className="w-4 h-4" style={{ color: "var(--accent-solid)" }} />
               <span>
-                {filteredEntries.length}{" "}
-                {filteredEntries.length === 1
-                  ? t("history.entry")
-                  : t("history.entries")}
+                {filteredEntries.length > visibleCount
+                  ? isRtl
+                    ? `عرض ${visibleCount} من ${filteredEntries.length} تدوينة`
+                    : `Showing ${visibleCount} of ${filteredEntries.length} entries`
+                  : `${filteredEntries.length} ${
+                      filteredEntries.length === 1
+                        ? t("history.entry")
+                        : t("history.entries")
+                    }`}
               </span>
             </h2>
           </div>
@@ -1016,12 +1022,12 @@ export default function HistoryPage() {
                   <div className="pt-2 flex justify-center">
                     <button
                       type="button"
-                      onClick={() => setVisibleCount((prev) => prev + 25)}
+                      onClick={() => setVisibleCount((prev) => prev + ENTRIES_PER_PAGE)}
                       className="px-5 py-2.5 rounded-2xl glass theme-text-primary text-xs font-semibold hover:opacity-90 transition-opacity shadow-md"
                     >
                       {isRtl
-                        ? `عرض المزيد (${filteredEntries.length - visibleCount})`
-                        : `Show More (${filteredEntries.length - visibleCount})`}
+                        ? `عرض ١٠ تدوينات إضافية (${filteredEntries.length - visibleCount})`
+                        : `Show Next 10 (${filteredEntries.length - visibleCount} remaining)`}
                     </button>
                   </div>
                 )}
