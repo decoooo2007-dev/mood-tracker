@@ -113,6 +113,9 @@ body {
 /* ==================== VISION CRYSTAL SURFACE + CRYSTAL PEARL SPOTLIGHT ==================== */
 .glass {
   position: relative;
+  transform: translateZ(0);
+  backface-visibility: hidden;
+  -webkit-backface-visibility: hidden;
   backdrop-filter: blur(28px) saturate(185%);
   -webkit-backdrop-filter: blur(28px) saturate(185%);
   background:
@@ -149,6 +152,9 @@ body {
 }
 
 .glass-strong {
+  transform: translateZ(0);
+  backface-visibility: hidden;
+  -webkit-backface-visibility: hidden;
   backdrop-filter: blur(24px) saturate(180%);
   -webkit-backdrop-filter: blur(24px) saturate(180%);
   background: var(--bg-card-base);
@@ -156,12 +162,85 @@ body {
 }
 
 .glass-modal {
+  transform: translateZ(0);
+  backface-visibility: hidden;
+  -webkit-backface-visibility: hidden;
   backdrop-filter: blur(26px) saturate(180%);
   -webkit-backdrop-filter: blur(26px) saturate(180%);
   background: rgba(10, 16, 32, 0.94);
   border: 1px solid rgba(255, 255, 255, 0.22);
   box-shadow: 0 24px 60px rgba(0, 0, 0, 0.55);
   color: #FFFFFF;
+}
+
+/* Coarse-pointer / Mobile GPU Compositor Optimization */
+@media (pointer: coarse), (max-width: 767px) {
+  .glass,
+  :root.light .glass {
+    backdrop-filter: blur(12px) saturate(145%);
+    -webkit-backdrop-filter: blur(12px) saturate(145%);
+    background: var(--bg-card-base);
+  }
+  .glass-strong {
+    backdrop-filter: blur(12px) saturate(145%);
+    -webkit-backdrop-filter: blur(12px) saturate(145%);
+  }
+  .glass-modal {
+    backdrop-filter: blur(14px) saturate(150%);
+    -webkit-backdrop-filter: blur(14px) saturate(150%);
+  }
+}
+
+/* Hardware-Accelerated Atmospheric Blobs & Particles */
+@keyframes mfBlob1 {
+  0%, 100% { transform: translate3d(0, 0, 0); }
+  50% { transform: translate3d(90px, 45px, 0); }
+}
+
+@keyframes mfBlob2 {
+  0%, 100% { transform: translate3d(0, 0, 0); }
+  50% { transform: translate3d(-75px, -55px, 0); }
+}
+
+@keyframes mfBlob3 {
+  0%, 100% { transform: translate3d(-45px, -25px, 0); }
+  50% { transform: translate3d(45px, 25px, 0); }
+}
+
+@keyframes mfParticleFloat {
+  0%, 100% { transform: translate3d(0, 0, 0); opacity: 0.3; }
+  50% { transform: translate3d(0, -20px, 0); opacity: 0.65; }
+}
+
+.mf-blob-1,
+.mf-blob-2,
+.mf-blob-3,
+.mf-particle {
+  will-change: transform;
+  transform: translate3d(0, 0, 0);
+  backface-visibility: hidden;
+  -webkit-backface-visibility: hidden;
+}
+
+@media (pointer: fine) and (prefers-reduced-motion: no-preference) {
+  .mf-blob-1 { animation: mfBlob1 20s ease-in-out infinite; }
+  .mf-blob-2 { animation: mfBlob2 25s ease-in-out infinite; }
+  .mf-blob-3 { animation: mfBlob3 18s ease-in-out infinite; }
+  .mf-particle { animation: mfParticleFloat 4.2s ease-in-out infinite; }
+}
+
+@media (pointer: coarse), (prefers-reduced-motion: reduce) {
+  .mf-blob-1,
+  .mf-blob-2,
+  .mf-blob-3,
+  .mf-particle {
+    animation: none !important;
+  }
+}
+
+.history-entry-card {
+  content-visibility: auto;
+  contain-intrinsic-size: 0 88px;
 }
 
 :root.dark .glass-modal {

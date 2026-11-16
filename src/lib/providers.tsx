@@ -101,6 +101,7 @@ function AuthProvider({ children }: { children: ReactNode }) {
 
   const signOut = () => {
     authSignOut();
+    browserQueryClient?.clear();
     setUser(null);
   };
 

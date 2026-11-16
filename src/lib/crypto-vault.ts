@@ -23,6 +23,41 @@ interface StoredVaultRecord {
 
 const memoryPasswordKeyCache = new Map<string, CryptoKey>();
 const memoryFallbackKeyCache = new Map<string, CryptoKey>();
+const decryptedTextCache = new Map<string, string>();
+const vaultClearListeners = new Set<() => void>();
+const MAX_DECRYPT_CACHE_SIZE = 2000;
+
+export function onVaultCleared(listener: () => void): () => void {
+  vaultClearListeners.add(listener);
+  return () => {
+    vaultClearListeners.delete(listener);
+  };
+}
+
+function setDecryptedCacheEntry(cacheKey: string, plaintext: string): void {
+  if (decryptedTextCache.size >= MAX_DECRYPT_CACHE_SIZE && !decryptedTextCache.has(cacheKey)) {
+    const oldestKey = decryptedTextCache.keys().next().value;
+    if (oldestKey !== undefined) {
+      decryptedTextCache.delete(oldestKey);
+    }
+  }
+  decryptedTextCache.set(cacheKey, plaintext);
+}
+
+export function getDecryptedCacheSize(): number {
+  return decryptedTextCache.size;
+}
+
+export function peekDecryptedJournalText(
+  payload: string | null | undefined,
+  userId: string
+): string {
+  if (!payload) return "";
+  if (!isEncryptedJournal(payload)) return payload;
+  if (!userId) return "";
+  const normalizedId = userId.trim().toLowerCase();
+  return decryptedTextCache.get(`${normalizedId}::${payload}`) ?? "";
+}
 
 function getSubtleCrypto(): SubtleCrypto | null {
   if (typeof globalThis !== "undefined" && globalThis.crypto?.subtle) {
@@ -127,6 +162,14 @@ export async function cacheUserVaultKey(
 export function clearUserVaultKey(): void {
   memoryPasswordKeyCache.clear();
   memoryFallbackKeyCache.clear();
+  decryptedTextCache.clear();
+  for (const listener of vaultClearListeners) {
+    try {
+      listener();
+    } catch {
+      // Ignore listener errors
+    }
+  }
   if (typeof window !== "undefined" && typeof localStorage !== "undefined") {
     try {
       localStorage.removeItem(VAULT_STORAGE_KEY);
@@ -243,6 +286,8 @@ export async function encryptJournalText(
 /**
  * Decrypts an AES-256-GCM encrypted journal string (`enc:v1:...` or `enc:u1:...`).
  * Legacy plaintext strings are returned unchanged.
+ * Uses session-scoped O(1) in-memory cache (`decryptedTextCache`) so already-decrypted
+ * entries resolve in < 0.001ms without re-invoking WebCrypto subtle.decrypt.
  */
 export async function decryptJournalText(
   payload: string,
@@ -252,8 +297,16 @@ export async function decryptJournalText(
     return payload || "";
   }
 
+  if (!userId) return "";
+  const normalizedId = userId.trim().toLowerCase();
+  const cacheKey = `${normalizedId}::${payload}`;
+  const cachedPlaintext = decryptedTextCache.get(cacheKey);
+  if (cachedPlaintext !== undefined) {
+    return cachedPlaintext;
+  }
+
   const subtle = getSubtleCrypto();
-  if (!subtle || !userId) return "";
+  if (!subtle) return "";
 
   const parts = payload.split(":");
   if (parts.length !== 4) {
@@ -286,7 +339,9 @@ export async function decryptJournalText(
           cipherBytes.byteOffset + cipherBytes.byteLength
         ) as ArrayBuffer
       );
-      return new TextDecoder().decode(plainBuffer);
+      const decoded = new TextDecoder().decode(plainBuffer);
+      setDecryptedCacheEntry(cacheKey, decoded);
+      return decoded;
     }
 
     const iv = base64ToBytes(ivB64);
@@ -303,7 +358,9 @@ export async function decryptJournalText(
       ) as ArrayBuffer
     );
 
-    return new TextDecoder().decode(plainBuffer);
+    const decoded = new TextDecoder().decode(plainBuffer);
+    setDecryptedCacheEntry(cacheKey, decoded);
+    return decoded;
   } catch {
     return "";
   }

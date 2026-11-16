@@ -1,124 +1,139 @@
 "use client";
 
-import { useEffect, useRef } from "react";
-import { motion } from "framer-motion";
-import { applyAppearanceTokens, getStoredAppearance } from "@/lib/theme";
-import type { MoodType } from "@/types/mood";
+import { useEffect } from "react";
 
 interface GlassBackgroundProps {
   children: React.ReactNode;
 }
 
 export default function GlassBackground({ children }: GlassBackgroundProps) {
-  const activeMoodRef = useRef<MoodType | null>(null);
-
-  // Sync palette tokens, Mode-Aware Aura Rule, and cursor spotlight across .glass surfaces
+  // Desktop Crystal Pearl spotlight with cached .glass elements and rects (updated only on scroll/resize/DOM change)
   useEffect(() => {
-    const syncTokens = (e?: Event) => {
-      const custom = e as CustomEvent<{ activeMood?: MoodType | null }> | undefined;
-      if (custom?.detail && "activeMood" in custom.detail) {
-        activeMoodRef.current = custom.detail.activeMood ?? null;
-      }
-      applyAppearanceTokens(getStoredAppearance(), activeMoodRef.current);
+    if (
+      typeof window === "undefined" ||
+      typeof window.matchMedia !== "function" ||
+      !window.matchMedia("(pointer: fine)").matches
+    ) {
+      return;
+    }
+
+    let cachedCards: { el: HTMLElement; rect: DOMRect }[] = [];
+    let rectsDirty = true;
+    let rafId = 0;
+    let settleTimer: ReturnType<typeof setTimeout> | null = null;
+    let lastX = 0;
+    let lastY = 0;
+
+    const refreshRects = () => {
+      const nodes = document.querySelectorAll<HTMLElement>(".glass");
+      cachedCards = Array.from(nodes).map((el) => ({
+        el,
+        rect: el.getBoundingClientRect(),
+      }));
+      rectsDirty = false;
     };
 
-    syncTokens();
-    window.addEventListener("moodflow-appearance-change", syncTokens);
-    window.addEventListener("storage", syncTokens);
+    const markDirty = () => {
+      rectsDirty = true;
+    };
 
-    let rafId = 0;
+    const markDirtyWithAnimationSettle = () => {
+      rectsDirty = true;
+      if (settleTimer) clearTimeout(settleTimer);
+      settleTimer = setTimeout(() => {
+        rectsDirty = true;
+      }, 650);
+    };
+
     const handlePointerMove = (ev: PointerEvent) => {
       if (ev.pointerType === "touch") return;
-      if (rafId) cancelAnimationFrame(rafId);
-      const clientX = ev.clientX;
-      const clientY = ev.clientY;
+      lastX = ev.clientX;
+      lastY = ev.clientY;
+      if (rafId) return;
       rafId = requestAnimationFrame(() => {
-        const cards = document.querySelectorAll<HTMLElement>(".glass");
-        cards.forEach((card) => {
-          const rect = card.getBoundingClientRect();
-          card.style.setProperty("--mouse-x", `${clientX - rect.left}px`);
-          card.style.setProperty("--mouse-y", `${clientY - rect.top}px`);
-        });
+        rafId = 0;
+        if (rectsDirty || cachedCards.length === 0) {
+          refreshRects();
+        }
+        for (let i = 0; i < cachedCards.length; i++) {
+          const { el, rect } = cachedCards[i];
+          if (!el.isConnected) {
+            rectsDirty = true;
+            continue;
+          }
+          el.style.setProperty("--mouse-x", `${lastX - rect.left}px`);
+          el.style.setProperty("--mouse-y", `${lastY - rect.top}px`);
+        }
       });
     };
 
+    const observer =
+      typeof MutationObserver !== "undefined"
+        ? new MutationObserver(markDirtyWithAnimationSettle)
+        : null;
+    if (observer && document.body) {
+      observer.observe(document.body, { childList: true, subtree: true });
+    }
+
     window.addEventListener("pointermove", handlePointerMove, { passive: true });
+    window.addEventListener("scroll", markDirty, { passive: true, capture: true });
+    window.addEventListener("resize", markDirty, { passive: true });
 
     return () => {
       if (rafId) cancelAnimationFrame(rafId);
-      window.removeEventListener("moodflow-appearance-change", syncTokens);
-      window.removeEventListener("storage", syncTokens);
+      if (settleTimer) clearTimeout(settleTimer);
+      observer?.disconnect();
       window.removeEventListener("pointermove", handlePointerMove);
+      window.removeEventListener("scroll", markDirty, true);
+      window.removeEventListener("resize", markDirty);
     };
   }, []);
 
   return (
     <div className="min-h-screen relative overflow-hidden">
-      {/* Fixed Gradient Mesh + Atmospheric Blobs (Nile Sapphire x Gold Default) */}
+      {/* Fixed Gradient Mesh + Hardware-Accelerated Atmospheric Blobs (Nile Sapphire x Gold Default) */}
       <div className="fixed inset-0 overflow-hidden pointer-events-none z-0">
         <div
-          className="absolute inset-0 transition-all duration-700"
+          className="absolute inset-0 transition-colors duration-700"
           style={{
             background:
               "linear-gradient(135deg, var(--bg-gradient-start), var(--bg-gradient-mid), var(--bg-gradient-end))",
           }}
         />
-        <motion.div
-          className="absolute w-[780px] h-[780px] rounded-full transition-colors duration-700"
+        <div
+          className="mf-blob-1 absolute w-[780px] h-[780px] rounded-full transition-colors duration-700"
           style={{
             background: "radial-gradient(circle, var(--blob-1) 0%, transparent 70%)",
             top: "-18%",
             left: "-8%",
           }}
-          animate={{
-            x: [0, 90, 0],
-            y: [0, 45, 0],
-          }}
-          transition={{ duration: 20, repeat: Infinity }}
         />
-        <motion.div
-          className="absolute w-[620px] h-[620px] rounded-full transition-colors duration-700"
+        <div
+          className="mf-blob-2 absolute w-[620px] h-[620px] rounded-full transition-colors duration-700"
           style={{
             background: "radial-gradient(circle, var(--blob-2) 0%, transparent 70%)",
             bottom: "-12%",
             right: "-6%",
           }}
-          animate={{
-            x: [0, -75, 0],
-            y: [0, -55, 0],
-          }}
-          transition={{ duration: 25, repeat: Infinity }}
         />
-        <motion.div
-          className="absolute w-[520px] h-[520px] rounded-full transition-colors duration-700"
+        <div
+          className="mf-blob-3 absolute w-[520px] h-[520px] rounded-full transition-colors duration-700"
           style={{
             background: "radial-gradient(circle, var(--blob-3) 0%, transparent 70%)",
             top: "42%",
             left: "42%",
           }}
-          animate={{
-            x: [-45, 45, -45],
-            y: [-25, 25, -25],
-          }}
-          transition={{ duration: 18, repeat: Infinity }}
         />
-        {/* Floating decorative crystal particles */}
+        {/* Floating decorative crystal particles (zero nested backdrop-blur overdraw) */}
         {[...Array(4)].map((_, i) => (
-          <motion.div
+          <div
             key={i}
-            className="absolute w-3.5 h-3.5 rounded-full bg-white/15 backdrop-blur-sm"
+            className="mf-particle absolute w-3.5 h-3.5 rounded-full bg-white/15"
             style={{
               top: `${18 + i * 18}%`,
               left: `${12 + i * 21}%`,
-            }}
-            animate={{
-              y: [0, -20, 0],
-              opacity: [0.3, 0.65, 0.3],
-            }}
-            transition={{
-              duration: 3.8 + i * 0.7,
-              repeat: Infinity,
-              delay: i * 0.45,
+              animationDuration: `${3.8 + i * 0.7}s`,
+              animationDelay: `${i * 0.45}s`,
             }}
           />
         ))}

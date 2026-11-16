@@ -1,7 +1,6 @@
 "use client";
 
 import { useMemo, useState, useEffect } from "react";
-import { motion } from "framer-motion";
 import { Calendar, Sparkles } from "lucide-react";
 import type { MoodEntry, MoodType } from "@/types/mood";
 import { moodOptions, toLocalDateStr } from "@/lib/moods";
@@ -272,13 +271,21 @@ export default function MoodHeatmap({ entries }: MoodHeatmapProps) {
                       const isCurrentDay = cell.dateStr === todayStr;
 
                       return (
-                        <motion.button
+                        <button
                           key={cell.dateStr}
                           type="button"
                           onClick={() => setActiveCell({ date: cell.dateStr, entry })}
-                          onMouseEnter={() => setActiveCell({ date: cell.dateStr, entry })}
-                          onMouseLeave={() => setActiveCell(null)}
-                          className={`no-touch-target w-3.5 h-3.5 sm:w-4 sm:h-4 rounded-[4px] transition-transform relative ${
+                          onPointerEnter={(e) => {
+                            if (e.pointerType === "mouse") {
+                              setActiveCell({ date: cell.dateStr, entry });
+                            }
+                          }}
+                          onPointerLeave={(e) => {
+                            if (e.pointerType === "mouse") {
+                              setActiveCell(null);
+                            }
+                          }}
+                          className={`no-touch-target w-3.5 h-3.5 sm:w-4 sm:h-4 rounded-[4px] active:scale-90 transition-transform relative ${
                             entry ? "hover:scale-125 hover:z-10" : "hover:opacity-80"
                           } ${
                             isHovered || isCurrentDay
@@ -292,7 +299,6 @@ export default function MoodHeatmap({ entries }: MoodHeatmapProps) {
                             border: mood ? "none" : emptyCellBorder,
                           }}
                           aria-label={`${cell.dateStr}: ${mood ? tmood(mood) : t("heatmap.noEntry")}`}
-                          whileTap={{ scale: 0.9 }}
                         />
                       );
                     })}

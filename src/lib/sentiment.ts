@@ -268,7 +268,13 @@ interface TextLexiconAnalysis {
   totalMagnitude: number;
 }
 
+const textLexiconCache = new Map<string, TextLexiconAnalysis>();
+const MAX_LEXICON_CACHE_SIZE = 500;
+
 function analyzeTextLexicon(text: string): TextLexiconAnalysis {
+  const cached = textLexiconCache.get(text);
+  if (cached) return cached;
+
   const normalized = normalizeLexiconText(text);
   if (!normalized) {
     return {
@@ -411,7 +417,7 @@ function analyzeTextLexicon(text: string): TextLexiconAnalysis {
     score = clamp(signedValenceSum / totalMagnitude, -1, 1);
   }
 
-  return {
+  const result: TextLexiconAnalysis = {
     score: round2(score),
     dimensionScores,
     keywords: [...new Set(foundKeywords)].slice(0, 6),
@@ -419,6 +425,12 @@ function analyzeTextLexicon(text: string): TextLexiconAnalysis {
     signedValenceSum,
     totalMagnitude,
   };
+  if (textLexiconCache.size >= MAX_LEXICON_CACHE_SIZE) {
+    const oldest = textLexiconCache.keys().next().value;
+    if (oldest !== undefined) textLexiconCache.delete(oldest);
+  }
+  textLexiconCache.set(text, result);
+  return result;
 }
 
 /**

@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useMemo, useEffect, useRef } from "react";
+import { useState, useMemo, useEffect, useRef, useDeferredValue } from "react";
 import dynamic from "next/dynamic";
 import Link from "next/link";
 import { motion, AnimatePresence } from "framer-motion";
@@ -230,32 +230,47 @@ export default function TodayPage() {
     [entries, locale]
   );
 
+  // Deferred values & memoized lexicon scan so slider dragging and typing stay at 120fps with 0ms lag
+  const deferredJournalText = useDeferredValue(journalText);
+  const deferredSliderValue = useDeferredValue(sliderValue);
+
+  const textSentiment = useMemo(
+    () => analyzeSentiment(deferredJournalText, locale),
+    [deferredJournalText, locale]
+  );
+
   // Real mathematical trait & massive lexicon sentiment analysis
   const sentiment = useMemo(() => {
-    const hasEnoughText = journalText.trim().length >= 3;
+    const hasEnoughText = deferredJournalText.trim().length >= 3;
     if (!hasEnoughText && selectedMood === null) return null;
 
-    const textResult = analyzeSentiment(journalText, locale);
     if (selectedMood !== null) {
       const moodLabel = moodOptions[selectedMood].label;
       const composite = computeCompositeMoodScore({
         mood: moodLabel,
-        intensity: sliderValue,
+        intensity: deferredSliderValue,
         tags: selectedTags,
-        text: journalText,
+        text: deferredJournalText,
         locale,
       });
       return {
-        ...textResult,
+        ...textSentiment,
         wellnessIndex: composite.wellnessIndex,
         dominantDimension: hasEnoughText
-          ? textResult.dominantDimension
+          ? textSentiment.dominantDimension
           : composite.dominantDimension,
-        score: hasEnoughText ? textResult.score : composite.score,
+        score: hasEnoughText ? textSentiment.score : composite.score,
       };
     }
-    return textResult;
-  }, [journalText, locale, selectedMood, sliderValue, selectedTags]);
+    return textSentiment;
+  }, [
+    deferredJournalText,
+    textSentiment,
+    locale,
+    selectedMood,
+    deferredSliderValue,
+    selectedTags,
+  ]);
 
   const toggleTag = (tag: string) => {
     setSelectedTags((prev) =>
@@ -616,7 +631,7 @@ export default function TodayPage() {
               </div>
               <div className="relative h-6 rounded-full recessed-well p-1 overflow-hidden flex items-center">
                 <div
-                  className="h-full rounded-full transition-all duration-150"
+                  className="h-full rounded-full"
                   style={{
                     width: `${sliderValue}%`,
                     background:

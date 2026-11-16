@@ -1,10 +1,9 @@
 "use client";
 
-import { motion } from "framer-motion";
+import { useEffect, useState } from "react";
 import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
 import { Home, Clock, Settings, WifiOff, LogOut, Globe, MessageSquare } from "lucide-react";
-import { useSyncStore } from "@/hooks/useSyncStore";
 import { useAuth, useLanguage } from "@/lib/providers";
 import type { TranslationKey } from "@/lib/i18n/translations";
 
@@ -18,9 +17,21 @@ const navItems: { href: string; labelKey: TranslationKey; icon: React.ComponentT
 export default function Navigation() {
   const pathname = usePathname();
   const router = useRouter();
-  const { isOnline } = useSyncStore();
+  const [isOnline, setIsOnline] = useState(true);
   const { user, signOut } = useAuth();
   const { locale, toggleLanguage, t } = useLanguage();
+
+  useEffect(() => {
+    setIsOnline(typeof navigator !== "undefined" ? navigator.onLine : true);
+    const handleOnline = () => setIsOnline(true);
+    const handleOffline = () => setIsOnline(false);
+    window.addEventListener("online", handleOnline);
+    window.addEventListener("offline", handleOffline);
+    return () => {
+      window.removeEventListener("online", handleOnline);
+      window.removeEventListener("offline", handleOffline);
+    };
+  }, []);
 
   if (!user || pathname === "/login" || pathname === "/offline" || pathname.startsWith("/preview")) {
     return null;
@@ -34,12 +45,7 @@ export default function Navigation() {
   return (
     <nav className="fixed bottom-5 left-0 right-0 z-50 flex justify-center pointer-events-none px-2">
       <div className="pointer-events-auto max-w-[calc(100vw-1.5rem)]">
-        <motion.div
-          className="glass rounded-full px-2 py-1.5 flex items-center gap-1 shadow-2xl"
-          initial={{ y: 100, opacity: 0 }}
-          animate={{ y: 0, opacity: 1 }}
-          transition={{ delay: 0.3 }}
-        >
+        <div className="glass rounded-full px-2 py-1.5 flex items-center gap-1 shadow-2xl">
           {/* Navigation Items */}
           <div className="flex items-center">
             {navItems.map((item) => {
@@ -58,12 +64,7 @@ export default function Navigation() {
                   }`}
                 >
                   {isActive && (
-                    <motion.div
-                      className="absolute inset-0 nav-active-pill rounded-full"
-                      initial={false}
-                      animate={{ opacity: 1 }}
-                      transition={{ duration: 0.15 }}
-                    />
+                    <div className="absolute inset-0 nav-active-pill rounded-full transition-opacity duration-150" />
                   )}
                   <Icon
                     className={`w-5 h-5 relative z-10 ${
@@ -118,7 +119,7 @@ export default function Navigation() {
               </div>
             )}
           </div>
-        </motion.div>
+        </div>
       </div>
     </nav>
   );

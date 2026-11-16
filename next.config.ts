@@ -54,7 +54,13 @@ const nextConfig: NextConfig = {
   },
 
   experimental: {
-    optimizePackageImports: ["lucide-react", "@supabase/supabase-js", "@tanstack/react-query"],
+    optimizePackageImports: [
+      "lucide-react",
+      "@supabase/supabase-js",
+      "@tanstack/react-query",
+      "framer-motion",
+      "recharts",
+    ],
   },
 };
 

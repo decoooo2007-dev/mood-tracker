@@ -1,14 +1,22 @@
 "use client";
 
-import { useEffect } from "react";
+import { useEffect, useRef } from "react";
 import { applyAppearanceTokens, getStoredAppearance } from "@/lib/theme";
+import type { MoodType } from "@/types/mood";
 
 export default function ThemeScript() {
+  const activeMoodRef = useRef<MoodType | null>(null);
+
   useEffect(() => {
-    const applyThemeAndLocale = () => {
+    const applyThemeAndLocale = (e?: Event) => {
+      const custom = e as CustomEvent<{ activeMood?: MoodType | null }> | undefined;
+      if (custom?.detail && "activeMood" in custom.detail) {
+        activeMoodRef.current = custom.detail.activeMood ?? null;
+      }
+
       const html = document.documentElement;
       const appearance = getStoredAppearance();
-      applyAppearanceTokens(appearance);
+      applyAppearanceTokens(appearance, activeMoodRef.current);
 
       const storedLocale = localStorage.getItem("moodflow-locale");
       if (storedLocale === "ar") {

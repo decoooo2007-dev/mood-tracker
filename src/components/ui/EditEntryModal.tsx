@@ -218,7 +218,7 @@ export default function EditEntryModal({
                   </div>
                   <div className="relative h-6 rounded-full recessed-well p-1 overflow-hidden flex items-center">
                     <div
-                      className="h-full rounded-full transition-all duration-150"
+                      className="h-full rounded-full"
                       style={{
                         width: `${intensity}%`,
                         background:

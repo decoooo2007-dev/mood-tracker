@@ -108,6 +108,7 @@ export async function signOut(): Promise<void> {
   if (typeof window === "undefined") return;
   localStorage.removeItem(SESSION_CACHE_KEY);
   clearUserVaultKey();
+  window.dispatchEvent(new Event("moodflow-auth-change"));
   try {
     await fetch("/api/auth/signout", { method: "POST", credentials: "include" });
     if ("serviceWorker" in navigator && navigator.serviceWorker.controller) {

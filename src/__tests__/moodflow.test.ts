@@ -1063,6 +1063,94 @@ describe("Gate 3 (test-guard): Auth, JWT, Time Classifier & API Row Validation",
   });
 });
 
+describe("Cross-Device Performance Track 2 & 6: O(1) E2EE Decryption Cache (crypto-vault.ts)", () => {
+  it("serves subsequent decryptJournalText calls from O(1) decryptedTextCache without re-invoking subtle.decrypt and clears on clearUserVaultKey", async () => {
+    const {
+      cacheUserVaultKey,
+      clearUserVaultKey,
+      encryptJournalText,
+      decryptJournalText,
+      peekDecryptedJournalText,
+      getDecryptedCacheSize,
+    } = await import("@/lib/crypto-vault");
+
+    clearUserVaultKey();
+    expect(getDecryptedCacheSize()).toBe(0);
+
+    const userId = "88888888-4444-4444-8888-121212121212";
+    await cacheUserVaultKey(userId, "FastVaultPassword!2026");
+
+    const plainText = "Smooth 120fps performance across Desktop, Tablet, and Mobile.";
+    const cipherText = await encryptJournalText(plainText, userId);
+
+    // Before first decrypt, synchronous peek returns empty string (never raw ciphertext)
+    expect(peekDecryptedJournalText(cipherText, userId)).toBe("");
+
+    const decryptSpy = vi.spyOn(globalThis.crypto.subtle, "decrypt");
+    try {
+      // 1st call invokes WebCrypto subtle.decrypt and populates decryptedTextCache
+      const firstRead = await decryptJournalText(cipherText, userId);
+      expect(firstRead).toBe(plainText);
+      expect(decryptSpy).toHaveBeenCalledTimes(1);
+      expect(getDecryptedCacheSize()).toBe(1);
+
+      // Synchronous peek now resolves immediately in O(1)
+      expect(peekDecryptedJournalText(cipherText, userId)).toBe(plainText);
+
+      // 2nd and 3rd calls resolve in O(1) from memory without calling subtle.decrypt again
+      const secondRead = await decryptJournalText(cipherText, userId);
+      const thirdRead = await decryptJournalText(cipherText, userId);
+      expect(secondRead).toBe(plainText);
+      expect(thirdRead).toBe(plainText);
+      expect(decryptSpy).toHaveBeenCalledTimes(1);
+
+      // Clearing the vault purges decryptedTextCache
+      clearUserVaultKey();
+      expect(getDecryptedCacheSize()).toBe(0);
+      expect(peekDecryptedJournalText(cipherText, userId)).toBe("");
+    } finally {
+      decryptSpy.mockRestore();
+      clearUserVaultKey();
+    }
+  });
+
+  it("isolates decryptedTextCache strictly by userId and triggers onVaultCleared listeners on sign-out", async () => {
+    const {
+      cacheUserVaultKey,
+      clearUserVaultKey,
+      encryptJournalText,
+      decryptJournalText,
+      peekDecryptedJournalText,
+      onVaultCleared,
+    } = await import("@/lib/crypto-vault");
+
+    clearUserVaultKey();
+    const userA = "aaaa1111-2222-3333-4444-555555555555";
+    const userB = "bbbb1111-2222-3333-4444-555555555555";
+
+    await cacheUserVaultKey(userA, "UserAPass123!");
+    const secretA = "User A private journal entry";
+    const cipherA = await encryptJournalText(secretA, userA);
+
+    expect(await decryptJournalText(cipherA, userA)).toBe(secretA);
+    expect(peekDecryptedJournalText(cipherA, userA)).toBe(secretA);
+
+    // User B must never hit User A's cached plaintext even with the exact same ciphertext string
+    expect(peekDecryptedJournalText(cipherA, userB)).toBe("");
+    expect(await decryptJournalText(cipherA, userB)).toBe("");
+
+    let clearNotified = 0;
+    const unsubscribe = onVaultCleared(() => {
+      clearNotified += 1;
+    });
+
+    clearUserVaultKey();
+    expect(clearNotified).toBe(1);
+    expect(peekDecryptedJournalText(cipherA, userA)).toBe("");
+    unsubscribe();
+  });
+});
+
 
 
 

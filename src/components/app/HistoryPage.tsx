@@ -51,24 +51,63 @@ import EditEntryModal from "@/components/ui/EditEntryModal";
 import MoodHeatmap from "@/components/ui/MoodHeatmap";
 import AchievementBadges from "@/components/ui/AchievementBadges";
 
-// Dynamic Recharts with ssr: false
-const ResponsiveContainer = dynamic(
-  () => import("recharts").then((mod) => mod.ResponsiveContainer),
-  { ssr: false }
+// Single consolidated Dynamic Recharts PieChart component with ssr: false
+const DynamicMoodPieChart = dynamic(
+  () =>
+    import("recharts").then((mod) => {
+      const { ResponsiveContainer, PieChart, Pie, Cell, Tooltip } = mod;
+
+      return function MoodPieChartComponent({
+        data,
+        isLight,
+      }: {
+        data: { id: string; name: string; value: number; color: string }[];
+        isLight: boolean;
+      }) {
+        return (
+          <div className="h-44 w-full">
+            <ResponsiveContainer width="100%" height="100%">
+              <PieChart>
+                <Pie
+                  data={data}
+                  cx="50%"
+                  cy="50%"
+                  innerRadius={45}
+                  outerRadius={75}
+                  paddingAngle={4}
+                  dataKey="value"
+                >
+                  {data.map((entry, index) => (
+                    <Cell key={index} fill={entry.color} />
+                  ))}
+                </Pie>
+                <Tooltip
+                  contentStyle={{
+                    backgroundColor: isLight
+                      ? "rgba(255, 255, 255, 0.96)"
+                      : "rgba(10, 16, 32, 0.95)",
+                    backdropFilter: "blur(10px)",
+                    border: isLight
+                      ? "1px solid rgba(15, 23, 42, 0.12)"
+                      : "1px solid rgba(255,255,255,0.2)",
+                    borderRadius: "12px",
+                    color: isLight ? "#0F172A" : "#fff",
+                    fontSize: "12px",
+                  }}
+                />
+              </PieChart>
+            </ResponsiveContainer>
+          </div>
+        );
+      };
+    }),
+  {
+    ssr: false,
+    loading: () => (
+      <div className="h-44 w-full rounded-2xl bg-white/5 animate-pulse" />
+    ),
+  }
 );
-const PieChart = dynamic(
-  () => import("recharts").then((mod) => mod.PieChart),
-  { ssr: false }
-);
-const Pie = dynamic(() => import("recharts").then((mod) => mod.Pie), {
-  ssr: false,
-});
-const Cell = dynamic(() => import("recharts").then((mod) => mod.Cell), {
-  ssr: false,
-});
-const Tooltip = dynamic(() => import("recharts").then((mod) => mod.Tooltip), {
-  ssr: false,
-});
 
 const moodColors: Record<MoodType, string> = {
   Happy: "#4ADE80",
@@ -98,6 +137,11 @@ export default function HistoryPage() {
   const [editingEntry, setEditingEntry] = useState<string | null>(null);
   const [entryToDelete, setEntryToDelete] = useState<string | null>(null);
   const [isReportOpen, setIsReportOpen] = useState(false);
+  const [visibleCount, setVisibleCount] = useState(25);
+
+  useEffect(() => {
+    setVisibleCount(25);
+  }, [searchQuery, filterMood, filterTag]);
 
   // Editable What Lifts vs. Drains Your Mood state
   const [factorPrefs, setFactorPrefs] = useState<FactorPreferences>({
@@ -669,39 +713,10 @@ export default function HistoryPage() {
               <Calendar className="w-4 h-4" style={{ color: "var(--accent-solid)" }} />
               <span>{t("history.moodDistribution")}</span>
             </h2>
-            <div className="h-44 w-full">
-              <ResponsiveContainer width="100%" height="100%">
-                <PieChart>
-                  <Pie
-                    data={moodDistributionData}
-                    cx="50%"
-                    cy="50%"
-                    innerRadius={45}
-                    outerRadius={75}
-                    paddingAngle={4}
-                    dataKey="value"
-                  >
-                    {moodDistributionData.map((entry, index) => (
-                      <Cell key={index} fill={entry.color} />
-                    ))}
-                  </Pie>
-                  <Tooltip
-                    contentStyle={{
-                      backgroundColor: isLight
-                        ? "rgba(255, 255, 255, 0.96)"
-                        : "rgba(10, 16, 32, 0.95)",
-                      backdropFilter: "blur(10px)",
-                      border: isLight
-                        ? "1px solid rgba(15, 23, 42, 0.12)"
-                        : "1px solid rgba(255,255,255,0.2)",
-                      borderRadius: "12px",
-                      color: isLight ? "#0F172A" : "#fff",
-                      fontSize: "12px",
-                    }}
-                  />
-                </PieChart>
-              </ResponsiveContainer>
-            </div>
+            <DynamicMoodPieChart
+              data={moodDistributionData}
+              isLight={isLight}
+            />
             <div className="flex flex-wrap justify-center gap-3 mt-1">
               {moodDistributionData.map((entry) => (
                 <div key={entry.name} className="flex items-center gap-1.5">
@@ -879,122 +894,138 @@ export default function HistoryPage() {
                 </p>
               </div>
             ) : (
-              filteredEntries.map((entry) => {
-                const mood = getMoodByLabel(entry.mood);
-                const isExpanded = selectedEntry === entry.id;
+              <>
+                {filteredEntries.slice(0, visibleCount).map((entry) => {
+                  const mood = getMoodByLabel(entry.mood);
+                  const isExpanded = selectedEntry === entry.id;
 
-                return (
-                  <div
-                    key={entry.id}
-                    className="glass rounded-2xl overflow-hidden transition-colors"
-                  >
+                  return (
                     <div
-                      className="p-4 cursor-pointer"
-                      onClick={() =>
-                        setSelectedEntry(isExpanded ? null : entry.id)
-                      }
+                      key={entry.id}
+                      className="glass history-entry-card rounded-2xl overflow-hidden transition-colors"
                     >
-                      <div className="flex items-center justify-between">
-                        <div className="flex items-center gap-3">
-                          <span className="text-2xl emoji">{mood.emoji}</span>
-                          <div>
-                            <div className="flex items-center gap-1.5">
-                              <span className="font-semibold theme-text-primary text-sm">
-                                {tmood(entry.mood)}
-                              </span>
-                              <span className="theme-text-muted text-xs">·</span>
-                              <span className="theme-text-muted text-xs">
-                                {getRelativeDate(entry.date, locale)}
-                              </span>
-                              {entry.time && (
-                                <>
-                                  <span className="theme-text-muted text-xs">·</span>
-                                  <span className="theme-text-muted text-xs">
-                                    {entry.time}
-                                  </span>
-                                </>
-                              )}
-                            </div>
-                            {!isExpanded && entry.text && (
-                              <p className="theme-text-secondary text-xs line-clamp-2 mt-1">
-                                {entry.text}
-                              </p>
-                            )}
-                          </div>
-                        </div>
-
-                        <div className="flex items-center gap-2">
-                          <span className="text-xs theme-text-secondary font-medium">
-                            {entry.intensity}%
-                          </span>
-                          <ChevronDown
-                            className={`w-4 h-4 theme-text-muted transition-transform ${
-                              isExpanded ? "rotate-180" : ""
-                            }`}
-                          />
-                        </div>
-                      </div>
-
-                      <AnimatePresence>
-                        {isExpanded && (
-                          <motion.div
-                            initial={{ opacity: 0, height: 0 }}
-                            animate={{ opacity: 1, height: "auto" }}
-                            exit={{ opacity: 0, height: 0 }}
-                            className="overflow-hidden"
-                          >
-                            <div className="mt-3 pt-3 border-t border-white/10">
-                              {entry.text && (
-                                <p className="theme-text-secondary text-sm leading-relaxed whitespace-pre-wrap mb-3">
+                      <div
+                        className="p-4 cursor-pointer"
+                        onClick={() =>
+                          setSelectedEntry(isExpanded ? null : entry.id)
+                        }
+                      >
+                        <div className="flex items-center justify-between">
+                          <div className="flex items-center gap-3">
+                            <span className="text-2xl emoji">{mood.emoji}</span>
+                            <div>
+                              <div className="flex items-center gap-1.5">
+                                <span className="font-semibold theme-text-primary text-sm">
+                                  {tmood(entry.mood)}
+                                </span>
+                                <span className="theme-text-muted text-xs">·</span>
+                                <span className="theme-text-muted text-xs">
+                                  {getRelativeDate(entry.date, locale)}
+                                </span>
+                                {entry.time && (
+                                  <>
+                                    <span className="theme-text-muted text-xs">·</span>
+                                    <span className="theme-text-muted text-xs">
+                                      {entry.time}
+                                    </span>
+                                  </>
+                                )}
+                              </div>
+                              {!isExpanded && entry.text && (
+                                <p className="theme-text-secondary text-xs line-clamp-2 mt-1">
                                   {entry.text}
                                 </p>
                               )}
-
-                              {entry.tags.length > 0 && (
-                                <div className="flex flex-wrap gap-1 mb-3">
-                                  {entry.tags.map((tag) => (
-                                    <span
-                                      key={tag}
-                                      className="px-2 py-0.5 accent-pill rounded-full text-[10px]"
-                                    >
-                                      #{ttag(tag)}
-                                    </span>
-                                  ))}
-                                </div>
-                              )}
-
-                              <div className="flex items-center gap-2 pt-1">
-                                <button
-                                  type="button"
-                                  onClick={(e) => {
-                                    e.stopPropagation();
-                                    setEditingEntry(entry.id);
-                                  }}
-                                  className="flex items-center gap-1.5 px-3 py-1.5 accent-pill rounded-xl text-xs font-medium transition-opacity hover:opacity-90"
-                                >
-                                  <Pencil className="w-3.5 h-3.5" />
-                                  <span>{t("history.editEntry")}</span>
-                                </button>
-                                <button
-                                  type="button"
-                                  onClick={(e) => {
-                                    e.stopPropagation();
-                                    setEntryToDelete(entry.id);
-                                  }}
-                                  className="flex items-center gap-1.5 px-3 py-1.5 bg-red-500/20 hover:bg-red-500/30 rounded-xl stat-negative text-xs font-medium transition-colors"
-                                >
-                                  <Trash2 className="w-3.5 h-3.5" />
-                                  <span>{t("history.delete")}</span>
-                                </button>
-                              </div>
                             </div>
-                          </motion.div>
-                        )}
-                      </AnimatePresence>
+                          </div>
+
+                          <div className="flex items-center gap-2">
+                            <span className="text-xs theme-text-secondary font-medium">
+                              {entry.intensity}%
+                            </span>
+                            <ChevronDown
+                              className={`w-4 h-4 theme-text-muted transition-transform ${
+                                isExpanded ? "rotate-180" : ""
+                              }`}
+                            />
+                          </div>
+                        </div>
+
+                        <AnimatePresence>
+                          {isExpanded && (
+                            <motion.div
+                              initial={{ opacity: 0, height: 0 }}
+                              animate={{ opacity: 1, height: "auto" }}
+                              exit={{ opacity: 0, height: 0 }}
+                              className="overflow-hidden"
+                            >
+                              <div className="mt-3 pt-3 border-t border-white/10">
+                                {entry.text && (
+                                  <p className="theme-text-secondary text-sm leading-relaxed whitespace-pre-wrap mb-3">
+                                    {entry.text}
+                                  </p>
+                                )}
+
+                                {entry.tags.length > 0 && (
+                                  <div className="flex flex-wrap gap-1 mb-3">
+                                    {entry.tags.map((tag) => (
+                                      <span
+                                        key={tag}
+                                        className="px-2 py-0.5 accent-pill rounded-full text-[10px]"
+                                      >
+                                        #{ttag(tag)}
+                                      </span>
+                                    ))}
+                                  </div>
+                                )}
+
+                                <div className="flex items-center gap-2 pt-1">
+                                  <button
+                                    type="button"
+                                    onClick={(e) => {
+                                      e.stopPropagation();
+                                      setEditingEntry(entry.id);
+                                    }}
+                                    className="flex items-center gap-1.5 px-3 py-1.5 accent-pill rounded-xl text-xs font-medium transition-opacity hover:opacity-90"
+                                  >
+                                    <Pencil className="w-3.5 h-3.5" />
+                                    <span>{t("history.editEntry")}</span>
+                                  </button>
+                                  <button
+                                    type="button"
+                                    onClick={(e) => {
+                                      e.stopPropagation();
+                                      setEntryToDelete(entry.id);
+                                    }}
+                                    className="flex items-center gap-1.5 px-3 py-1.5 bg-red-500/20 hover:bg-red-500/30 rounded-xl stat-negative text-xs font-medium transition-colors"
+                                  >
+                                    <Trash2 className="w-3.5 h-3.5" />
+                                    <span>{t("history.delete")}</span>
+                                  </button>
+                                </div>
+                              </div>
+                            </motion.div>
+                          )}
+                        </AnimatePresence>
+                      </div>
                     </div>
+                  );
+                })}
+
+                {filteredEntries.length > visibleCount && (
+                  <div className="pt-2 flex justify-center">
+                    <button
+                      type="button"
+                      onClick={() => setVisibleCount((prev) => prev + 25)}
+                      className="px-5 py-2.5 rounded-2xl glass theme-text-primary text-xs font-semibold hover:opacity-90 transition-opacity shadow-md"
+                    >
+                      {isRtl
+                        ? `عرض المزيد (${filteredEntries.length - visibleCount})`
+                        : `Show More (${filteredEntries.length - visibleCount})`}
+                    </button>
                   </div>
-                );
-              })
+                )}
+              </>
             )}
           </div>
         </motion.div>
