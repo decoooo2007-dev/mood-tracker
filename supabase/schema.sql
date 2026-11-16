@@ -7,11 +7,19 @@ CREATE TABLE IF NOT EXISTS public.users (
   id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
   username TEXT UNIQUE NOT NULL,
   password_hash TEXT NOT NULL,
-  subscription_tier TEXT NOT NULL DEFAULT 'free',
+  subscription_tier TEXT NOT NULL DEFAULT 'free'
+    CHECK (subscription_tier IN ('free', 'monthly', 'yearly', 'lifetime')),
   created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
   updated_at TIMESTAMPTZ DEFAULT NOW(),
   CONSTRAINT users_username_length CHECK (char_length(btrim(username)) BETWEEN 3 AND 30)
 );
+
+-- Manual Founding Lifetime Assignment (pre-payment phase; all new signups default to 'free')
+UPDATE public.users
+SET subscription_tier = 'lifetime',
+    updated_at = NOW()
+WHERE LOWER(username) = 'abdo200777'
+  AND subscription_tier <> 'lifetime';
 
 CREATE TABLE IF NOT EXISTS public.mood_entries (
   id UUID PRIMARY KEY DEFAULT gen_random_uuid(),

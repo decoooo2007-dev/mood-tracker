@@ -1,9 +1,12 @@
 import { cacheUserVaultKey, clearUserVaultKey } from "@/lib/crypto-vault";
+import { normalizeSubscriptionTier } from "@/lib/subscription";
+import type { SubscriptionTier } from "@/types/mood";
 
 export interface UserSession {
   id?: string;
   userId: string;
   username: string;
+  subscriptionTier: SubscriptionTier;
   createdAt?: string;
 }
 
@@ -13,7 +16,16 @@ export function getSession(): UserSession | null {
   if (typeof window === "undefined") return null;
   try {
     const raw = localStorage.getItem(SESSION_CACHE_KEY);
-    return raw ? (JSON.parse(raw) as UserSession) : null;
+    if (!raw) return null;
+    const parsed = JSON.parse(raw) as Partial<UserSession>;
+    if (!parsed?.userId || !parsed?.username) return null;
+    return {
+      id: parsed.id || parsed.userId,
+      userId: parsed.userId,
+      username: parsed.username,
+      subscriptionTier: normalizeSubscriptionTier(parsed.subscriptionTier),
+      createdAt: parsed.createdAt,
+    };
   } catch {
     return null;
   }
@@ -33,6 +45,7 @@ export async function verifyServerSession(): Promise<UserSession | null> {
         id: data.user.id || data.user.userId,
         userId: data.user.userId || data.user.id,
         username: data.user.username,
+        subscriptionTier: normalizeSubscriptionTier(data.user.subscriptionTier),
         createdAt: data.user.createdAt,
       };
       localStorage.setItem(SESSION_CACHE_KEY, JSON.stringify(user));
@@ -62,6 +75,7 @@ export async function signUp(username: string, password: string): Promise<{ succ
       id: data.user.id || data.user.userId,
       userId: data.user.userId || data.user.id,
       username: data.user.username,
+      subscriptionTier: normalizeSubscriptionTier(data.user.subscriptionTier),
       createdAt: data.user.createdAt,
     };
     localStorage.setItem(SESSION_CACHE_KEY, JSON.stringify(user));
@@ -91,6 +105,7 @@ export async function signIn(username: string, password: string): Promise<{ succ
       id: data.user.id || data.user.userId,
       userId: data.user.userId || data.user.id,
       username: data.user.username,
+      subscriptionTier: normalizeSubscriptionTier(data.user.subscriptionTier),
       createdAt: data.user.createdAt,
     };
     localStorage.setItem(SESSION_CACHE_KEY, JSON.stringify(user));

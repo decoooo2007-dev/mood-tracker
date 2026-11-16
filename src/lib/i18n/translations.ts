@@ -352,6 +352,14 @@ export const translations = {
     "tag.friends": "Friends",
     "tag.prayer": "Prayer",
     "tag.relaxing": "Relaxing",
+    // Membership Tiers & Badge Preview (Pre-Payment Readiness)
+    "plan.badgesPreview": "Membership Badges",
+    "plan.previewTitle": "Membership Tiers & Badge Design",
+    "plan.previewDesc": "All features remain open until payment integration launches. Tap a badge below to visually preview it.",
+    "plan.activeAccountTier": "Account Tier",
+    "plan.previewing": "Visual Preview",
+    "plan.resetTier": "Reset",
+    "plan.paymentsPending": "Manual tier control active — Paymob / Kashier checkout opens later",
   },
   ar: {
     "app.title": "مد فلو",
@@ -707,6 +715,14 @@ export const translations = {
     "tag.friends": "الأصدقاء",
     "tag.prayer": "الصلاة",
     "tag.relaxing": "الاسترخاء",
+    // Membership Tiers & Badge Preview (Pure Arabic BiDi)
+    "plan.badgesPreview": "شارات الباقات",
+    "plan.previewTitle": "شارات العضوية وتصميم الباقات",
+    "plan.previewDesc": "جميع المزايا متاحة حالياً لحين تفعيل بوابة الدفع، اضغط على أي شارة لمعاينة شكلها.",
+    "plan.activeAccountTier": "باقة الحساب",
+    "plan.previewing": "معاينة بصرية",
+    "plan.resetTier": "استعادة",
+    "plan.paymentsPending": "التحكم اليدوي بالباقة مفعل حالياً قبل ربط بوابة الدفع",
   }
 } as const;
 

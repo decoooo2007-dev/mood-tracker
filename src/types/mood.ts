@@ -1,3 +1,5 @@
+export type SubscriptionTier = "free" | "monthly" | "yearly" | "lifetime";
+
 export interface MoodEntry {
   id: string;
   date: string;

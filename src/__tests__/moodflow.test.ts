@@ -1066,6 +1066,55 @@ describe("Gate 3 (test-guard): Auth, JWT, Time Classifier & API Row Validation",
   });
 });
 
+describe("Subscription Tiers, Entitlements & BiDi Purity (Pre-Payment Architecture)", () => {
+  it("normalizes known subscription tiers safely and fails closed to free for untrusted values", async () => {
+    const { normalizeSubscriptionTier, PAYWALL_ENFORCEMENT_ENABLED } = await import(
+      "@/lib/subscription"
+    );
+
+    expect(PAYWALL_ENFORCEMENT_ENABLED).toBe(false);
+    expect(normalizeSubscriptionTier("lifetime")).toBe("lifetime");
+    expect(normalizeSubscriptionTier("LIFETIME")).toBe("lifetime");
+    expect(normalizeSubscriptionTier("yearly")).toBe("yearly");
+    expect(normalizeSubscriptionTier("monthly")).toBe("monthly");
+    expect(normalizeSubscriptionTier("free")).toBe("free");
+    expect(normalizeSubscriptionTier("admin_hack")).toBe("free");
+    expect(normalizeSubscriptionTier(null)).toBe("free");
+    expect(normalizeSubscriptionTier(undefined)).toBe("free");
+  });
+
+  it("keeps features unlocked when paywall is disabled and strictly enforces rank hierarchy when enabled", async () => {
+    const { hasTierAccess, getTierCapabilities } = await import("@/lib/subscription");
+
+    // Pre-payment phase: enforcePaywall = false -> everything unlocked while testing
+    expect(hasTierAccess("free", "lifetime", false)).toBe(true);
+    expect(getTierCapabilities("free", false).futureModulesPriority).toBe(true);
+
+    // Post-payment phase: enforcePaywall = true -> strict rank check (lifetime > yearly > monthly > free)
+    expect(hasTierAccess("free", "monthly", true)).toBe(false);
+    expect(hasTierAccess("monthly", "yearly", true)).toBe(false);
+    expect(hasTierAccess("yearly", "yearly", true)).toBe(true);
+    expect(hasTierAccess("yearly", "lifetime", true)).toBe(false);
+    expect(hasTierAccess("lifetime", "lifetime", true)).toBe(true);
+    expect(hasTierAccess("lifetime", "monthly", true)).toBe(true);
+  });
+
+  it("enforces zero ASCII Latin letters in all Arabic subscription plan copy", async () => {
+    const { SUBSCRIPTION_PLANS, SUBSCRIPTION_TIERS } = await import("@/lib/subscription");
+
+    for (const tier of SUBSCRIPTION_TIERS) {
+      const plan = SUBSCRIPTION_PLANS[tier];
+      expect(/[a-zA-Z]/.test(plan.labelAr)).toBe(false);
+      expect(/[a-zA-Z]/.test(plan.badgeAr)).toBe(false);
+      expect(/[a-zA-Z]/.test(plan.priceEgpAr)).toBe(false);
+      expect(/[a-zA-Z]/.test(plan.summaryAr)).toBe(false);
+      for (const feat of plan.featuresAr) {
+        expect(/[a-zA-Z]/.test(feat)).toBe(false);
+      }
+    }
+  });
+});
+
 describe("Cross-Device Performance Track 2 & 6: O(1) E2EE Decryption Cache (crypto-vault.ts)", () => {
   it("serves subsequent decryptJournalText calls from O(1) decryptedTextCache without re-invoking subtle.decrypt and clears on clearUserVaultKey", async () => {
     const {

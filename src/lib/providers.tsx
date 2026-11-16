@@ -4,9 +4,16 @@ import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { createContext, useContext, useEffect, useState, ReactNode, useCallback } from "react";
 import { getSession, signOut as authSignOut, verifyServerSession } from "@/lib/auth";
 import { translations, Locale, TranslationKey, setLocale as setI18nLocale } from "@/lib/i18n/translations";
+import type { SubscriptionTier } from "@/types/mood";
+
+interface AuthUser {
+  id: string;
+  username: string;
+  subscriptionTier: SubscriptionTier;
+}
 
 interface AuthContextType {
-  user: { id: string; username: string } | null;
+  user: AuthUser | null;
   isLoading: boolean;
   signOut: () => void;
 }
@@ -63,14 +70,18 @@ function getQueryClient() {
 }
 
 function AuthProvider({ children }: { children: ReactNode }) {
-  const [user, setUser] = useState<{ id: string; username: string } | null>(null);
+  const [user, setUser] = useState<AuthUser | null>(null);
   const [isLoading, setIsLoading] = useState(true);
 
   useEffect(() => {
     const syncLocalSession = () => {
       const session = getSession();
       if (session) {
-        setUser({ id: session.userId || session.id || "", username: session.username });
+        setUser({
+          id: session.userId || session.id || "",
+          username: session.username,
+          subscriptionTier: session.subscriptionTier || "free",
+        });
         setIsLoading(false);
       } else {
         setUser(null);
@@ -80,11 +91,15 @@ function AuthProvider({ children }: { children: ReactNode }) {
     syncLocalSession();
     window.addEventListener("moodflow-auth-change", syncLocalSession);
 
-    // Verify session with server
+    // Verify authoritative session & subscription_tier with server
     verifyServerSession()
       .then((verified) => {
         if (verified) {
-          setUser({ id: verified.userId, username: verified.username });
+          setUser({
+            id: verified.userId,
+            username: verified.username,
+            subscriptionTier: verified.subscriptionTier || "free",
+          });
         } else {
           setUser(null);
         }

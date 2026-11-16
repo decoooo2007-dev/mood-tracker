@@ -47,6 +47,7 @@ import Navigation from "@/components/ui/Navigation";
 import Disclaimer from "@/components/ui/Disclaimer";
 import BreathingExerciseModal from "@/components/ui/BreathingExerciseModal";
 import AchievementBadges from "@/components/ui/AchievementBadges";
+import MembershipBadge from "@/components/ui/MembershipBadge";
 
 // Dynamic import for Recharts with ssr: false
 const DynamicWeeklyChart = dynamic(
@@ -434,7 +435,12 @@ export default function TodayPage() {
               </div>
               <div>
                 <p className="theme-text-secondary text-xs">{t("greeting.welcome")}</p>
-                <p className="theme-text-primary font-semibold text-sm">@{user?.username}</p>
+                <div className="flex flex-wrap items-center gap-1.5">
+                  <p className="theme-text-primary font-semibold text-sm">@{user?.username}</p>
+                  {user?.subscriptionTier && user.subscriptionTier !== "free" && (
+                    <MembershipBadge tier={user.subscriptionTier} size="sm" />
+                  )}
+                </div>
               </div>
             </div>
 

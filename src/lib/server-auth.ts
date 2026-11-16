@@ -10,6 +10,7 @@ import {
   signSessionToken,
 } from "@/lib/jwt";
 import { checkRateLimit, getClientIp } from "@/lib/rate-limit";
+import { normalizeSubscriptionTier } from "@/lib/subscription";
 
 export const USERNAME_REGEX = /^[a-zA-Z0-9_\u0600-\u06FF]{3,20}$/;
 export const SHA256_HEX_REGEX = /^[a-f0-9]{64}$/i;
@@ -98,7 +99,7 @@ export async function handleLoginRequest(request: Request): Promise<NextResponse
     const escapedLike = normalizedUsername.replace(/[\\%_]/g, "\\$&");
     const { data: candidates, error: dbError } = await supabaseAdmin
       .from("users")
-      .select("id, username, password_hash, created_at")
+      .select("id, username, password_hash, subscription_tier, created_at")
       .ilike("username", escapedLike)
       .limit(5);
 
@@ -157,6 +158,8 @@ export async function handleLoginRequest(request: Request): Promise<NextResponse
       return invalidCredentialsResponse();
     }
 
+    const subscriptionTier = normalizeSubscriptionTier(user.subscription_tier);
+
     const token = await signSessionToken({
       userId: user.id,
       username: user.username,
@@ -170,6 +173,7 @@ export async function handleLoginRequest(request: Request): Promise<NextResponse
           id: user.id,
           userId: user.id,
           username: user.username,
+          subscriptionTier,
           createdAt: user.created_at,
         },
       },
@@ -276,8 +280,9 @@ export async function handleSignupRequest(request: Request): Promise<NextRespons
       .insert({
         username: normalizedUsername,
         password_hash: passwordHash,
+        subscription_tier: "free",
       })
-      .select("id, username, created_at")
+      .select("id, username, subscription_tier, created_at")
       .single();
 
     if (createError || !createdUser) {
@@ -330,6 +335,7 @@ export async function handleSignupRequest(request: Request): Promise<NextRespons
           id: createdUser.id,
           userId: createdUser.id,
           username: createdUser.username,
+          subscriptionTier: normalizeSubscriptionTier(createdUser.subscription_tier),
           createdAt: createdUser.created_at,
         },
       },
@@ -379,7 +385,7 @@ export async function handleSessionRequest(request: Request): Promise<NextRespon
 
   const { data: dbUser, error } = await supabaseAdmin
     .from("users")
-    .select("id, username, created_at")
+    .select("id, username, subscription_tier, created_at")
     .eq("id", session.userId)
     .maybeSingle();
 
@@ -417,6 +423,7 @@ export async function handleSessionRequest(request: Request): Promise<NextRespon
         id: dbUser.id,
         userId: dbUser.id,
         username: dbUser.username,
+        subscriptionTier: normalizeSubscriptionTier(dbUser.subscription_tier),
         createdAt: dbUser.created_at,
       },
     },
