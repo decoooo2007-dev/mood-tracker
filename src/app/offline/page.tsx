@@ -21,7 +21,11 @@ export default function OfflinePage() {
 
   return (
     <div
-      className="min-h-screen bg-[#0F0F14] flex items-center justify-center p-4"
+      className="min-h-screen flex items-center justify-center p-4"
+      style={{
+        background:
+          "linear-gradient(135deg, var(--bg-gradient-start), var(--bg-gradient-mid), var(--bg-gradient-end))",
+      }}
       dir={isRtl ? "rtl" : "ltr"}
     >
       <motion.div
@@ -32,17 +36,17 @@ export default function OfflinePage() {
       >
         {/* Icon */}
         <motion.div
-          className="inline-flex items-center justify-center w-24 h-24 rounded-full bg-purple-500/20 mb-6 shadow-xl"
+          className="inline-flex items-center justify-center w-24 h-24 rounded-full accent-pill mb-6 shadow-xl"
           initial={{ scale: 0 }}
           animate={{ scale: 1 }}
           transition={{ delay: 0.2, type: "spring" }}
         >
-          <WifiOff className="w-12 h-12 text-purple-400" />
+          <WifiOff className="w-12 h-12" />
         </motion.div>
 
         {/* Title */}
         <motion.h1
-          className="text-3xl font-bold text-white mb-3"
+          className="text-3xl font-bold theme-text-primary mb-3"
           initial={{ opacity: 0 }}
           animate={{ opacity: 1 }}
           transition={{ delay: 0.3 }}
@@ -52,7 +56,7 @@ export default function OfflinePage() {
 
         {/* Description */}
         <motion.p
-          className="text-white/60 mb-6 leading-relaxed text-sm"
+          className="theme-text-secondary mb-6 leading-relaxed text-sm"
           initial={{ opacity: 0 }}
           animate={{ opacity: 1 }}
           transition={{ delay: 0.4 }}
@@ -62,7 +66,7 @@ export default function OfflinePage() {
 
         {/* Note Card */}
         <motion.div
-          className="backdrop-blur-xl bg-white/10 rounded-2xl p-4 border border-white/20 mb-6 text-xs text-white/80"
+          className="glass rounded-2xl p-4 mb-6 text-xs theme-text-secondary"
           initial={{ opacity: 0 }}
           animate={{ opacity: 1 }}
           transition={{ delay: 0.5 }}
@@ -75,7 +79,7 @@ export default function OfflinePage() {
         {/* Retry Button */}
         <motion.button
           onClick={handleRetry}
-          className="inline-flex items-center gap-2 px-6 py-3 bg-gradient-to-r from-purple-500 to-pink-500 text-white font-semibold rounded-xl hover:opacity-90 transition-all shadow-lg text-sm"
+          className="inline-flex items-center gap-2 px-6 py-3 accent-gradient-btn font-semibold rounded-xl hover:opacity-95 transition-all shadow-lg text-sm"
           initial={{ opacity: 0, y: 20 }}
           animate={{ opacity: 1, y: 0 }}
           transition={{ delay: 0.6 }}

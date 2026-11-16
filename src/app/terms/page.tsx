@@ -97,12 +97,12 @@ export default function TermsPage() {
 
         {/* Intro */}
         <motion.div
-          className="backdrop-blur-xl bg-white/10 rounded-2xl p-6 border border-white/20 mb-6"
+          className="glass rounded-2xl p-6 mb-6"
           initial={{ opacity: 0, y: 20 }}
           animate={{ opacity: 1, y: 0 }}
           transition={{ delay: 0.25 }}
         >
-          <p className="text-white/80 leading-relaxed text-sm md:text-base">{t("terms.intro")}</p>
+          <p className="theme-text-secondary leading-relaxed text-sm md:text-base">{t("terms.intro")}</p>
         </motion.div>
 
         {/* Content */}
@@ -115,7 +115,7 @@ export default function TermsPage() {
           {sections.map((section, index) => (
             <motion.div
               key={section.key}
-              className="backdrop-blur-xl bg-white/10 rounded-2xl p-5 md:p-6 border border-white/20"
+              className="glass rounded-2xl p-5 md:p-6"
               initial={{ opacity: 0, y: 20 }}
               animate={{ opacity: 1, y: 0 }}
               transition={{ delay: 0.3 + index * 0.04 }}
@@ -125,8 +125,8 @@ export default function TermsPage() {
                   <section.icon className={`w-5 h-5 ${colorClasses[section.color].text}`} />
                 </div>
                 <div className="flex-1">
-                  <h2 className="text-base font-semibold text-white mb-1.5">{section.title}</h2>
-                  <p className="text-white/70 text-sm leading-relaxed">{section.desc}</p>
+                  <h2 className="text-base font-semibold theme-text-primary mb-1.5">{section.title}</h2>
+                  <p className="theme-text-secondary text-sm leading-relaxed">{section.desc}</p>
                 </div>
               </div>
             </motion.div>

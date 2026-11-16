@@ -98,20 +98,20 @@ export default function FeedbackPage() {
           </div>
 
           <motion.div
-            className="inline-flex items-center justify-center w-16 h-16 rounded-3xl bg-gradient-to-br from-purple-500 to-pink-500 mb-4 shadow-lg"
+            className="inline-flex items-center justify-center w-16 h-16 rounded-3xl accent-avatar mb-4 shadow-lg"
             initial={{ scale: 0 }}
             animate={{ scale: 1 }}
             transition={{ delay: 0.2, type: "spring" }}
           >
             <Star className="w-8 h-8 text-white" />
           </motion.div>
-          <h1 className="text-3xl font-bold text-white mb-2">{t("feedback.title")}</h1>
-          <p className="text-white/60 text-sm">{t("settings.feedbackDesc")}</p>
+          <h1 className="text-3xl font-bold theme-text-primary mb-2">{t("feedback.title")}</h1>
+          <p className="theme-text-secondary text-sm">{t("settings.feedbackDesc")}</p>
         </motion.div>
 
         {/* Feedback Card */}
         <motion.div
-          className="backdrop-blur-xl bg-white/10 rounded-3xl p-6 border border-white/20 shadow-2xl"
+          className="glass rounded-3xl p-6 shadow-2xl"
           initial={{ opacity: 0, y: 20 }}
           animate={{ opacity: 1, y: 0 }}
           transition={{ delay: 0.3 }}
@@ -176,8 +176,8 @@ export default function FeedbackPage() {
                       onClick={() => setCategory(c.id)}
                       className={`px-3 py-1.5 rounded-xl text-xs font-medium transition-all ${
                         category === c.id
-                          ? "bg-purple-500 text-white shadow-sm"
-                          : "bg-white/10 text-white/70 hover:bg-white/20"
+                          ? "accent-tag-active"
+                          : "recessed-well theme-text-secondary"
                       }`}
                     >
                       {c.label}
@@ -226,7 +226,7 @@ export default function FeedbackPage() {
                 type="button"
                 onClick={handleSubmit}
                 disabled={isSending || rating === 0 || trimmedLength < 10}
-                className="w-full py-3.5 rounded-xl font-medium flex items-center justify-center gap-2 transition-all bg-gradient-to-r from-purple-500 to-pink-500 text-white hover:opacity-90 disabled:opacity-50 disabled:cursor-not-allowed shadow-lg"
+                className="w-full py-3.5 rounded-xl font-medium flex items-center justify-center gap-2 transition-all accent-gradient-btn disabled:opacity-50 disabled:cursor-not-allowed shadow-lg"
               >
                 {isSending ? (
                   <motion.div

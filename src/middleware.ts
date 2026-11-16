@@ -56,6 +56,7 @@ export async function middleware(request: NextRequest) {
   if (
     pathname.startsWith("/_next/") ||
     pathname.startsWith("/icons/") ||
+    pathname.startsWith("/apple-icon") ||
     pathname.startsWith("/api/keep-alive") ||
     pathname.startsWith("/api/auth/") ||
     pathname.startsWith("/api/feedback") ||
@@ -97,6 +98,6 @@ export async function middleware(request: NextRequest) {
 
 export const config = {
   matcher: [
-    "/((?!_next/static|_next/image|favicon.ico|icons/|manifest.json|sw.js).*)",
+    "/((?!_next/static|_next/image|favicon.ico|apple-icon|icons/|manifest.json|sw.js).*)",
   ],
 };

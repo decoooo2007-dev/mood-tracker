@@ -659,8 +659,281 @@ describe("Security Hardening: CSRF Origin & Middleware Protection", () => {
     });
     const aiRes = await middleware(unauthAiReq);
     expect(aiRes.status).toBe(401);
+
+    // 3. /apple-icon must be publicly accessible for iOS PWA home screen fetching
+    const appleIconReq = new NextRequest("https://moodflow.example.com/apple-icon", {
+      method: "GET",
+      headers: { host: "moodflow.example.com" },
+    });
+    const appleIconRes = await middleware(appleIconReq);
+    expect(appleIconRes.status).toBe(200);
   });
 });
+
+describe("Track 1 (Option A): 8-Dimension EN / MSA / Egyptian Colloquial Lexicon & Formula", () => {
+  it("detects all 8 emotional dimensions accurately in English including multi-word phrases", async () => {
+    const { analyzeSentiment } = await import("@/lib/sentiment");
+
+    const happy = analyzeSentiment("I am on cloud nine and feeling so blessed today!", "en");
+    expect(happy.dominantDimension).toBe("happy");
+    expect(happy.wellnessIndex).toBeGreaterThan(75);
+    expect(happy.score).toBeGreaterThan(0.5);
+
+    const calm = analyzeSentiment("I feel inner peace and serenity right now.", "en");
+    expect(calm.dominantDimension).toBe("calm");
+    expect(calm.wellnessIndex).toBeGreaterThan(70);
+
+    const motivated = analyzeSentiment("Locked in and crushing it, making huge progress!", "en");
+    expect(motivated.dominantDimension).toBe("motivated");
+    expect(motivated.wellnessIndex).toBeGreaterThan(75);
+
+    const tired = analyzeSentiment("Completely burned out and running on empty.", "en");
+    expect(tired.dominantDimension).toBe("tired");
+    expect(tired.suggestedMood).toBe("Tired");
+    expect(tired.score).toBeLessThan(-0.2);
+
+    const sad = analyzeSentiment("Heartbroken, lonely, and feeling down.", "en");
+    expect(sad.dominantDimension).toBe("sad");
+    expect(sad.suggestedMood).toBe("Sad");
+    expect(sad.score).toBeLessThan(-0.5);
+
+    const frustrated = analyzeSentiment("Fed up, furious, and sick and tired of nothing working.", "en");
+    expect(frustrated.dominantDimension).toBe("frustrated");
+    expect(frustrated.suggestedMood).toBe("Frustrated");
+    expect(frustrated.score).toBeLessThan(-0.5);
+
+    const anxious = analyzeSentiment("Heart racing, on edge, and having a panic attack.", "en");
+    expect(anxious.dominantDimension).toBe("anxious");
+    expect(anxious.score).toBeLessThan(-0.5);
+
+    const confused = analyzeSentiment("Brain fog and at a loss, mixed feelings everywhere.", "en");
+    expect(confused.dominantDimension).toBe("confused");
+    expect(confused.score).toBeLessThan(-0.2);
+  });
+
+  it("normalizes Modern Standard Arabic letters, diacritics, and prefixes (و/ال/وال/ب/بال/ف/ك/لل)", async () => {
+    const { analyzeSentiment } = await import("@/lib/sentiment");
+
+    const msaPos = analyzeSentiment("أشعُرُ بالهُدوءِ والسَّكِينَةِ والامتنانِ وَالتَّفَاؤُل", "ar");
+    expect(msaPos.score).toBeGreaterThan(0.5);
+    expect(msaPos.wellnessIndex).toBeGreaterThan(75);
+    expect(/[a-zA-Z]/.test(msaPos.insight)).toBe(false);
+
+    const msaMotivated = analyzeSentiment("سعيد للنجاح والإنجاز والتقدم", "ar");
+    expect(msaMotivated.score).toBeGreaterThan(0.5);
+    expect(msaMotivated.dimensionScores.motivated).toBeGreaterThan(0);
+
+    const msaAnxious = analyzeSentiment("أشعر كالقلق والذعر والاضطراب فالتعب شديد", "ar");
+    expect(msaAnxious.score).toBeLessThan(-0.3);
+    expect(msaAnxious.dimensionScores.anxious).toBeGreaterThan(0);
+    expect(msaAnxious.dimensionScores.tired).toBeGreaterThan(0);
+  });
+
+  it("scores Egyptian Colloquial (عامية مصرية) accurately across all 8 dimensions", async () => {
+    const { analyzeSentiment } = await import("@/lib/sentiment");
+
+    const egHappy = analyzeSentiment("الحمدلله مبسوط أوي وفرحان والدنيا زي الفل وعظمة ومنشكح", "ar");
+    expect(egHappy.dominantDimension).toBe("happy");
+    expect(egHappy.wellnessIndex).toBeGreaterThan(75);
+    expect(/[a-zA-Z]/.test(egHappy.insight)).toBe(false);
+
+    const egCalm = analyzeSentiment("قاعد رايق وفي روقان ومطمن على الاخر", "ar");
+    expect(egCalm.dominantDimension).toBe("calm");
+    expect(egCalm.wellnessIndex).toBeGreaterThan(70);
+
+    const egMotivated = analyzeSentiment("الحمدلله انجزت وشديت حيلي وكسرت الدنيا", "ar");
+    expect(egMotivated.dominantDimension).toBe("motivated");
+    expect(egMotivated.wellnessIndex).toBeGreaterThan(75);
+
+    const egTired = analyzeSentiment("انا هلكان ومفرهد وتعبان وفصلت شحن وبطاريتي فضيت", "ar");
+    expect(egTired.dominantDimension).toBe("tired");
+    expect(egTired.suggestedMood).toBe("Tired");
+    expect(egTired.score).toBeLessThan(-0.2);
+
+    const egSad = analyzeSentiment("مخنوق وزعلان ومقهور وموجوع", "ar");
+    expect(egSad.dominantDimension).toBe("sad");
+    expect(egSad.suggestedMood).toBe("Sad");
+    expect(egSad.score).toBeLessThan(-0.5);
+
+    const egFrustrated = analyzeSentiment("دمي محروق ومتعصب وقرفان وزهقان ومفروس ومتنرفز ومش طايق", "ar");
+    expect(egFrustrated.dominantDimension).toBe("frustrated");
+    expect(egFrustrated.suggestedMood).toBe("Frustrated");
+    expect(egFrustrated.score).toBeLessThan(-0.5);
+
+    const egAnxious = analyzeSentiment("قلقان ومقبوض وشايل الهم ومزنوق", "ar");
+    expect(egAnxious.dominantDimension).toBe("anxious");
+    expect(egAnxious.score).toBeLessThan(-0.4);
+
+    const egConfused = analyzeSentiment("متلخبط وتايه ومحتار ومشوش ومش مجمع", "ar");
+    expect(egConfused.dominantDimension).toBe("confused");
+    expect(egConfused.score).toBeLessThan(-0.2);
+  });
+
+  it("handles Egyptian negation idioms vs negated adjectives and elongated words", async () => {
+    const { analyzeSentiment } = await import("@/lib/sentiment");
+
+    // Negation-prefixed negative idioms must NOT flip positive
+    const idiomFrustrated = analyzeSentiment("مش طايق نفسي النهارده", "ar");
+    expect(idiomFrustrated.score).toBeLessThan(-0.4);
+    expect(idiomFrustrated.dominantDimension).toBe("frustrated");
+
+    const idiomConfused = analyzeSentiment("دماغي لفة ومش مجمع", "ar");
+    expect(idiomConfused.score).toBeLessThan(-0.2);
+    expect(idiomConfused.dominantDimension).toBe("confused");
+
+    // Negated positive flips negative; negated negative flips positive
+    const negatedPositive = analyzeSentiment("أنا مش مبسوط خالص", "ar");
+    expect(negatedPositive.score).toBeLessThan(0);
+
+    const negatedNegative = analyzeSentiment("أنا مش زعلان ومش قلقان", "ar");
+    expect(negatedNegative.score).toBeGreaterThan(0);
+
+    // Elongation handling
+    const elongated = analyzeSentiment("مبسووووط اويييي", "ar");
+    expect(elongated.score).toBeGreaterThan(0.5);
+    expect(elongated.dominantDimension).toBe("happy");
+  });
+
+  it("computes deterministic composite mood score combining Mood Vector, Intensity, Trait Tags, and Lexicon", async () => {
+    const { computeCompositeMoodScore } = await import("@/lib/sentiment");
+
+    const highHappy = computeCompositeMoodScore({
+      mood: "Happy",
+      intensity: 95,
+      tags: ["Exercise", "Gratitude"],
+      text: "الحمدلله انجزت ومبسوط أوي",
+      locale: "ar",
+    });
+    const lowHappy = computeCompositeMoodScore({
+      mood: "Happy",
+      intensity: 20,
+      tags: [],
+      text: "",
+      locale: "en",
+    });
+    const heavyFrustrated = computeCompositeMoodScore({
+      mood: "Frustrated",
+      intensity: 90,
+      tags: ["Stress", "Anxiety"],
+      text: "دمي محروق ومش طايق",
+      locale: "ar",
+    });
+
+    expect(highHappy.wellnessIndex).toBeGreaterThan(lowHappy.wellnessIndex);
+    expect(highHappy.wellnessIndex).toBeGreaterThanOrEqual(80);
+    expect(highHappy.wellnessIndex).toBeLessThanOrEqual(100);
+    expect(highHappy.moodVectorContribution).toBeGreaterThan(0);
+    expect(highHappy.traitContribution).toBeGreaterThan(0);
+    expect(highHappy.lexiconContribution).toBeGreaterThan(0);
+
+    expect(heavyFrustrated.wellnessIndex).toBeLessThan(25);
+    expect(heavyFrustrated.wellnessIndex).toBeGreaterThanOrEqual(0);
+    expect(heavyFrustrated.score).toBeLessThan(-0.5);
+    expect(heavyFrustrated.traitContribution).toBeLessThan(0);
+  });
+});
+
+describe("Track 3: Tag Correlations & Editable Factor Preferences", () => {
+  beforeEach(() => {
+    const store = new Map<string, string>();
+    globalThis.localStorage = {
+      getItem: (key: string) => store.get(key) ?? null,
+      setItem: (key: string, val: string) => {
+        store.set(key, String(val));
+      },
+      removeItem: (key: string) => {
+        store.delete(key);
+      },
+      clear: () => {
+        store.clear();
+      },
+      key: (i: number) => Array.from(store.keys())[i] ?? null,
+      length: 0,
+    } as Storage;
+  });
+
+  it("calculates positive lifting tags vs negative draining tags accurately", async () => {
+    const { computeTagCorrelations } = await import("@/lib/sentiment");
+
+    const sampleEntries = [
+      { mood: "Happy" as const, intensity: 90, tags: ["Exercise", "Prayer"], text: "Great workout" },
+      { mood: "Happy" as const, intensity: 85, tags: ["Exercise", "Family"], text: "Wonderful day" },
+      { mood: "Calm" as const, intensity: 80, tags: ["Prayer"], text: "Peaceful" },
+      { mood: "Frustrated" as const, intensity: 85, tags: ["Stress", "Work"], text: "Annoyed" },
+      { mood: "Sad" as const, intensity: 80, tags: ["Stress"], text: "Exhausted and sad" },
+    ];
+
+    const correlations = computeTagCorrelations(sampleEntries);
+    const exercise = correlations.find((c) => c.tag === "Exercise");
+    const stress = correlations.find((c) => c.tag === "Stress");
+
+    expect(exercise).toBeDefined();
+    expect(exercise!.direction).toBe("lift");
+    expect(exercise!.delta).toBeGreaterThan(0);
+
+    expect(stress).toBeDefined();
+    expect(stress!.direction).toBe("drain");
+    expect(stress!.delta).toBeLessThan(0);
+  });
+
+  it("supports adding, renaming, pinning, hiding, removing, and resetting custom factors", async () => {
+    const {
+      getFactorPreferences,
+      addCustomFactor,
+      renameFactor,
+      togglePinFactor,
+      toggleHideFactor,
+      removeCustomFactor,
+      resetFactorPreferences,
+      buildEditableFactors,
+    } = await import("@/lib/factors");
+
+    const correlations = [
+      { tag: "Exercise", delta: 24, averageScore: 84, count: 4, direction: "lift" as const },
+      { tag: "Prayer", delta: 28, averageScore: 88, count: 5, direction: "lift" as const },
+      { tag: "Stress", delta: -22, averageScore: 30, count: 3, direction: "drain" as const },
+    ];
+
+    addCustomFactor("Morning Walk", "lift", 15);
+    renameFactor("Exercise", "Gym Session");
+    togglePinFactor("Exercise"); // Pin Exercise above Prayer even though Prayer has +28
+    toggleHideFactor("Stress");
+
+    const prefs = getFactorPreferences();
+    const { lifters, drainers, hiddenItems } = buildEditableFactors(correlations, prefs);
+
+    expect(lifters[0].rawTag).toBe("Exercise");
+    expect(lifters[0].label).toBe("Gym Session");
+    expect(lifters[0].isPinned).toBe(true);
+    expect(lifters.some((l) => l.rawTag === "Morning Walk" && l.isCustom)).toBe(true);
+    expect(drainers).toHaveLength(0);
+    expect(hiddenItems).toHaveLength(1);
+    expect(hiddenItems[0].rawTag).toBe("Stress");
+
+    removeCustomFactor("Morning Walk");
+    const afterRemove = buildEditableFactors(correlations, getFactorPreferences());
+    expect(afterRemove.lifters.some((l) => l.rawTag === "Morning Walk")).toBe(false);
+
+    const reset = resetFactorPreferences();
+    expect(reset.pinned).toHaveLength(0);
+    expect(reset.hidden).toHaveLength(0);
+  });
+});
+
+describe("Track 2: Nile Sapphire Default Palette & BiDi Purity", () => {
+  it("sets palette #4 Nile Sapphire x Gold as default and enforces Arabic BiDi purity across all 8 palettes", async () => {
+    const { DEFAULT_PALETTE_ID, PALETTES, getPaletteById } = await import("@/lib/theme");
+
+    expect(DEFAULT_PALETTE_ID).toBe(4);
+    expect(PALETTES).toHaveLength(8);
+    expect(getPaletteById(4).nameEn).toContain("Nile Sapphire");
+
+    for (const pal of PALETTES) {
+      expect(/[a-zA-Z]/.test(pal.nameAr)).toBe(false);
+    }
+  });
+});
+
 
 
 

@@ -5,6 +5,7 @@ import { motion, AnimatePresence } from "framer-motion";
 import { X, Loader2, Plus } from "lucide-react";
 import { MoodEntry, MoodType } from "@/types/mood";
 import { moodOptions, commonTags, getCustomTags, saveCustomTag } from "@/lib/moods";
+import { getStoredAppearance, MOOD_AURA_BLOBS, type MoodButtonStyle } from "@/lib/theme";
 import { useLanguage } from "@/lib/providers";
 
 interface EditEntryModalProps {
@@ -37,6 +38,16 @@ export default function EditEntryModal({
   const [customTags, setCustomTags] = useState<string[]>(() => getCustomTags());
   const [isAddingTag, setIsAddingTag] = useState(false);
   const [newTagText, setNewTagText] = useState("");
+  const [moodStyle, setMoodStyle] = useState<MoodButtonStyle>("hybrid");
+
+  useEffect(() => {
+    const syncStyle = () => {
+      setMoodStyle(getStoredAppearance().moodStyle);
+    };
+    syncStyle();
+    window.addEventListener("moodflow-appearance-change", syncStyle);
+    return () => window.removeEventListener("moodflow-appearance-change", syncStyle);
+  }, []);
 
   const allAvailableTags = useMemo(() => {
     const merged = [...commonTags, ...customTags];
@@ -105,6 +116,13 @@ export default function EditEntryModal({
 
   if (!entry) return null;
 
+  const moodBtnClass =
+    moodStyle === "orbs"
+      ? "mood-btn-orbs"
+      : moodStyle === "keycaps"
+      ? "mood-btn-keycaps"
+      : "mood-btn-hybrid";
+
   return (
     <AnimatePresence>
       {isOpen && (
@@ -125,7 +143,7 @@ export default function EditEntryModal({
             aria-modal="true"
           >
             <motion.div
-              className="w-full max-w-md glass-modal rounded-3xl border border-white/20 shadow-2xl overflow-hidden max-h-[90vh] overflow-y-auto text-white"
+              className="w-full max-w-md glass-modal rounded-3xl border border-white/20 shadow-2xl overflow-hidden max-h-[90vh] overflow-y-auto"
               initial={{ scale: 0.9, y: 20 }}
               animate={{ scale: 1, y: 0 }}
               exit={{ scale: 0.9, y: 20 }}
@@ -134,13 +152,13 @@ export default function EditEntryModal({
             >
               {/* Header */}
               <div className="flex items-center justify-between p-4 border-b border-white/10">
-                <h2 className="text-base font-semibold text-white">
+                <h2 className="text-base font-semibold theme-text-primary">
                   {t("history.editEntry")}
                 </h2>
                 <button
                   type="button"
                   onClick={onClose}
-                  className="p-2 hover:bg-white/10 rounded-xl transition-colors text-white/60 hover:text-white"
+                  className="p-2 hover:bg-white/10 rounded-xl transition-colors theme-text-secondary"
                   aria-label="Close"
                 >
                   <X className="w-5 h-5" />
@@ -149,68 +167,84 @@ export default function EditEntryModal({
 
               {/* Content */}
               <div className="p-4 space-y-4">
-                {/* Mood Selector */}
+                {/* Mood Selector (Hybrid / Keycaps / Orbs) */}
                 <div>
-                  <label className="block text-xs text-white/70 font-medium mb-2">
+                  <label className="block text-xs theme-text-secondary font-medium mb-2">
                     {t("select.mood")}
                   </label>
                   <div className="grid grid-cols-5 gap-2">
-                    {moodOptions.map((mood, index) => (
-                      <button
-                        key={mood.label}
-                        type="button"
-                        onClick={() => setSelectedMood(index)}
-                        className={`flex flex-col items-center justify-center p-2 rounded-xl transition-all ${
-                          selectedMood === index
-                            ? "bg-white/20 ring-2 ring-white shadow-lg"
-                            : "bg-white/5 hover:bg-white/10 border border-white/5"
-                        }`}
-                        aria-pressed={selectedMood === index}
-                      >
-                        <span className="text-xl mb-1">{mood.emoji}</span>
-                        <span
-                          className={`text-[10px] ${
-                            selectedMood === index
-                              ? "text-white font-bold"
-                              : "text-white/60"
-                          }`}
+                    {moodOptions.map((mood, index) => {
+                      const isSelected = selectedMood === index;
+                      const aura = MOOD_AURA_BLOBS[mood.label];
+                      return (
+                        <button
+                          key={mood.label}
+                          type="button"
+                          onClick={() => setSelectedMood(index)}
+                          className={`${moodBtnClass} ${isSelected ? "selected" : ""} flex flex-col items-center justify-center p-2 min-h-[68px]`}
+                          style={
+                            {
+                              "--mood-glow": aura.blob,
+                              "--mood-color": aura.color,
+                            } as React.CSSProperties
+                          }
+                          aria-pressed={isSelected}
                         >
-                          {tmood(mood.label)}
-                        </span>
-                      </button>
-                    ))}
+                          <span className={`text-xl mb-1 emoji ${isSelected ? "mood-selected-emoji" : ""}`}>
+                            {mood.emoji}
+                          </span>
+                          <span
+                            className={`text-[10px] theme-text-primary ${
+                              isSelected ? "font-bold" : "opacity-80"
+                            }`}
+                          >
+                            {tmood(mood.label)}
+                          </span>
+                        </button>
+                      );
+                    })}
                   </div>
                 </div>
 
-                {/* Intensity */}
+                {/* Thick Capsule Intensity Slider */}
                 <div>
                   <div className="flex justify-between items-center mb-2">
-                    <span className="text-xs text-white/70 font-medium">
+                    <span className="text-xs theme-text-secondary font-medium">
                       {t("entry.intensity")}
                     </span>
-                    <span className="text-xs text-white font-bold bg-white/10 px-2 py-0.5 rounded-md">
+                    <span className="text-xs theme-text-primary font-bold font-mono recessed-well px-2.5 py-0.5 rounded-full">
                       {intensity}%
                     </span>
                   </div>
-                  <div className="relative h-2 rounded-full bg-white/10">
-                    <motion.div
-                      className="absolute inset-y-0 left-0 rounded-full bg-gradient-to-r from-purple-500 to-pink-500"
-                      style={{ width: `${intensity}%` }}
+                  <div className="relative h-6 rounded-full recessed-well p-1 overflow-hidden flex items-center">
+                    <div
+                      className="h-full rounded-full transition-all duration-150"
+                      style={{
+                        width: `${intensity}%`,
+                        background:
+                          "linear-gradient(90deg, var(--accent-from), var(--accent-via), var(--accent-to))",
+                        boxShadow: "0 0 14px var(--accent-soft)",
+                      }}
                     />
                     <input
                       type="range"
                       min="1"
                       max="100"
                       value={intensity}
-                      onChange={(e) => setIntensity(Math.max(1, Math.min(100, parseInt(e.target.value, 10) || 1)))}
+                      onChange={(e) =>
+                        setIntensity(
+                          Math.max(1, Math.min(100, parseInt(e.target.value, 10) || 1))
+                        )
+                      }
                       className="absolute inset-0 w-full h-full opacity-0 cursor-pointer"
+                      aria-label={t("entry.intensity")}
                     />
                   </div>
                 </div>
 
                 {/* Tags (Preset + Custom) */}
                 <div>
-                  <label className="block text-xs text-white/70 font-medium mb-2">
+                  <label className="block text-xs theme-text-secondary font-medium mb-2">
                     {t("entry.tags")}
                   </label>
                   <div className="flex flex-wrap items-center gap-1.5">
@@ -221,8 +255,8 @@ export default function EditEntryModal({
                         onClick={() => toggleTag(tag)}
                         className={`px-3 py-1 rounded-full text-xs font-medium transition-all ${
                           selectedTags.includes(tag)
-                            ? "bg-purple-500/70 text-white shadow-sm ring-1 ring-white/30"
-                            : "bg-white/10 text-white/70 hover:bg-white/20"
+                            ? "accent-tag-active"
+                            : "recessed-well theme-text-secondary hover:opacity-90"
                         }`}
                       >
                         {ttag(tag)}
@@ -234,7 +268,7 @@ export default function EditEntryModal({
                       <button
                         type="button"
                         onClick={() => setIsAddingTag(true)}
-                        className="px-2.5 py-1 rounded-full text-xs font-medium bg-white/10 text-purple-300 hover:bg-white/20 border border-purple-500/30 flex items-center gap-1 transition-all"
+                        className="px-2.5 py-1 rounded-full text-xs font-medium accent-pill flex items-center gap-1 transition-all"
                       >
                         <Plus className="w-3 h-3" />
                         <span>{t("tag.addCustom")}</span>
@@ -246,7 +280,7 @@ export default function EditEntryModal({
                           value={newTagText}
                           onChange={(e) => setNewTagText(e.target.value)}
                           placeholder={t("tag.newPlaceholder")}
-                          className="px-2 py-0.5 bg-white/15 rounded-lg text-xs text-white placeholder-white/40 border border-white/20 outline-none focus:border-purple-400"
+                          className="px-2.5 py-1 recessed-well rounded-lg text-xs theme-text-primary outline-none"
                           onKeyDown={(e) => {
                             if (e.key === "Enter") {
                               e.preventDefault();
@@ -258,7 +292,7 @@ export default function EditEntryModal({
                         <button
                           type="button"
                           onClick={handleSaveCustomTag}
-                          className="px-2 py-0.5 bg-purple-500 text-white rounded-lg text-xs font-semibold hover:bg-purple-600 transition-colors"
+                          className="px-2.5 py-1 accent-gradient-btn rounded-lg text-xs font-semibold"
                         >
                           {t("tag.save")}
                         </button>
@@ -268,7 +302,7 @@ export default function EditEntryModal({
                             setIsAddingTag(false);
                             setNewTagText("");
                           }}
-                          className="px-1.5 py-0.5 bg-white/10 text-white/60 hover:text-white rounded-lg text-xs transition-colors"
+                          className="px-2 py-1 recessed-well theme-text-secondary rounded-lg text-xs"
                         >
                           {t("tag.cancel")}
                         </button>
@@ -279,14 +313,14 @@ export default function EditEntryModal({
 
                 {/* Text (Optional) */}
                 <div>
-                  <label className="block text-xs text-white/70 font-medium mb-2">
+                  <label className="block text-xs theme-text-secondary font-medium mb-2">
                     {t("entry.journal")}
                   </label>
                   <textarea
                     value={text}
                     onChange={(e) => setText(e.target.value)}
                     placeholder={t("entry.journal")}
-                    className="w-full h-24 p-3 rounded-2xl border border-white/20 bg-white/10 text-white placeholder-white/40 outline-none focus:border-white/40 resize-none text-sm"
+                    className="w-full h-24 p-3 rounded-2xl recessed-well theme-text-primary placeholder-white/40 outline-none resize-none text-sm"
                     dir={isRtl ? "rtl" : "ltr"}
                   />
                 </div>
@@ -297,7 +331,7 @@ export default function EditEntryModal({
                 <button
                   type="button"
                   onClick={onClose}
-                  className="flex-1 py-2.5 rounded-xl bg-white/10 text-white font-medium hover:bg-white/15 transition-all text-sm"
+                  className="flex-1 py-2.5 rounded-xl recessed-well theme-text-primary font-medium hover:opacity-90 transition-all text-sm"
                 >
                   {t("settings.cancel")}
                 </button>
@@ -305,7 +339,7 @@ export default function EditEntryModal({
                   type="button"
                   onClick={handleSave}
                   disabled={selectedMood === null || isSaving}
-                  className="flex-1 py-2.5 rounded-xl font-medium flex items-center justify-center gap-2 bg-gradient-to-r from-purple-500 to-pink-500 text-white hover:opacity-90 transition-all text-sm disabled:opacity-50"
+                  className="flex-1 py-2.5 rounded-xl font-medium flex items-center justify-center gap-2 accent-gradient-btn transition-all text-sm disabled:opacity-50"
                 >
                   {isSaving ? (
                     <Loader2 className="w-4 h-4 animate-spin" />

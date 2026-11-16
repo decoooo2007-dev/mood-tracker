@@ -119,22 +119,22 @@ export default function LoginPage() {
           {/* Logo */}
           <div className={`text-center mb-8 ${isRtl ? "rtl" : ""}`}>
             <motion.div
-              className="inline-flex items-center justify-center w-16 h-16 rounded-3xl bg-gradient-to-br from-purple-500 to-pink-500 mb-4"
+              className="inline-flex items-center justify-center w-16 h-16 rounded-3xl accent-avatar mb-4"
               initial={{ scale: 0 }}
               animate={{ scale: 1 }}
               transition={{ delay: 0.2, type: "spring" }}
             >
               <Heart className="w-8 h-8 text-white" />
             </motion.div>
-            <h1 className="text-3xl font-bold text-white mb-2">{t("app.title")}</h1>
-            <p className="text-white/60">
+            <h1 className="text-3xl font-bold theme-text-primary mb-2">{t("app.title")}</h1>
+            <p className="theme-text-secondary">
               {isSignUp ? t("auth.createAccount") : t("auth.welcomeBack")}
             </p>
           </div>
 
           {/* Form */}
           <motion.div
-            className="backdrop-blur-xl bg-white/10 rounded-3xl p-6 border border-white/20 shadow-2xl"
+            className="glass rounded-3xl p-6 shadow-2xl"
             initial={{ opacity: 0, y: 20 }}
             animate={{ opacity: 1, y: 0 }}
             transition={{ delay: 0.3 }}
@@ -225,7 +225,7 @@ export default function LoginPage() {
               <button
                 type="submit"
                 disabled={isLoading}
-                className="w-full py-3 bg-gradient-to-r from-purple-500 to-pink-500 text-white font-medium rounded-xl flex items-center justify-center gap-2 hover:opacity-90 transition-opacity disabled:opacity-50"
+                className="w-full py-3 accent-gradient-btn font-medium rounded-xl flex items-center justify-center gap-2 hover:opacity-95 transition-opacity disabled:opacity-50"
               >
                 {isLoading ? (
                   <Loader2 className="w-5 h-5 animate-spin" />

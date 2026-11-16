@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect, useCallback, ReactNode } from "react";
+import { useState, useEffect, useCallback, useRef, ReactNode } from "react";
 import { usePathname } from "next/navigation";
 import { motion } from "framer-motion";
 import { Lock, Fingerprint, Delete } from "lucide-react";
@@ -25,6 +25,7 @@ export default function AppLockGate({ children }: AppLockGateProps) {
   const [pin, setPin] = useState("");
   const [error, setError] = useState(false);
   const [hasBiometrics, setHasBiometrics] = useState(false);
+  const pinRef = useRef("");
 
   const checkLockState = useCallback(() => {
     // Whitelist public/auth routes
@@ -53,36 +54,61 @@ export default function AppLockGate({ children }: AppLockGateProps) {
       .catch(() => {});
   }, [checkLockState]);
 
-  const handleDigit = async (digit: string) => {
-    if (pin.length >= 4) return;
-    const nextPin = pin + digit;
+  const handleDigit = useCallback(async (digit: string) => {
+    if (pinRef.current.length >= 4) return;
+    const nextPin = pinRef.current + digit;
+    pinRef.current = nextPin;
     setPin(nextPin);
     setError(false);
 
     if (nextPin.length === 4) {
       const valid = await verifyPin(nextPin);
       if (valid) {
+        pinRef.current = "";
         setIsLocked(false);
         setPin("");
       } else {
         setError(true);
         setTimeout(() => {
+          pinRef.current = "";
           setPin("");
           setError(false);
         }, 700);
       }
     }
-  };
+  }, []);
 
-  const handleDelete = () => {
-    setPin((prev) => prev.slice(0, -1));
+  const handleDelete = useCallback(() => {
+    const next = pinRef.current.slice(0, -1);
+    pinRef.current = next;
+    setPin(next);
     setError(false);
-  };
+  }, []);
+
+  // PC physical keyboard 0-9 / Backspace support
+  useEffect(() => {
+    if (!isLocked) return;
+
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if (e.ctrlKey || e.metaKey || e.altKey) return;
+      if (/^[0-9]$/.test(e.key)) {
+        e.preventDefault();
+        handleDigit(e.key);
+      } else if (e.key === "Backspace") {
+        e.preventDefault();
+        handleDelete();
+      }
+    };
+
+    window.addEventListener("keydown", handleKeyDown);
+    return () => window.removeEventListener("keydown", handleKeyDown);
+  }, [isLocked, handleDigit, handleDelete]);
 
   const handleBiometricUnlock = async () => {
     try {
       const verified = await authenticateBiometric();
       if (verified) {
+        pinRef.current = "";
         setIsLocked(false);
         setPin("");
       } else {
@@ -100,7 +126,11 @@ export default function AppLockGate({ children }: AppLockGateProps) {
 
   return (
     <div
-      className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-gradient-to-br from-gray-950 via-purple-950/80 to-gray-950 text-white select-none"
+      className="fixed inset-0 z-50 flex items-center justify-center p-4 select-none"
+      style={{
+        background:
+          "linear-gradient(135deg, var(--bg-gradient-start), var(--bg-gradient-mid), var(--bg-gradient-end))",
+      }}
       dir={isRtl ? "rtl" : "ltr"}
     >
       <motion.div
@@ -109,12 +139,12 @@ export default function AppLockGate({ children }: AppLockGateProps) {
         animate={{ scale: 1, opacity: 1 }}
         exit={{ scale: 0.9, opacity: 0 }}
       >
-        <div className="w-14 h-14 mx-auto rounded-2xl bg-purple-500/20 border border-purple-500/30 flex items-center justify-center mb-4 text-purple-300">
+        <div className="w-14 h-14 mx-auto rounded-2xl accent-pill flex items-center justify-center mb-4">
           <Lock className="w-7 h-7" />
         </div>
 
-        <h2 className="text-xl font-bold mb-1">{t("lock.title")}</h2>
-        <p className="text-xs text-white/60 mb-6">{t("lock.subtitle")}</p>
+        <h2 className="text-xl font-bold mb-1 theme-text-primary">{t("lock.title")}</h2>
+        <p className="text-xs theme-text-secondary mb-6">{t("lock.subtitle")}</p>
 
         {/* 4 PIN Dots */}
         <motion.div
@@ -131,9 +161,17 @@ export default function AppLockGate({ children }: AppLockGateProps) {
                   error
                     ? "bg-red-500 border-red-400 scale-110"
                     : filled
-                    ? "bg-purple-400 border-purple-300 scale-105 shadow-md shadow-purple-500/50"
-                    : "bg-white/10 border-white/30"
+                    ? "scale-105 shadow-md"
+                    : "recessed-well"
                 }`}
+                style={
+                  !error && filled
+                    ? {
+                        backgroundColor: "var(--accent-solid)",
+                        borderColor: "var(--accent-border)",
+                      }
+                    : undefined
+                }
               />
             );
           })}
@@ -152,7 +190,7 @@ export default function AppLockGate({ children }: AppLockGateProps) {
               key={num}
               type="button"
               onClick={() => handleDigit(num)}
-              className="h-14 rounded-2xl bg-white/10 hover:bg-white/20 active:scale-95 transition-all text-xl font-semibold flex items-center justify-center"
+              className="h-14 rounded-2xl recessed-well hover:opacity-90 active:scale-95 transition-all text-xl font-semibold flex items-center justify-center theme-text-primary"
             >
               {num}
             </button>
@@ -162,7 +200,7 @@ export default function AppLockGate({ children }: AppLockGateProps) {
               <button
                 type="button"
                 onClick={handleBiometricUnlock}
-                className="h-14 w-full rounded-2xl bg-white/5 hover:bg-white/15 flex items-center justify-center text-purple-300 transition-colors"
+                className="h-14 w-full rounded-2xl accent-pill flex items-center justify-center transition-colors"
                 title={t("lock.useBiometrics")}
               >
                 <Fingerprint className="w-6 h-6" />
@@ -172,14 +210,14 @@ export default function AppLockGate({ children }: AppLockGateProps) {
           <button
             type="button"
             onClick={() => handleDigit("0")}
-            className="h-14 rounded-2xl bg-white/10 hover:bg-white/20 active:scale-95 transition-all text-xl font-semibold flex items-center justify-center"
+            className="h-14 rounded-2xl recessed-well hover:opacity-90 active:scale-95 transition-all text-xl font-semibold flex items-center justify-center theme-text-primary"
           >
             0
           </button>
           <button
             type="button"
             onClick={handleDelete}
-            className="h-14 rounded-2xl bg-white/5 hover:bg-white/15 active:scale-95 transition-all flex items-center justify-center text-white/70"
+            className="h-14 rounded-2xl recessed-well hover:opacity-90 active:scale-95 transition-all flex items-center justify-center theme-text-secondary"
             aria-label="Delete"
           >
             <Delete className="w-5 h-5" />

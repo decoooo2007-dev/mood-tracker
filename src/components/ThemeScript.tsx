@@ -1,23 +1,15 @@
 "use client";
 
 import { useEffect } from "react";
+import { applyAppearanceTokens, getStoredAppearance } from "@/lib/theme";
 
 export default function ThemeScript() {
   useEffect(() => {
     const applyThemeAndLocale = () => {
       const html = document.documentElement;
+      const appearance = getStoredAppearance();
+      applyAppearanceTokens(appearance);
 
-      // Theme
-      const storedTheme = localStorage.getItem("moodflow-theme");
-      if (storedTheme === "light") {
-        html.classList.remove("dark");
-        html.classList.add("light");
-      } else {
-        html.classList.remove("light");
-        html.classList.add("dark");
-      }
-
-      // Locale / Direction
       const storedLocale = localStorage.getItem("moodflow-locale");
       if (storedLocale === "ar") {
         html.dir = "rtl";
@@ -31,8 +23,10 @@ export default function ThemeScript() {
     applyThemeAndLocale();
 
     window.addEventListener("storage", applyThemeAndLocale);
+    window.addEventListener("moodflow-appearance-change", applyThemeAndLocale);
     return () => {
       window.removeEventListener("storage", applyThemeAndLocale);
+      window.removeEventListener("moodflow-appearance-change", applyThemeAndLocale);
     };
   }, []);
 

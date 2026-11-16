@@ -89,15 +89,15 @@ export default function AchievementBadges({
             <Trophy className="w-4 h-4" />
           </div>
           <div>
-            <h2 className="text-white font-semibold text-base">
+            <h2 className="theme-text-primary font-semibold text-base">
               {t("badges.title")}
             </h2>
-            <p className="text-white/50 text-xs">
+            <p className="theme-text-muted text-xs">
               {isRtl ? "احتفل بالتزامك واستمراريتك" : "Celebrate your consistency and milestones"}
             </p>
           </div>
         </div>
-        <span className="text-xs font-semibold px-2.5 py-1 bg-white/10 rounded-full text-white/80">
+        <span className="text-xs font-semibold px-2.5 py-1 recessed-well rounded-full theme-text-primary">
           {badges.filter((b) => b.unlocked).length} / {badges.length}
         </span>
       </div>
@@ -111,15 +111,14 @@ export default function AchievementBadges({
           return (
             <motion.button
               key={badge.id}
+              type="button"
               onClick={() => {
                 setSelectedBadge(isSelected ? null : badge.id);
                 if (badge.unlocked) triggerCelebration();
               }}
-              className={`relative p-3.5 rounded-2xl flex flex-col items-center text-center transition-all ${
-                badge.unlocked
-                  ? "bg-white/10 border border-white/20 hover:bg-white/15"
-                  : "bg-white/5 border border-white/5 opacity-50"
-              } ${isSelected ? "ring-2 ring-white scale-105" : ""}`}
+              className={`relative p-3.5 rounded-2xl flex flex-col items-center text-center transition-all recessed-well ${
+                badge.unlocked ? "hover:opacity-95" : "opacity-50"
+              } ${isSelected ? "ring-2 ring-[var(--accent-solid)] scale-105" : ""}`}
               whileHover={{ scale: badge.unlocked ? 1.05 : 1 }}
               whileTap={{ scale: 0.95 }}
               initial={{ opacity: 0, y: 15 }}
@@ -130,22 +129,22 @@ export default function AchievementBadges({
               <div
                 className={`w-12 h-12 rounded-xl flex items-center justify-center mb-2 shadow-lg ${
                   badge.unlocked
-                    ? `bg-gradient-to-br ${badge.color} text-white`
-                    : "bg-white/10 text-white/30"
+                    ? `bg-gradient-to-br ${badge.color} text-white keep-white`
+                    : "bg-white/10 theme-text-muted"
                 }`}
               >
                 <Icon className="w-6 h-6" />
               </div>
 
-              <span className={`text-xs font-semibold mb-0.5 ${badge.unlocked ? "text-white" : "text-white/50"}`}>
+              <span className={`text-xs font-semibold mb-0.5 ${badge.unlocked ? "theme-text-primary" : "theme-text-muted"}`}>
                 {badge.label}
               </span>
-              <span className="text-[10px] text-white/40">
+              <span className="text-[10px] theme-text-muted">
                 {badge.requirement}
               </span>
 
               {!badge.unlocked && (
-                <div className="absolute top-2 right-2 text-white/40">
+                <div className="absolute top-2 right-2 theme-text-muted">
                   <Lock className="w-3 h-3" />
                 </div>
               )}
@@ -159,7 +158,7 @@ export default function AchievementBadges({
         <motion.div
           initial={{ opacity: 0, height: 0 }}
           animate={{ opacity: 1, height: "auto" }}
-          className="mt-4 p-3 bg-white/5 rounded-xl border border-white/10 text-xs text-white/80 text-center"
+          className="mt-4 p-3 recessed-well rounded-xl text-xs theme-text-secondary text-center"
         >
           {badges.find((b) => b.id === selectedBadge)?.desc}
         </motion.div>

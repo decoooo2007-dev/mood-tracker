@@ -26,6 +26,10 @@ import {
   Phone,
   CheckCircle2,
   AlertCircle,
+  Palette,
+  Sparkles,
+  MousePointerClick,
+  Layers,
 } from "lucide-react";
 import GlassBackground from "@/components/ui/GlassBackground";
 import Navigation from "@/components/ui/Navigation";
@@ -36,6 +40,16 @@ import {
   registerBiometricCredential,
 } from "@/lib/app-lock";
 import { saveCustomTag } from "@/lib/moods";
+import {
+  PALETTES,
+  getStoredAppearance,
+  setStoredPaletteId,
+  setStoredMoodStyle,
+  setStoredSpotlightStyle,
+  setStoredMoodReactive,
+  type MoodButtonStyle,
+  type SpotlightStyle,
+} from "@/lib/theme";
 import type { MoodType } from "@/types/mood";
 
 export default function SettingsPage() {
@@ -62,11 +76,30 @@ export default function SettingsPage() {
   const [pinStep, setPinStep] = useState<"enter" | "confirm">("enter");
   const [pinError, setPinError] = useState("");
   const [showHelplines, setShowHelplines] = useState(false);
-  const [importNotice, setImportNotice] = useState<{ type: "success" | "error"; text: string } | null>(null);
+  const [importNotice, setImportNotice] = useState<{
+    type: "success" | "error";
+    text: string;
+  } | null>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
+
+  // Appearance state (Palettes 1-8, Mood Style, Spotlight, Mode-Aware Aura)
+  const [paletteId, setPaletteId] = useState<number>(4);
+  const [moodStyle, setMoodStyle] = useState<MoodButtonStyle>("hybrid");
+  const [spotlightStyle, setSpotlightStyle] = useState<SpotlightStyle>("classic");
+  const [moodReactive, setMoodReactive] = useState<boolean>(false);
 
   useEffect(() => {
     setAppLockEnabled(isAppLockEnabled());
+    const syncAppearance = () => {
+      const app = getStoredAppearance();
+      setPaletteId(app.paletteId);
+      setMoodStyle(app.moodStyle);
+      setSpotlightStyle(app.spotlightStyle);
+      setMoodReactive(app.moodReactive);
+    };
+    syncAppearance();
+    window.addEventListener("moodflow-appearance-change", syncAppearance);
+    return () => window.removeEventListener("moodflow-appearance-change", syncAppearance);
   }, []);
 
   const stats = getStats();
@@ -77,6 +110,25 @@ export default function SettingsPage() {
     reminderTime: "21:00",
     language: "en",
     exportFormat: "json" as const,
+  };
+
+  const handleThemeSwitch = (mode: "dark" | "light") => {
+    changeTheme(mode);
+    // Automatic Mode-Aware Aura Rule feedback in local state
+    setMoodReactive(mode === "light");
+  };
+
+  const handleToggleNotifications = () => {
+    const nextEnabled = !currentSettings.notifications;
+    if (
+      nextEnabled &&
+      typeof window !== "undefined" &&
+      "Notification" in window &&
+      Notification.permission === "default"
+    ) {
+      Notification.requestPermission().catch(() => {});
+    }
+    updateSettings({ notifications: nextEnabled });
   };
 
   const handleToggleAppLock = () => {
@@ -111,7 +163,6 @@ export default function SettingsPage() {
       setShowPinModal(false);
       setNewPin("");
       setConfirmPin("");
-      // Optionally register WebAuthn platform biometric credential if supported
       registerBiometricCredential().catch(() => {});
     }
   };
@@ -148,12 +199,10 @@ export default function SettingsPage() {
             : "";
         const time = typeof item.time === "string" ? item.time : "";
 
-        // Register any custom tags present in the imported entry
         for (const tg of tags) {
           saveCustomTag(tg);
         }
 
-        // Check for duplicates
         const exists = entries.some(
           (existing) =>
             existing.date === date &&
@@ -212,7 +261,8 @@ export default function SettingsPage() {
       <GlassBackground>
         <div className="flex items-center justify-center min-h-screen">
           <motion.div
-            className="w-12 h-12 border-4 border-purple-500 border-t-transparent rounded-full"
+            className="w-12 h-12 border-4 border-t-transparent rounded-full"
+            style={{ borderColor: "var(--accent-solid)", borderTopColor: "transparent" }}
             animate={{ rotate: 360 }}
             transition={{ duration: 1, repeat: Infinity, ease: "linear" }}
           />
@@ -223,17 +273,17 @@ export default function SettingsPage() {
 
   return (
     <GlassBackground>
-      <div className="max-w-4xl mx-auto px-4 py-8 md:px-6 md:py-12" dir={isRtl ? "rtl" : "ltr"}>
+      <div className="max-w-4xl mx-auto px-4 py-8 md:px-6 md:py-10" dir={isRtl ? "rtl" : "ltr"}>
         {/* Header */}
         <motion.div
           initial={{ opacity: 0, y: -20 }}
           animate={{ opacity: 1, y: 0 }}
           className="mb-8"
         >
-          <h1 className="text-3xl font-extrabold text-white mb-1 tracking-tight">
+          <h1 className="text-3xl font-extrabold theme-text-primary mb-1 tracking-tight">
             {t("settings.title")}
           </h1>
-          <p className="text-white/60 text-sm">{t("settings.customize")}</p>
+          <p className="theme-text-secondary text-sm">{t("settings.customize")}</p>
         </motion.div>
 
         {/* Account Card */}
@@ -244,19 +294,19 @@ export default function SettingsPage() {
             animate={{ opacity: 1, y: 0 }}
             transition={{ delay: 0.05 }}
           >
-            <h2 className="text-xs font-semibold text-white/60 uppercase tracking-wider mb-2.5">
+            <h2 className="text-xs font-semibold theme-text-muted uppercase tracking-wider mb-2.5">
               {t("settings.account")}
             </h2>
             <div className="glass rounded-2xl p-4 flex items-center justify-between shadow-sm">
               <div className="flex items-center gap-3">
-                <div className="w-10 h-10 rounded-full bg-gradient-to-br from-purple-500 to-pink-500 flex items-center justify-center text-white font-bold text-sm shadow-md">
+                <div className="w-10 h-10 rounded-full accent-avatar flex items-center justify-center text-white font-bold text-sm shadow-md">
                   <User className="w-5 h-5" />
                 </div>
                 <div>
-                  <p className="text-white font-semibold text-sm">
+                  <p className="theme-text-primary font-semibold text-sm">
                     @{user.username}
                   </p>
-                  <p className="text-white/50 text-xs">
+                  <p className="theme-text-muted text-xs">
                     {stats.totalEntries} {t("history.entriesRecorded")}
                   </p>
                 </div>
@@ -265,7 +315,7 @@ export default function SettingsPage() {
               <button
                 type="button"
                 onClick={handleSignOut}
-                className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-white/10 hover:bg-white/15 text-white/80 hover:text-white text-xs font-medium transition-colors"
+                className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl recessed-well theme-text-primary text-xs font-medium transition-opacity hover:opacity-90"
               >
                 <LogOut className="w-3.5 h-3.5" />
                 <span>{t("settings.signOut")}</span>
@@ -274,57 +324,216 @@ export default function SettingsPage() {
           </motion.div>
         )}
 
-        {/* Appearance (Theme) */}
+        {/* Appearance (Theme Mode + Palettes 1-8 + Mood Button Style + Spotlight + Mode-Aware Aura) */}
         <motion.div
           className="mb-6"
           initial={{ opacity: 0, y: 20 }}
           animate={{ opacity: 1, y: 0 }}
           transition={{ delay: 0.1 }}
         >
-          <h2 className="text-xs font-semibold text-white/60 uppercase tracking-wider mb-2.5">
+          <h2 className="text-xs font-semibold theme-text-muted uppercase tracking-wider mb-2.5">
             {t("settings.appearance")}
           </h2>
-          <div className="glass rounded-2xl overflow-hidden shadow-sm">
-            <div className="p-4 flex items-center justify-between">
+          <div className="glass rounded-2xl overflow-hidden shadow-sm divide-y divide-white/10">
+            {/* Dark / Light Mode */}
+            <div className="p-4 flex items-center justify-between gap-3">
               <div className="flex items-center gap-3">
                 {currentSettings.theme === "dark" ? (
-                  <Moon className="w-5 h-5 text-purple-400" />
+                  <Moon className="w-5 h-5" style={{ color: "var(--accent-solid)" }} />
                 ) : (
-                  <Sun className="w-5 h-5 text-yellow-400" />
+                  <Sun className="w-5 h-5 text-amber-500" />
                 )}
                 <div>
-                  <p className="text-white font-medium text-sm">
+                  <p className="theme-text-primary font-medium text-sm">
                     {t("settings.theme")}
                   </p>
-                  <p className="text-white/60 text-xs">
+                  <p className="theme-text-secondary text-xs">
                     {t("settings.themeDesc")}
                   </p>
                 </div>
               </div>
-              <div className="flex gap-1.5">
+              <div className="flex gap-1.5 shrink-0">
                 <button
                   type="button"
-                  onClick={() => changeTheme("dark")}
+                  onClick={() => handleThemeSwitch("dark")}
                   className={`px-3.5 py-1.5 rounded-xl text-xs font-semibold transition-all ${
                     currentSettings.theme === "dark"
-                      ? "bg-purple-500 text-white shadow-sm"
-                      : "bg-white/10 text-white/60 hover:bg-white/15"
+                      ? "accent-gradient-btn shadow-sm"
+                      : "recessed-well theme-text-secondary"
                   }`}
                 >
                   {t("settings.dark")}
                 </button>
                 <button
                   type="button"
-                  onClick={() => changeTheme("light")}
+                  onClick={() => handleThemeSwitch("light")}
                   className={`px-3.5 py-1.5 rounded-xl text-xs font-semibold transition-all ${
                     currentSettings.theme === "light"
-                      ? "bg-purple-500 text-white shadow-sm"
-                      : "bg-white/10 text-white/60 hover:bg-white/15"
+                      ? "accent-gradient-btn shadow-sm"
+                      : "recessed-well theme-text-secondary"
                   }`}
                 >
                   {t("settings.light")}
                 </button>
               </div>
+            </div>
+
+            {/* Selectable Palettes 1–8 (#4 Nile Sapphire x Gold Default) */}
+            <div className="p-4">
+              <div className="flex items-center gap-3 mb-3">
+                <Palette className="w-5 h-5" style={{ color: "var(--accent-solid)" }} />
+                <div>
+                  <p className="theme-text-primary font-medium text-sm">
+                    {t("appearance.palette")}
+                  </p>
+                  <p className="theme-text-secondary text-xs">
+                    {t("appearance.paletteDesc")}
+                  </p>
+                </div>
+              </div>
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
+                {PALETTES.map((pal) => {
+                  const active = pal.id === paletteId;
+                  return (
+                    <button
+                      key={pal.id}
+                      type="button"
+                      onClick={() => {
+                        setPaletteId(pal.id);
+                        setStoredPaletteId(pal.id);
+                      }}
+                      className={`flex items-center gap-2.5 px-3 py-2 rounded-xl text-start transition-all ${
+                        active
+                          ? "accent-pill ring-1 ring-[var(--accent-solid)] font-semibold"
+                          : "recessed-well theme-text-secondary hover:opacity-95"
+                      }`}
+                    >
+                      <span
+                        className="w-4 h-4 rounded-full shrink-0 border border-white/50 shadow-sm"
+                        style={{ background: pal.swatch }}
+                      />
+                      <span className="text-xs truncate">
+                        {isRtl ? pal.nameAr : pal.nameEn}
+                      </span>
+                    </button>
+                  );
+                })}
+              </div>
+            </div>
+
+            {/* Mood Button Style (Hybrid Orb-Keycaps / 3D Keycaps / Glowing Orbs) */}
+            <div className="p-4 flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+              <div className="flex items-center gap-3">
+                <Layers className="w-5 h-5" style={{ color: "var(--accent-solid)" }} />
+                <div>
+                  <p className="theme-text-primary font-medium text-sm">
+                    {t("appearance.moodStyle")}
+                  </p>
+                  <p className="theme-text-secondary text-xs">
+                    {t("appearance.moodStyleDesc")}
+                  </p>
+                </div>
+              </div>
+              <div className="flex flex-wrap gap-1.5">
+                {(
+                  [
+                    { id: "hybrid", label: t("appearance.styleHybrid") },
+                    { id: "keycaps", label: t("appearance.styleKeycaps") },
+                    { id: "orbs", label: t("appearance.styleOrbs") },
+                  ] as const
+                ).map((opt) => (
+                  <button
+                    key={opt.id}
+                    type="button"
+                    onClick={() => {
+                      setMoodStyle(opt.id);
+                      setStoredMoodStyle(opt.id);
+                    }}
+                    className={`px-3 py-1.5 rounded-xl text-xs font-medium transition-all ${
+                      moodStyle === opt.id
+                        ? "accent-gradient-btn shadow-sm"
+                        : "recessed-well theme-text-secondary"
+                    }`}
+                  >
+                    {opt.label}
+                  </button>
+                ))}
+              </div>
+            </div>
+
+            {/* Cursor Spotlight (Crystal Pearl / Accent Prism) */}
+            <div className="p-4 flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+              <div className="flex items-center gap-3">
+                <MousePointerClick className="w-5 h-5" style={{ color: "var(--accent-solid)" }} />
+                <div>
+                  <p className="theme-text-primary font-medium text-sm">
+                    {t("appearance.spotlight")}
+                  </p>
+                  <p className="theme-text-secondary text-xs">
+                    {t("appearance.spotlightDesc")}
+                  </p>
+                </div>
+              </div>
+              <div className="flex gap-1.5 shrink-0">
+                {(
+                  [
+                    { id: "classic", label: t("appearance.spotClassic") },
+                    { id: "accent", label: t("appearance.spotAccent") },
+                  ] as const
+                ).map((opt) => (
+                  <button
+                    key={opt.id}
+                    type="button"
+                    onClick={() => {
+                      setSpotlightStyle(opt.id);
+                      setStoredSpotlightStyle(opt.id);
+                    }}
+                    className={`px-3 py-1.5 rounded-xl text-xs font-medium transition-all ${
+                      spotlightStyle === opt.id
+                        ? "accent-gradient-btn shadow-sm"
+                        : "recessed-well theme-text-secondary"
+                    }`}
+                  >
+                    {opt.label}
+                  </button>
+                ))}
+              </div>
+            </div>
+
+            {/* Mood-Reactive Background Aura Toggle (dir="ltr" enforced) */}
+            <div className="p-4 flex items-center justify-between gap-3">
+              <div className="flex items-center gap-3">
+                <Sparkles className="w-5 h-5" style={{ color: "var(--accent-solid)" }} />
+                <div>
+                  <p className="theme-text-primary font-medium text-sm">
+                    {t("appearance.moodReactive")}
+                  </p>
+                  <p className="theme-text-secondary text-xs">
+                    {t("appearance.moodReactiveDesc")}
+                  </p>
+                </div>
+              </div>
+              <button
+                type="button"
+                dir="ltr"
+                onClick={() => {
+                  const next = !moodReactive;
+                  setMoodReactive(next);
+                  setStoredMoodReactive(next);
+                }}
+                className={`w-11 h-6 rounded-full transition-colors relative shrink-0 ${
+                  moodReactive ? "accent-gradient-btn" : "bg-white/20"
+                }`}
+                aria-label="Toggle Mood-Reactive Aura"
+              >
+                <motion.div
+                  className="absolute top-0.5 w-5 h-5 bg-white rounded-full shadow"
+                  animate={{
+                    left: moodReactive ? "22px" : "2px",
+                  }}
+                  transition={{ type: "spring", stiffness: 500, damping: 30 }}
+                />
+              </button>
             </div>
           </div>
         </motion.div>
@@ -336,31 +545,28 @@ export default function SettingsPage() {
           animate={{ opacity: 1, y: 0 }}
           transition={{ delay: 0.15 }}
         >
-          <h2 className="text-xs font-semibold text-white/60 uppercase tracking-wider mb-2.5">
+          <h2 className="text-xs font-semibold theme-text-muted uppercase tracking-wider mb-2.5">
             {t("settings.reminders")}
           </h2>
           <div className="glass rounded-2xl overflow-hidden shadow-sm">
-            <div className="p-4 flex items-center justify-between">
+            <div className="p-4 flex items-center justify-between gap-3">
               <div className="flex items-center gap-3">
-                <Bell className="w-5 h-5 text-purple-400" />
+                <Bell className="w-5 h-5" style={{ color: "var(--accent-solid)" }} />
                 <div>
-                  <p className="text-white font-medium text-sm">
+                  <p className="theme-text-primary font-medium text-sm">
                     {t("settings.dailyReminder")}
                   </p>
-                  <p className="text-white/60 text-xs">
+                  <p className="theme-text-secondary text-xs">
                     {t("settings.reminderDesc")}
                   </p>
                 </div>
               </div>
               <button
                 type="button"
-                onClick={() =>
-                  updateSettings({
-                    notifications: !currentSettings.notifications,
-                  })
-                }
-                className={`w-11 h-6 rounded-full transition-colors relative ${
-                  currentSettings.notifications ? "bg-purple-500" : "bg-white/20"
+                dir="ltr"
+                onClick={handleToggleNotifications}
+                className={`w-11 h-6 rounded-full transition-colors relative shrink-0 ${
+                  currentSettings.notifications ? "accent-gradient-btn" : "bg-white/20"
                 }`}
                 aria-label="Toggle reminder"
               >
@@ -374,9 +580,9 @@ export default function SettingsPage() {
               </button>
             </div>
             {currentSettings.notifications && (
-              <div className="px-4 pb-4 pt-1 border-t border-white/5">
+              <div className="px-4 pb-4 pt-1 border-t border-white/10">
                 <div className="flex items-center gap-3">
-                  <span className="text-white/70 text-xs">
+                  <span className="theme-text-secondary text-xs">
                     {t("settings.remindAt")}
                   </span>
                   <input
@@ -385,7 +591,7 @@ export default function SettingsPage() {
                     onChange={(e) =>
                       updateSettings({ reminderTime: e.target.value })
                     }
-                    className="px-3 py-1.5 bg-white/10 rounded-xl text-white text-xs outline-none focus:ring-1 focus:ring-purple-400"
+                    className="px-3 py-1.5 recessed-well rounded-xl theme-text-primary text-xs outline-none"
                   />
                 </div>
               </div>
@@ -393,34 +599,35 @@ export default function SettingsPage() {
           </div>
         </motion.div>
 
-        {/* Security & App Lock (Track 1.2) */}
+        {/* Security & App Lock */}
         <motion.div
           className="mb-6"
           initial={{ opacity: 0, y: 20 }}
           animate={{ opacity: 1, y: 0 }}
           transition={{ delay: 0.18 }}
         >
-          <h2 className="text-xs font-semibold text-white/60 uppercase tracking-wider mb-2.5">
+          <h2 className="text-xs font-semibold theme-text-muted uppercase tracking-wider mb-2.5">
             {t("lock.enableAppLock")}
           </h2>
           <div className="glass rounded-2xl overflow-hidden shadow-sm">
-            <div className="p-4 flex items-center justify-between">
+            <div className="p-4 flex items-center justify-between gap-3">
               <div className="flex items-center gap-3">
-                <Lock className="w-5 h-5 text-purple-400" />
+                <Lock className="w-5 h-5" style={{ color: "var(--accent-solid)" }} />
                 <div>
-                  <p className="text-white font-medium text-sm">
+                  <p className="theme-text-primary font-medium text-sm">
                     {t("lock.enableAppLock")}
                   </p>
-                  <p className="text-white/60 text-xs">
+                  <p className="theme-text-secondary text-xs">
                     {t("lock.appLockDesc")}
                   </p>
                 </div>
               </div>
               <button
                 type="button"
+                dir="ltr"
                 onClick={handleToggleAppLock}
-                className={`w-11 h-6 rounded-full transition-colors relative ${
-                  appLockEnabled ? "bg-purple-500" : "bg-white/20"
+                className={`w-11 h-6 rounded-full transition-colors relative shrink-0 ${
+                  appLockEnabled ? "accent-gradient-btn" : "bg-white/20"
                 }`}
                 aria-label="Toggle App Lock"
               >
@@ -443,17 +650,16 @@ export default function SettingsPage() {
           animate={{ opacity: 1, y: 0 }}
           transition={{ delay: 0.2 }}
         >
-          <h2 className="text-xs font-semibold text-white/60 uppercase tracking-wider mb-2.5">
+          <h2 className="text-xs font-semibold theme-text-muted uppercase tracking-wider mb-2.5">
             {t("settings.data")}
           </h2>
 
-          {/* Import Status Alert */}
           {importNotice && (
             <div
               className={`p-3.5 mb-3 rounded-2xl border flex items-center gap-2.5 text-xs font-medium ${
                 importNotice.type === "success"
-                  ? "bg-emerald-500/20 border-emerald-500/40 text-emerald-300"
-                  : "bg-red-500/20 border-red-500/40 text-red-300"
+                  ? "bg-emerald-500/20 border-emerald-500/40 stat-positive"
+                  : "bg-red-500/20 border-red-500/40 stat-negative"
               }`}
             >
               {importNotice.type === "success" ? (
@@ -466,7 +672,6 @@ export default function SettingsPage() {
           )}
 
           <div className="glass rounded-2xl overflow-hidden shadow-sm divide-y divide-white/10">
-            {/* Import JSON (Track 5.1) */}
             <input
               ref={fileInputRef}
               type="file"
@@ -480,44 +685,42 @@ export default function SettingsPage() {
               className="w-full p-4 flex items-center justify-between hover:bg-white/5 transition-colors text-start"
             >
               <div className="flex items-center gap-3">
-                <Upload className="w-5 h-5 text-purple-400" />
+                <Upload className="w-5 h-5" style={{ color: "var(--accent-solid)" }} />
                 <div>
-                  <p className="text-white font-medium text-sm">
+                  <p className="theme-text-primary font-medium text-sm">
                     {t("settings.importData")}
                   </p>
-                  <p className="text-white/60 text-xs">
+                  <p className="theme-text-secondary text-xs">
                     {t("settings.importDesc")}
                   </p>
                 </div>
               </div>
               <ChevronRight
-                className={`w-4 h-4 text-white/40 ${isRtl ? "rotate-180" : ""}`}
+                className={`w-4 h-4 theme-text-muted ${isRtl ? "rotate-180" : ""}`}
               />
             </button>
 
-            {/* Export JSON */}
             <button
               type="button"
               onClick={() => exportData("json")}
               className="w-full p-4 flex items-center justify-between hover:bg-white/5 transition-colors text-start"
             >
               <div className="flex items-center gap-3">
-                <Download className="w-5 h-5 text-purple-400" />
+                <Download className="w-5 h-5" style={{ color: "var(--accent-solid)" }} />
                 <div>
-                  <p className="text-white font-medium text-sm">
+                  <p className="theme-text-primary font-medium text-sm">
                     {t("settings.exportJson")}
                   </p>
-                  <p className="text-white/60 text-xs">
+                  <p className="theme-text-secondary text-xs">
                     {isRtl ? "نسخة احتياطية كاملة لبياناتك" : "Full backup of all entries"}
                   </p>
                 </div>
               </div>
               <ChevronRight
-                className={`w-4 h-4 text-white/40 ${isRtl ? "rotate-180" : ""}`}
+                className={`w-4 h-4 theme-text-muted ${isRtl ? "rotate-180" : ""}`}
               />
             </button>
 
-            {/* Export CSV */}
             <button
               type="button"
               onClick={() => exportData("csv")}
@@ -526,20 +729,21 @@ export default function SettingsPage() {
               <div className="flex items-center gap-3">
                 <Download className="w-5 h-5 text-pink-400" />
                 <div>
-                  <p className="text-white font-medium text-sm">
+                  <p className="theme-text-primary font-medium text-sm">
                     {t("settings.exportCsv")}
                   </p>
-                  <p className="text-white/60 text-xs">
-                    {isRtl ? "ملف جداول بيانات متوافق مع برامج الجداول" : "Excel-compatible spreadsheet with Arabic support"}
+                  <p className="theme-text-secondary text-xs">
+                    {isRtl
+                      ? "ملف جداول بيانات متوافق مع برامج الجداول"
+                      : "Excel-compatible spreadsheet with Arabic support"}
                   </p>
                 </div>
               </div>
               <ChevronRight
-                className={`w-4 h-4 text-white/40 ${isRtl ? "rotate-180" : ""}`}
+                className={`w-4 h-4 theme-text-muted ${isRtl ? "rotate-180" : ""}`}
               />
             </button>
 
-            {/* Clear All Data */}
             <button
               type="button"
               onClick={() => setShowClearConfirm(true)}
@@ -548,47 +752,47 @@ export default function SettingsPage() {
               <div className="flex items-center gap-3">
                 <Trash2 className="w-5 h-5 text-red-400" />
                 <div>
-                  <p className="text-red-400 font-medium text-sm">
+                  <p className="stat-negative font-medium text-sm">
                     {t("settings.clearAllData")}
                   </p>
-                  <p className="text-white/60 text-xs">
+                  <p className="theme-text-secondary text-xs">
                     {t("settings.clearDesc")}
                   </p>
                 </div>
               </div>
               <ChevronRight
-                className={`w-4 h-4 text-red-400/50 ${isRtl ? "rotate-180" : ""}`}
+                className={`w-4 h-4 text-red-400/60 ${isRtl ? "rotate-180" : ""}`}
               />
             </button>
           </div>
         </motion.div>
 
-        {/* Wellness & Crisis Helplines (Track 2.1) */}
+        {/* Wellness & Crisis Helplines (Deduplicated Numbers: 16328, 123, 988) */}
         <motion.div
           className="mb-6"
           initial={{ opacity: 0, y: 20 }}
           animate={{ opacity: 1, y: 0 }}
           transition={{ delay: 0.22 }}
         >
-          <div className="glass rounded-2xl overflow-hidden shadow-sm border border-purple-500/20">
+          <div className="glass rounded-2xl overflow-hidden shadow-sm">
             <button
               type="button"
               onClick={() => setShowHelplines(!showHelplines)}
               className="w-full p-4 flex items-center justify-between hover:bg-white/5 transition-colors text-start"
             >
               <div className="flex items-center gap-3">
-                <HeartHandshake className="w-5 h-5 text-purple-400" />
+                <HeartHandshake className="w-5 h-5" style={{ color: "var(--accent-solid)" }} />
                 <div>
-                  <p className="text-white font-medium text-sm">
+                  <p className="theme-text-primary font-medium text-sm">
                     {t("helpline.title")}
                   </p>
-                  <p className="text-white/60 text-xs">
+                  <p className="theme-text-secondary text-xs">
                     {t("helpline.subtitle")}
                   </p>
                 </div>
               </div>
               <ChevronDown
-                className={`w-4 h-4 text-purple-300 transition-transform ${
+                className={`w-4 h-4 theme-text-secondary transition-transform ${
                   showHelplines ? "rotate-180" : ""
                 }`}
               />
@@ -604,44 +808,53 @@ export default function SettingsPage() {
                 >
                   <a
                     href="tel:16328"
-                    className="flex items-center justify-between p-3 rounded-xl bg-white/5 hover:bg-white/10 transition-colors text-white"
+                    className="flex items-center justify-between p-3 rounded-xl recessed-well hover:opacity-95 transition-opacity theme-text-primary"
                   >
                     <div className="flex items-center gap-2.5">
                       <Phone className="w-4 h-4 text-emerald-400" />
                       <span>{t("helpline.egyptMental")}</span>
                     </div>
-                    <span className="text-[11px] font-semibold text-emerald-300 px-2 py-0.5 rounded-full bg-emerald-500/20">
+                    <span
+                      dir="ltr"
+                      className="text-[11px] font-semibold stat-positive px-2.5 py-0.5 rounded-full bg-emerald-500/20"
+                    >
                       16328
                     </span>
                   </a>
 
                   <a
                     href="tel:123"
-                    className="flex items-center justify-between p-3 rounded-xl bg-white/5 hover:bg-white/10 transition-colors text-white"
+                    className="flex items-center justify-between p-3 rounded-xl recessed-well hover:opacity-95 transition-opacity theme-text-primary"
                   >
                     <div className="flex items-center gap-2.5">
                       <Phone className="w-4 h-4 text-red-400" />
                       <span>{t("helpline.egyptEmergency")}</span>
                     </div>
-                    <span className="text-[11px] font-semibold text-red-300 px-2 py-0.5 rounded-full bg-red-500/20">
+                    <span
+                      dir="ltr"
+                      className="text-[11px] font-semibold stat-negative px-2.5 py-0.5 rounded-full bg-red-500/20"
+                    >
                       123
                     </span>
                   </a>
 
                   <a
                     href="tel:988"
-                    className="flex items-center justify-between p-3 rounded-xl bg-white/5 hover:bg-white/10 transition-colors text-white"
+                    className="flex items-center justify-between p-3 rounded-xl recessed-well hover:opacity-95 transition-opacity theme-text-primary"
                   >
                     <div className="flex items-center gap-2.5">
                       <Phone className="w-4 h-4 text-blue-400" />
                       <span>{t("helpline.international")}</span>
                     </div>
-                    <span className="text-[11px] font-semibold text-blue-300 px-2 py-0.5 rounded-full bg-blue-500/20">
+                    <span
+                      dir="ltr"
+                      className="text-[11px] font-semibold accent-pill px-2.5 py-0.5 rounded-full"
+                    >
                       988
                     </span>
                   </a>
 
-                  <p className="text-white/50 text-[11px] pt-1 leading-relaxed">
+                  <p className="theme-text-muted text-[11px] pt-1 leading-relaxed">
                     {t("helpline.note")}
                   </p>
                 </motion.div>
@@ -657,7 +870,7 @@ export default function SettingsPage() {
           animate={{ opacity: 1, y: 0 }}
           transition={{ delay: 0.25 }}
         >
-          <h2 className="text-xs font-semibold text-white/60 uppercase tracking-wider mb-2.5">
+          <h2 className="text-xs font-semibold theme-text-muted uppercase tracking-wider mb-2.5">
             {t("feedback.title")}
           </h2>
           <div className="glass rounded-2xl overflow-hidden shadow-sm">
@@ -666,20 +879,18 @@ export default function SettingsPage() {
               className="w-full p-4 flex items-center justify-between hover:bg-white/5 transition-colors text-start"
             >
               <div className="flex items-center gap-3">
-                <MessageSquare className="w-5 h-5 text-purple-400" />
+                <MessageSquare className="w-5 h-5" style={{ color: "var(--accent-solid)" }} />
                 <div>
-                  <p className="text-white font-medium text-sm">
+                  <p className="theme-text-primary font-medium text-sm">
                     {t("settings.sendFeedback")}
                   </p>
-                  <p className="text-white/60 text-xs">
+                  <p className="theme-text-secondary text-xs">
                     {t("settings.feedbackDesc")}
                   </p>
                 </div>
               </div>
               <ChevronRight
-                className={`w-4 h-4 text-purple-400/50 ${
-                  isRtl ? "rotate-180" : ""
-                }`}
+                className={`w-4 h-4 theme-text-muted ${isRtl ? "rotate-180" : ""}`}
               />
             </Link>
           </div>
@@ -692,15 +903,15 @@ export default function SettingsPage() {
           animate={{ opacity: 1, y: 0 }}
           transition={{ delay: 0.3 }}
         >
-          <h2 className="text-xs font-semibold text-white/60 uppercase tracking-wider mb-2.5">
+          <h2 className="text-xs font-semibold theme-text-muted uppercase tracking-wider mb-2.5">
             {t("settings.about")}
           </h2>
           <div className="glass rounded-2xl overflow-hidden shadow-sm divide-y divide-white/10">
             <div className="p-4 flex items-center gap-3">
-              <Info className="w-5 h-5 text-purple-400" />
+              <Info className="w-5 h-5" style={{ color: "var(--accent-solid)" }} />
               <div>
-                <p className="text-white font-medium text-sm">{t("app.title")}</p>
-                <p className="text-white/60 text-xs">{t("settings.version")}</p>
+                <p className="theme-text-primary font-medium text-sm">{t("app.title")}</p>
+                <p className="theme-text-secondary text-xs">{t("settings.version")}</p>
               </div>
             </div>
 
@@ -709,13 +920,13 @@ export default function SettingsPage() {
               className="w-full p-4 flex items-center justify-between hover:bg-white/5 transition-colors text-start"
             >
               <div className="flex items-center gap-3">
-                <Shield className="w-5 h-5 text-purple-400" />
-                <p className="text-white font-medium text-sm">
+                <Shield className="w-5 h-5" style={{ color: "var(--accent-solid)" }} />
+                <p className="theme-text-primary font-medium text-sm">
                   {t("legal.privacyPolicy")}
                 </p>
               </div>
               <ChevronRight
-                className={`w-4 h-4 text-white/40 ${isRtl ? "rotate-180" : ""}`}
+                className={`w-4 h-4 theme-text-muted ${isRtl ? "rotate-180" : ""}`}
               />
             </Link>
 
@@ -724,13 +935,13 @@ export default function SettingsPage() {
               className="w-full p-4 flex items-center justify-between hover:bg-white/5 transition-colors text-start"
             >
               <div className="flex items-center gap-3">
-                <FileText className="w-5 h-5 text-purple-400" />
-                <p className="text-white font-medium text-sm">
+                <FileText className="w-5 h-5" style={{ color: "var(--accent-solid)" }} />
+                <p className="theme-text-primary font-medium text-sm">
                   {t("legal.termsOfService")}
                 </p>
               </div>
               <ChevronRight
-                className={`w-4 h-4 text-white/40 ${isRtl ? "rotate-180" : ""}`}
+                className={`w-4 h-4 theme-text-muted ${isRtl ? "rotate-180" : ""}`}
               />
             </Link>
           </div>
@@ -745,7 +956,7 @@ export default function SettingsPage() {
               aria-modal="true"
             >
               <motion.div
-                className="w-full max-w-sm glass-modal rounded-3xl border border-white/20 p-6 text-center shadow-2xl text-white"
+                className="w-full max-w-sm glass-modal rounded-3xl border border-white/20 p-6 text-center shadow-2xl"
                 initial={{ scale: 0.9, opacity: 0 }}
                 animate={{ scale: 1, opacity: 1 }}
                 exit={{ scale: 0.9, opacity: 0 }}
@@ -753,24 +964,24 @@ export default function SettingsPage() {
                 <div className="w-12 h-12 rounded-full bg-red-500/20 text-red-400 flex items-center justify-center mx-auto mb-3">
                   <Trash2 className="w-6 h-6" />
                 </div>
-                <h3 className="text-base font-bold mb-1">
+                <h3 className="text-base font-bold mb-1 theme-text-primary">
                   {t("settings.clearConfirm")}
                 </h3>
-                <p className="text-white/60 text-xs mb-5">
+                <p className="theme-text-secondary text-xs mb-5">
                   {t("settings.clearWarning")}
                 </p>
                 <div className="flex gap-2.5">
                   <button
                     type="button"
                     onClick={() => setShowClearConfirm(false)}
-                    className="flex-1 py-2.5 rounded-xl bg-white/10 hover:bg-white/15 text-white font-medium text-sm transition-colors"
+                    className="flex-1 py-2.5 rounded-xl recessed-well theme-text-primary font-medium text-sm"
                   >
                     {t("settings.cancel")}
                   </button>
                   <button
                     type="button"
                     onClick={handleClearData}
-                    className="flex-1 py-2.5 rounded-xl bg-red-500 hover:bg-red-600 text-white font-medium text-sm transition-colors"
+                    className="flex-1 py-2.5 rounded-xl bg-red-500 hover:bg-red-600 text-white keep-white font-medium text-sm transition-colors"
                   >
                     {t("settings.deleteAll")}
                   </button>
@@ -779,7 +990,7 @@ export default function SettingsPage() {
             </div>
           )}
 
-          {/* Set PIN Modal (Track 1.2) */}
+          {/* Set PIN Modal (with inputMode="numeric") */}
           {showPinModal && (
             <div
               className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/70 backdrop-blur-md"
@@ -787,25 +998,25 @@ export default function SettingsPage() {
               aria-modal="true"
             >
               <motion.div
-                className="w-full max-w-xs glass-modal rounded-3xl border border-white/20 p-6 text-center shadow-2xl text-white"
+                className="w-full max-w-xs glass-modal rounded-3xl border border-white/20 p-6 text-center shadow-2xl"
                 initial={{ scale: 0.9, opacity: 0 }}
                 animate={{ scale: 1, opacity: 1 }}
                 exit={{ scale: 0.9, opacity: 0 }}
               >
-                <div className="w-12 h-12 rounded-2xl bg-purple-500/20 text-purple-300 flex items-center justify-center mx-auto mb-3">
+                <div className="w-12 h-12 rounded-2xl accent-pill flex items-center justify-center mx-auto mb-3">
                   <Lock className="w-6 h-6" />
                 </div>
-                <h3 className="text-base font-bold mb-1">
+                <h3 className="text-base font-bold mb-1 theme-text-primary">
                   {pinStep === "enter" ? t("lock.setPin") : t("lock.confirmPin")}
                 </h3>
-                <p className="text-white/60 text-xs mb-4">
-                  {pinStep === "enter"
-                    ? t("lock.subtitle")
-                    : t("lock.confirmPin")}
+                <p className="theme-text-secondary text-xs mb-4">
+                  {pinStep === "enter" ? t("lock.subtitle") : t("lock.confirmPin")}
                 </p>
 
                 <input
                   type="password"
+                  inputMode="numeric"
+                  autoComplete="one-time-code"
                   maxLength={4}
                   pattern="\d*"
                   autoFocus
@@ -819,7 +1030,7 @@ export default function SettingsPage() {
                       setConfirmPin(val);
                     }
                   }}
-                  className="w-32 py-2 text-center tracking-[1em] text-xl font-bold bg-white/10 rounded-xl border border-white/20 outline-none focus:border-purple-400 mx-auto block mb-3 text-white"
+                  className="w-32 py-2 text-center tracking-[1em] text-xl font-bold recessed-well rounded-xl outline-none mx-auto block mb-3 theme-text-primary"
                   placeholder="••••"
                 />
 
@@ -839,7 +1050,7 @@ export default function SettingsPage() {
                       setPinStep("enter");
                       setPinError("");
                     }}
-                    className="flex-1 py-2 rounded-xl bg-white/10 hover:bg-white/15 text-white text-xs font-medium transition-colors"
+                    className="flex-1 py-2 rounded-xl recessed-well theme-text-primary text-xs font-medium"
                   >
                     {t("settings.cancel")}
                   </button>
@@ -851,7 +1062,7 @@ export default function SettingsPage() {
                         ? newPin.length !== 4
                         : confirmPin.length !== 4
                     }
-                    className="flex-1 py-2 rounded-xl bg-purple-500 hover:bg-purple-600 disabled:opacity-50 text-white text-xs font-semibold transition-colors"
+                    className="flex-1 py-2 rounded-xl accent-gradient-btn disabled:opacity-50 text-xs font-semibold"
                   >
                     {pinStep === "enter" ? t("entry.save") : t("lock.setPin")}
                   </button>

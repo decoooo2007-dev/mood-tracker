@@ -3,7 +3,7 @@
 import { useState, useEffect } from "react";
 import { usePathname } from "next/navigation";
 import { motion, AnimatePresence } from "framer-motion";
-import { Download, X, Smartphone } from "lucide-react";
+import { Download, X, Smartphone, Share } from "lucide-react";
 import { useLanguage } from "@/lib/providers";
 
 interface BeforeInstallPromptEvent extends Event {
@@ -15,6 +15,7 @@ export default function InstallPrompt() {
   const pathname = usePathname();
   const { isRtl, t } = useLanguage();
   const [deferredPrompt, setDeferredPrompt] = useState<BeforeInstallPromptEvent | null>(null);
+  const [isIosDevice, setIsIosDevice] = useState(false);
   const [isVisible, setIsVisible] = useState(false);
   const [dismissed, setDismissed] = useState(false);
 
@@ -24,15 +25,23 @@ export default function InstallPrompt() {
       return;
     }
 
-    if (window.matchMedia("(display-mode: standalone)").matches) {
+    const nav = navigator as unknown as { standalone?: boolean };
+    const isStandalone =
+      window.matchMedia("(display-mode: standalone)").matches || Boolean(nav.standalone);
+    if (isStandalone) {
       return;
     }
+
+    const ua = navigator.userAgent || "";
+    const iosDetected =
+      /iphone|ipad|ipod/i.test(ua) && !(window as unknown as { MSStream?: unknown }).MSStream;
+    setIsIosDevice(iosDetected);
 
     let promptEvent: BeforeInstallPromptEvent | null = null;
     let timerId: ReturnType<typeof setTimeout> | null = null;
 
     const maybeRevealPrompt = () => {
-      if (!promptEvent) return;
+      if (!promptEvent && !iosDetected) return;
       const hasDisclaimer =
         localStorage.getItem("moodflow-disclaimer-acknowledged") ||
         localStorage.getItem("moodflow-disclaimer-accepted");
@@ -61,6 +70,11 @@ export default function InstallPrompt() {
 
     window.addEventListener("beforeinstallprompt", handleBeforeInstallPrompt);
     window.addEventListener("moodflow-onboarding-step", maybeRevealPrompt);
+
+    // Trigger check for iOS Safari users where beforeinstallprompt is not fired
+    if (iosDetected) {
+      maybeRevealPrompt();
+    }
 
     return () => {
       if (timerId) clearTimeout(timerId);
@@ -107,37 +121,60 @@ export default function InstallPrompt() {
         >
           <div className="glass-modal rounded-2xl border border-white/20 shadow-2xl p-4">
             <div className="flex items-start gap-3 mb-3">
-              <div className="w-12 h-12 rounded-xl bg-gradient-to-br from-purple-500 to-pink-500 flex items-center justify-center flex-shrink-0">
+              <div className="w-12 h-12 rounded-xl accent-avatar flex items-center justify-center flex-shrink-0">
                 <Smartphone className="w-6 h-6 text-white" />
               </div>
               <div className="flex-1 min-w-0">
-                <h3 className="text-white font-semibold text-sm mb-1">{t("install.title")}</h3>
-                <p className="text-white/60 text-xs leading-relaxed">{t("install.subtitle")}</p>
+                <h3 className="theme-text-primary font-semibold text-sm mb-1">
+                  {t("install.title")}
+                </h3>
+                <p className="theme-text-secondary text-xs leading-relaxed">
+                  {isIosDevice && !deferredPrompt ? t("install.iosGuide") : t("install.subtitle")}
+                </p>
               </div>
               <button
+                type="button"
                 onClick={handleDismiss}
-                className="p-1 hover:bg-white/10 rounded-lg transition-colors text-white/50"
+                className="p-1 hover:bg-white/10 rounded-lg transition-colors theme-text-muted"
                 aria-label="Dismiss"
               >
                 <X className="w-4 h-4" />
               </button>
             </div>
 
-            <div className="flex gap-2">
-              <button
-                onClick={handleDismiss}
-                className="flex-1 py-2 rounded-xl bg-white/10 text-white/80 hover:bg-white/20 transition-all text-xs font-medium"
-              >
-                {t("settings.cancel")}
-              </button>
-              <button
-                onClick={handleInstall}
-                className="flex-1 py-2 rounded-xl bg-gradient-to-r from-purple-500 to-pink-500 text-white hover:opacity-90 transition-all text-xs font-medium flex items-center justify-center gap-1.5"
-              >
-                <Download className="w-3.5 h-3.5" />
-                {t("install.button")}
-              </button>
-            </div>
+            {isIosDevice && !deferredPrompt ? (
+              <div className="flex items-center justify-between gap-2">
+                <div className="flex items-center gap-1.5 text-[11px] theme-text-secondary px-2.5 py-1.5 rounded-xl recessed-well flex-1">
+                  <Share className="w-3.5 h-3.5 shrink-0" style={{ color: "var(--accent-solid)" }} />
+                  <span className="truncate">{t("install.title")}</span>
+                </div>
+                <button
+                  type="button"
+                  onClick={handleDismiss}
+                  className="px-4 py-2 rounded-xl accent-gradient-btn text-xs font-medium shrink-0"
+                >
+                  {t("install.gotIt")}
+                </button>
+              </div>
+            ) : (
+              <div className="flex gap-2">
+                <button
+                  type="button"
+                  onClick={handleDismiss}
+                  className="flex-1 py-2 rounded-xl recessed-well theme-text-secondary hover:opacity-90 transition-all text-xs font-medium"
+                >
+                  {t("settings.cancel")}
+                </button>
+                <button
+                  type="button"
+                  onClick={handleInstall}
+                  className="flex-1 py-2 rounded-xl accent-gradient-btn transition-all text-xs font-medium flex items-center justify-center gap-1.5"
+                >
+                  <Download className="w-3.5 h-3.5" />
+                  {t("install.button")}
+                </button>
+              </div>
+            )}
           </div>
         </motion.div>
       )}

@@ -1,0 +1,1328 @@
+<!DOCTYPE html>
+<html lang="en" class="dark" dir="ltr">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>MoodFlow — Original UI Color & Motion Studio (8 Themes)</title>
+  <script src="https://www.gstatic.com/antigravity/web/dev/tailwindcss.min.js"></script>
+  <style>
+    :root {
+      --font-sans: 'Inter', system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Cairo', sans-serif;
+
+      /* Default Theme 1: Original Cosmic Amethyst */
+      --bg-primary: #0F0F14;
+      --bg-secondary: #1A1A24;
+      --bg-card: rgba(255, 255, 255, 0.1);
+      --text-primary: #ffffff;
+      --text-secondary: rgba(255, 255, 255, 0.65);
+      --text-tertiary: rgba(255, 255, 255, 0.42);
+      --border-color: rgba(255, 255, 255, 0.2);
+
+      --accent-from: #a855f7;
+      --accent-to: #ec4899;
+      --accent-solid: #a855f7;
+      --accent-soft: rgba(168, 85, 247, 0.22);
+      --accent-border: rgba(168, 85, 247, 0.38);
+      --accent-text: #d8b4fe;
+      --chart-stroke: #A78BFA;
+      --chart-dot: #F472B6;
+
+      --bg-gradient-start: #581c87;
+      --bg-gradient-mid: #312e81;
+      --bg-gradient-end: #1e3a8a;
+      --blob-1: rgba(139, 92, 246, 0.42);
+      --blob-2: rgba(59, 130, 246, 0.32);
+      --blob-3: rgba(236, 72, 153, 0.28);
+
+      --blob-speed: 20s;
+      --card-spring: cubic-bezier(0.22, 1, 0.36, 1);
+    }
+
+    * {
+      box-sizing: border-box;
+      -webkit-tap-highlight-color: transparent;
+    }
+
+    html {
+      scroll-behavior: smooth;
+    }
+
+    body {
+      margin: 0;
+      padding: 0;
+      font-family: var(--font-sans);
+      -webkit-font-smoothing: antialiased;
+      background: var(--bg-primary);
+      color: var(--text-primary);
+      transition: background-color 0.4s ease, color 0.3s ease;
+      overflow-x: hidden;
+    }
+
+    /* Exact MoodFlow Glassmorphism */
+    .glass {
+      backdrop-filter: blur(16px);
+      -webkit-backdrop-filter: blur(16px);
+      background: var(--bg-card);
+      border: 1px solid var(--border-color);
+      transition: transform 0.35s var(--card-spring),
+                  box-shadow 0.35s var(--card-spring),
+                  border-color 0.35s ease,
+                  background-color 0.35s ease;
+    }
+
+    html.light .glass {
+      background: var(--bg-secondary);
+      border: 1px solid var(--border-color);
+      box-shadow: 0 8px 32px rgba(31, 22, 51, 0.06);
+    }
+
+    .glass-modal {
+      backdrop-filter: blur(24px);
+      -webkit-backdrop-filter: blur(24px);
+      background: rgba(20, 19, 32, 0.92);
+      border: 1px solid rgba(255, 255, 255, 0.2);
+    }
+
+    html.light .glass-modal {
+      background: rgba(255, 255, 255, 0.94);
+      border: 1px solid rgba(0, 0, 0, 0.12);
+      box-shadow: 0 16px 40px rgba(15, 23, 42, 0.12);
+    }
+
+    /* Dynamic Accent Utilities matching MoodFlow's gradient buttons & pills */
+    .accent-gradient-btn {
+      background: linear-gradient(to right, var(--accent-from), var(--accent-to));
+      color: #ffffff !important;
+      transition: transform 0.25s var(--card-spring), box-shadow 0.25s ease, opacity 0.2s ease;
+    }
+    .accent-gradient-btn:hover {
+      opacity: 0.95;
+      box-shadow: 0 10px 25px -5px var(--accent-soft);
+    }
+    .accent-gradient-btn:active {
+      transform: scale(0.98);
+    }
+
+    .accent-avatar {
+      background: linear-gradient(135deg, var(--accent-from), var(--accent-to));
+      color: #ffffff !important;
+    }
+
+    .accent-pill {
+      background: var(--accent-soft);
+      border: 1px solid var(--accent-border);
+      color: var(--accent-text);
+    }
+
+    .accent-tag-active {
+      background: var(--accent-solid) !important;
+      color: #ffffff !important;
+      box-shadow: 0 4px 12px var(--accent-soft);
+    }
+
+    .nav-active-pill {
+      background: linear-gradient(135deg, var(--accent-from), var(--accent-to));
+      opacity: 0.45;
+    }
+
+    /* Exact GlassBackground.tsx Floating Blobs */
+    @keyframes floatBlob1 {
+      0%, 100% { transform: translate(0px, 0px) scale(1); }
+      50% { transform: translate(100px, 50px) scale(1.06); }
+    }
+    @keyframes floatBlob2 {
+      0%, 100% { transform: translate(0px, 0px) scale(1); }
+      50% { transform: translate(-80px, -60px) scale(1.08); }
+    }
+    @keyframes floatBlob3 {
+      0%, 100% { transform: translate(-50px, -30px) scale(1); }
+      50% { transform: translate(50px, 30px) scale(1.05); }
+    }
+    @keyframes floatParticle {
+      0%, 100% { transform: translateY(0px); opacity: 0.3; }
+      50% { transform: translateY(-22px); opacity: 0.65; }
+    }
+    @keyframes flamePulse {
+      0%, 100% { transform: scale(1) rotate(0deg); }
+      50% { transform: scale(1.16) rotate(-4deg); }
+    }
+    @keyframes emojiFloat {
+      0%, 100% { transform: translateY(0px) scale(1); }
+      50% { transform: translateY(-4px) scale(1.08); }
+    }
+    @keyframes shimmerSweep {
+      0% { background-position: -200% 0; }
+      100% { background-position: 200% 0; }
+    }
+    @keyframes cardEntrance {
+      from { opacity: 0; transform: translateY(18px) scale(0.985); }
+      to { opacity: 1; transform: translateY(0) scale(1); }
+    }
+
+    .blob-1 {
+      background: radial-gradient(circle, var(--blob-1) 0%, transparent 70%);
+      animation: floatBlob1 var(--blob-speed) ease-in-out infinite;
+      transition: background 0.8s ease;
+    }
+    .blob-2 {
+      background: radial-gradient(circle, var(--blob-2) 0%, transparent 70%);
+      animation: floatBlob2 calc(var(--blob-speed) * 1.25) ease-in-out infinite;
+      transition: background 0.8s ease;
+    }
+    .blob-3 {
+      background: radial-gradient(circle, var(--blob-3) 0%, transparent 70%);
+      animation: floatBlob3 calc(var(--blob-speed) * 0.9) ease-in-out infinite;
+      transition: background 0.8s ease;
+    }
+
+    /* Motion Preset Variations */
+    body[data-motion="elastic"] .glass:hover {
+      transform: translateY(-4px) scale(1.008);
+      box-shadow: 0 20px 40px -15px rgba(0, 0, 0, 0.35), 0 0 24px -4px var(--accent-soft);
+      border-color: var(--accent-border);
+    }
+    body[data-motion="elastic"] .mood-btn:hover {
+      transform: translateY(-6px) scale(1.06);
+    }
+    body[data-motion="elastic"] .mood-btn.selected .emoji-icon {
+      animation: emojiFloat 2.2s ease-in-out infinite;
+    }
+
+    body[data-motion="aurora"] {
+      --blob-speed: 10s;
+    }
+    body[data-motion="aurora"] .glass {
+      box-shadow: 0 12px 32px -8px rgba(0, 0, 0, 0.3), inset 0 1px 0 0 rgba(255, 255, 255, 0.25);
+    }
+    body[data-motion="aurora"] .mood-btn.selected {
+      box-shadow: 0 0 28px var(--mood-glow, var(--accent-soft));
+    }
+
+    body[data-motion="calm"] {
+      --blob-speed: 32s;
+    }
+    body[data-motion="calm"] .glass:hover {
+      transform: translateY(-2px);
+    }
+
+    .animate-enter {
+      animation: cardEntrance 0.45s var(--card-spring) both;
+    }
+    .flame-animated {
+      animation: flamePulse 2.4s ease-in-out infinite;
+    }
+
+    /* Range slider exact styling from globals.css */
+    input[type="range"] {
+      -webkit-appearance: none;
+      appearance: none;
+      background: transparent;
+      cursor: pointer;
+    }
+    input[type="range"]::-webkit-slider-thumb {
+      -webkit-appearance: none;
+      appearance: none;
+      width: 22px;
+      height: 22px;
+      border-radius: 50%;
+      background: #ffffff;
+      box-shadow: 0 2px 8px rgba(0, 0, 0, 0.35);
+      transition: transform 0.15s ease;
+    }
+    input[type="range"]::-webkit-slider-thumb:hover {
+      transform: scale(1.18);
+    }
+
+    /* Light Mode Text Overrides matching globals.css */
+    html.light .theme-text-primary { color: #0F172A !important; }
+    html.light .theme-text-secondary { color: #334155 !important; }
+    html.light .theme-text-muted { color: #64748B !important; }
+    html.light .surface-soft { background: rgba(15, 23, 42, 0.05) !important; border-color: rgba(15, 23, 42, 0.1) !important; }
+
+    /* Emoji stack */
+    .emoji {
+      font-family: "Apple Color Emoji", "Segoe UI Emoji", "Noto Color Emoji", sans-serif;
+    }
+
+    /* Particle burst animation on save */
+    @keyframes burstOut {
+      0% { transform: translate(0, 0) scale(0.5); opacity: 1; }
+      100% { transform: translate(var(--tx), var(--ty)) scale(1.3); opacity: 0; }
+    }
+    .burst-particle {
+      position: fixed;
+      pointer-events: none;
+      z-index: 100;
+      animation: burstOut 0.85s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+    }
+  </style>
+</head>
+<body data-motion="elastic">
+
+  <!-- ==================== COMPACT FLOATING STUDIO SWITCHER (TOP BAR) ==================== -->
+  <div class="sticky top-0 z-50 px-3 pt-2.5 pb-2 bg-black/55 backdrop-blur-xl border-b border-white/15 text-white">
+    <div class="max-w-5xl mx-auto flex flex-col gap-2">
+      <!-- Row 1: Title + Controls -->
+      <div class="flex flex-wrap items-center justify-between gap-2">
+        <div class="flex items-center gap-2">
+          <span class="px-2.5 py-0.5 rounded-full text-[11px] font-bold accent-gradient-btn">MoodFlow UI</span>
+          <span id="studio-bar-label" class="text-xs font-semibold text-white/90">
+            Same Original App Base — Pick Your Color Palette &amp; Animation Feel
+          </span>
+        </div>
+
+        <div class="flex flex-wrap items-center gap-1.5">
+          <!-- Motion Feel Selector -->
+          <div class="inline-flex items-center bg-white/10 rounded-xl p-0.5 border border-white/10 text-[11px]">
+            <button onclick="setMotion('elastic')" id="mot-elastic" class="px-2 py-1 rounded-lg font-medium transition-all bg-white/20 text-white">Spring 3D</button>
+            <button onclick="setMotion('aurora')" id="mot-aurora" class="px-2 py-1 rounded-lg font-medium transition-all text-white/70 hover:text-white">Mood Aura Glow</button>
+            <button onclick="setMotion('calm')" id="mot-calm" class="px-2 py-1 rounded-lg font-medium transition-all text-white/70 hover:text-white">Soft &amp; Calm</button>
+          </div>
+
+          <!-- Mood-Reactive Background Toggle -->
+          <button onclick="toggleMoodReactive()" id="btn-reactive" class="px-2.5 py-1 rounded-xl text-[11px] font-medium bg-emerald-500/25 border border-emerald-400/40 text-emerald-200 transition-all">
+            Mood-Reactive Blobs: ON
+          </button>
+
+          <!-- Dark / Light Toggle -->
+          <button onclick="toggleThemeMode()" id="btn-mode" class="px-2.5 py-1 rounded-xl text-[11px] font-medium bg-white/10 hover:bg-white/20 border border-white/15 text-white transition-all">
+            🌙 Dark
+          </button>
+
+          <!-- Language Toggle -->
+          <button onclick="toggleLocale()" id="btn-lang" class="px-2.5 py-1 rounded-xl text-[11px] font-semibold bg-white/10 hover:bg-white/20 border border-white/15 text-white transition-all">
+            عربي
+          </button>
+
+          <!-- Copy Selected Theme Button -->
+          <button onclick="copySelection()" id="btn-copy" class="px-3 py-1 rounded-xl text-[11px] font-bold accent-gradient-btn shadow">
+            Copy Choice
+          </button>
+        </div>
+      </div>
+
+      <!-- Row 2: 8 Color Palette Swatches -->
+      <div id="palette-bar" class="grid grid-cols-2 sm:grid-cols-4 lg:grid-cols-8 gap-1.5"></div>
+    </div>
+  </div>
+
+  <!-- ==================== EXACT MOODFLOW GLASSBACKGROUND + APP ==================== -->
+  <div class="min-h-screen relative overflow-hidden" id="moodflow-root">
+    <!-- Animated Gradient Mesh Background (Exact GlassBackground.tsx) -->
+    <div class="fixed inset-0 overflow-hidden pointer-events-none z-0">
+      <div
+        id="bg-mesh"
+        class="absolute inset-0 transition-all duration-700"
+        style="background: linear-gradient(to bottom right, var(--bg-gradient-start), var(--bg-gradient-mid), var(--bg-gradient-end));"
+      ></div>
+      <div class="blob-1 absolute w-[750px] h-[750px] rounded-full" style="top: -20%; left: -10%;"></div>
+      <div class="blob-2 absolute w-[600px] h-[600px] rounded-full" style="bottom: -10%; right: -5%;"></div>
+      <div class="blob-3 absolute w-[500px] h-[500px] rounded-full" style="top: 45%; left: 45%;"></div>
+
+      <!-- 5 Floating Decorative Circles from GlassBackground.tsx -->
+      <div class=" absolute w-4 h-4 rounded-full bg-white/10 backdrop-blur-sm" style="top: 20%; left: 12%; animation: floatParticle 3.5s ease-in-out infinite;"></div>
+      <div class=" absolute w-4 h-4 rounded-full bg-white/10 backdrop-blur-sm" style="top: 35%; left: 32%; animation: floatParticle 4.5s ease-in-out infinite 0.5s;"></div>
+      <div class=" absolute w-4 h-4 rounded-full bg-white/10 backdrop-blur-sm" style="top: 50%; left: 52%; animation: floatParticle 5.5s ease-in-out infinite 1s;"></div>
+      <div class=" absolute w-4 h-4 rounded-full bg-white/10 backdrop-blur-sm" style="top: 65%; left: 72%; animation: floatParticle 6.5s ease-in-out infinite 1.5s;"></div>
+      <div class=" absolute w-4 h-4 rounded-full bg-white/10 backdrop-blur-sm" style="top: 80%; left: 88%; animation: floatParticle 7.5s ease-in-out infinite 2s;"></div>
+    </div>
+
+    <!-- Main Content Container (Exact TodayPage / HistoryPage / SettingsPage) -->
+    <div id="page-container" class="relative z-10 max-w-4xl mx-auto px-4 py-8 md:px-6 md:py-10 pb-32"></div>
+
+    <!-- Breathing Exercise Modal (Exact BreathingExerciseModal.tsx) -->
+    <div id="breathing-modal" class="fixed inset-0 z-50 hidden items-center justify-center p-4 bg-black/75 backdrop-blur-md"></div>
+
+    <!-- Save Toast (Exact TodayPage.tsx) -->
+    <div id="save-toast" class="fixed top-20 left-1/2 -translate-x-1/2 z-50 hidden px-6 py-3 backdrop-blur-xl bg-emerald-500/95 text-white rounded-full border border-white/20 shadow-2xl items-center gap-2">
+      <span>✨</span>
+      <span id="save-toast-text" class="font-medium text-sm">Mood entry saved!</span>
+    </div>
+
+    <!-- Exact Floating Bottom Pill Navigation (Navigation.tsx) -->
+    <nav class="fixed bottom-5 left-0 right-0 z-40 flex justify-center pointer-events-none px-2">
+      <div class="pointer-events-auto max-w-[calc(100vw-1.5rem)]">
+        <div class="glass rounded-full px-2.5 py-1.5 flex items-center gap-1 shadow-2xl">
+          <div class="flex items-center" id="bottom-nav-items"></div>
+          <div class="w-px h-6 bg-white/20 mx-1"></div>
+          <button onclick="toggleLocale()" class="flex items-center gap-1 px-2.5 py-1.5 hover:bg-white/10 rounded-full transition-colors theme-text-primary text-xs font-semibold">
+            <span>🌐</span>
+            <span id="nav-lang-label">عربي</span>
+          </button>
+        </div>
+      </div>
+    </nav>
+  </div>
+
+  <script>
+    // ==================== 8 CURATED COLOR PALETTES ON THE ORIGINAL MOODFLOW BASE ====================
+    const PALETTES = [
+      {
+        id: 1,
+        nameEn: "1. Cosmic Amethyst",
+        nameAr: "١. البنفسجي الكوني",
+        descEn: "Original MoodFlow signature purple, indigo & pink glow",
+        descAr: "تصميم مد فلو الأصلي بتدرجات البنفسجي والوردي",
+        swatch: "linear-gradient(135deg, #581c87, #7c3aed, #ec4899)",
+        dark: {
+          bgStart: "#581c87", bgMid: "#312e81", bgEnd: "#1e3a8a",
+          blob1: "rgba(139, 92, 246, 0.44)", blob2: "rgba(59, 130, 246, 0.32)", blob3: "rgba(236, 72, 153, 0.28)",
+          accentFrom: "#a855f7", accentTo: "#ec4899", accentSolid: "#a855f7",
+          accentSoft: "rgba(168, 85, 247, 0.22)", accentBorder: "rgba(168, 85, 247, 0.4)", accentText: "#d8b4fe",
+          chartStroke: "#A78BFA", chartDot: "#F472B6", cardBg: "rgba(255, 255, 255, 0.1)"
+        },
+        light: {
+          bgStart: "#c084fc", bgMid: "#f3e8ff", bgEnd: "#fce7f3",
+          blob1: "rgba(168, 85, 247, 0.25)", blob2: "rgba(236, 72, 153, 0.2)", blob3: "rgba(99, 102, 241, 0.2)",
+          accentFrom: "#9333ea", accentTo: "#db2777", accentSolid: "#9333ea",
+          accentSoft: "rgba(147, 51, 234, 0.14)", accentBorder: "rgba(147, 51, 234, 0.3)", accentText: "#6b21a8",
+          chartStroke: "#7C3AED", chartDot: "#DB2777", cardBg: "rgba(255, 255, 255, 0.78)"
+        }
+      },
+      {
+        id: 2,
+        nameEn: "2. Northern Aurora",
+        nameAr: "٢. شفق الشمال",
+        descEn: "Deep midnight teal with bioluminescent emerald & cyan waves",
+        descAr: "أخضر زمردي وسماوي هادئ مستوحى من الشفق القطبي",
+        swatch: "linear-gradient(135deg, #064e3b, #0d9488, #38bdf8)",
+        dark: {
+          bgStart: "#042f2e", bgMid: "#0f172a", bgEnd: "#1e1b4b",
+          blob1: "rgba(16, 185, 129, 0.4)", blob2: "rgba(6, 182, 212, 0.34)", blob3: "rgba(99, 102, 241, 0.26)",
+          accentFrom: "#10b981", accentTo: "#06b6d4", accentSolid: "#10b981",
+          accentSoft: "rgba(16, 185, 129, 0.22)", accentBorder: "rgba(16, 185, 129, 0.4)", accentText: "#6ee7b7",
+          chartStroke: "#34D399", chartDot: "#22D3EE", cardBg: "rgba(255, 255, 255, 0.09)"
+        },
+        light: {
+          bgStart: "#6ee7b7", bgMid: "#ecfdf5", bgEnd: "#e0f2fe",
+          blob1: "rgba(16, 185, 129, 0.25)", blob2: "rgba(6, 182, 212, 0.22)", blob3: "rgba(56, 189, 248, 0.2)",
+          accentFrom: "#059669", accentTo: "#0284c7", accentSolid: "#059669",
+          accentSoft: "rgba(5, 150, 105, 0.14)", accentBorder: "rgba(5, 150, 105, 0.3)", accentText: "#065f46",
+          chartStroke: "#059669", chartDot: "#0284c7", cardBg: "rgba(255, 255, 255, 0.8)"
+        }
+      },
+      {
+        id: 3,
+        nameEn: "3. Sunset Rose & Amber",
+        nameAr: "٣. غروب الوردي والعنبر",
+        descEn: "Warm dusk berry with glowing coral rose & golden sunset",
+        descAr: "دفء الغروب بتدرجات الوردي المرجاني والعنبر الذهبي",
+        swatch: "linear-gradient(135deg, #831843, #f43f5e, #f59e0b)",
+        dark: {
+          bgStart: "#4c0519", bgMid: "#3b0764", bgEnd: "#1c1917",
+          blob1: "rgba(244, 63, 94, 0.4)", blob2: "rgba(245, 158, 11, 0.3)", blob3: "rgba(217, 70, 239, 0.26)",
+          accentFrom: "#f43f5e", accentTo: "#f59e0b", accentSolid: "#f43f5e",
+          accentSoft: "rgba(244, 63, 94, 0.22)", accentBorder: "rgba(244, 63, 94, 0.4)", accentText: "#fda4af",
+          chartStroke: "#FB7185", chartDot: "#FBBF24", cardBg: "rgba(255, 255, 255, 0.1)"
+        },
+        light: {
+          bgStart: "#fda4af", bgMid: "#fff1f2", bgEnd: "#fef3c7",
+          blob1: "rgba(244, 63, 94, 0.22)", blob2: "rgba(245, 158, 11, 0.22)", blob3: "rgba(236, 72, 153, 0.18)",
+          accentFrom: "#e11d48", accentTo: "#d97706", accentSolid: "#e11d48",
+          accentSoft: "rgba(225, 29, 72, 0.14)", accentBorder: "rgba(225, 29, 72, 0.3)", accentText: "#9f1239",
+          chartStroke: "#E11D48", chartDot: "#D97706", cardBg: "rgba(255, 255, 255, 0.82)"
+        }
+      },
+      {
+        id: 4,
+        nameEn: "4. Royal Sapphire & Gold",
+        nameAr: "٤. الياقوت الملكي والذهب",
+        descEn: "Deep Nile midnight sapphire with warm golden-amber highlights",
+        descAr: "أزرق ملكي عميق مع لمسات ذهبية دافئة وفاخرة",
+        swatch: "linear-gradient(135deg, #0f172a, #1d4ed8, #eab308)",
+        dark: {
+          bgStart: "#0a1128", bgMid: "#172554", bgEnd: "#0f172a",
+          blob1: "rgba(59, 130, 246, 0.38)", blob2: "rgba(234, 179, 8, 0.28)", blob3: "rgba(14, 165, 233, 0.25)",
+          accentFrom: "#3b82f6", accentTo: "#eab308", accentSolid: "#3b82f6",
+          accentSoft: "rgba(234, 179, 8, 0.2)", accentBorder: "rgba(234, 179, 8, 0.4)", accentText: "#fde047",
+          chartStroke: "#60A5FA", chartDot: "#FACC15", cardBg: "rgba(255, 255, 255, 0.09)"
+        },
+        light: {
+          bgStart: "#93c5fd", bgMid: "#eff6ff", bgEnd: "#fefce8",
+          blob1: "rgba(59, 130, 246, 0.22)", blob2: "rgba(234, 179, 8, 0.2)", blob3: "rgba(14, 165, 233, 0.18)",
+          accentFrom: "#1d4ed8", accentTo: "#ca8a04", accentSolid: "#1d4ed8",
+          accentSoft: "rgba(29, 78, 216, 0.14)", accentBorder: "rgba(29, 78, 216, 0.3)", accentText: "#1e40af",
+          chartStroke: "#2563EB", chartDot: "#CA8A04", cardBg: "rgba(255, 255, 255, 0.82)"
+        }
+      },
+      {
+        id: 5,
+        nameEn: "5. Ocean Bioluminescence",
+        nameAr: "٥. أعماق المحيط المضيئة",
+        descEn: "Tranquil deep-sea indigo with electric sky & aqua glow",
+        descAr: "هدوء أعماق البحر بتدرجات الأزرق السماوي والأكوا",
+        swatch: "linear-gradient(135deg, #0c4a6e, #0284c7, #6366f1)",
+        dark: {
+          bgStart: "#082f49", bgMid: "#0f172a", bgEnd: "#1e1b4b",
+          blob1: "rgba(56, 189, 248, 0.42)", blob2: "rgba(99, 102, 241, 0.34)", blob3: "rgba(45, 212, 191, 0.26)",
+          accentFrom: "#0ea5e9", accentTo: "#6366f1", accentSolid: "#0ea5e9",
+          accentSoft: "rgba(14, 165, 233, 0.22)", accentBorder: "rgba(14, 165, 233, 0.4)", accentText: "#7dd3fc",
+          chartStroke: "#38BDF8", chartDot: "#818CF8", cardBg: "rgba(255, 255, 255, 0.1)"
+        },
+        light: {
+          bgStart: "#38bdf8", bgMid: "#f0f9ff", bgEnd: "#e0e7ff",
+          blob1: "rgba(14, 165, 233, 0.26)", blob2: "rgba(99, 102, 241, 0.2)", blob3: "rgba(45, 212, 191, 0.2)",
+          accentFrom: "#0284c7", accentTo: "#4f46e5", accentSolid: "#0284c7",
+          accentSoft: "rgba(2, 132, 199, 0.14)", accentBorder: "rgba(2, 132, 199, 0.3)", accentText: "#0369a1",
+          chartStroke: "#0284c7", chartDot: "#4F46E5", cardBg: "rgba(255, 255, 255, 0.82)"
+        }
+      },
+      {
+        id: 6,
+        nameEn: "6. Botanical Mind Oasis",
+        nameAr: "٦. واحة الطبيعة الخضراء",
+        descEn: "Grounded forest sage, warm leaf green & soothing mint",
+        descAr: "أخضر طبيعي مريح للأعصاب مستوحى من الحدائق الهادئة",
+        swatch: "linear-gradient(135deg, #14532d, #22c55e, #84cc16)",
+        dark: {
+          bgStart: "#052e16", bgMid: "#14532d", bgEnd: "#0f172a",
+          blob1: "rgba(34, 197, 94, 0.38)", blob2: "rgba(132, 204, 22, 0.28)", blob3: "rgba(20, 184, 166, 0.28)",
+          accentFrom: "#22c55e", accentTo: "#14b8a6", accentSolid: "#22c55e",
+          accentSoft: "rgba(34, 197, 94, 0.22)", accentBorder: "rgba(34, 197, 94, 0.4)", accentText: "#86efac",
+          chartStroke: "#4ADE80", chartDot: "#A3E635", cardBg: "rgba(255, 255, 255, 0.09)"
+        },
+        light: {
+          bgStart: "#86efac", bgMid: "#f0fdf4", bgEnd: "#ecfccb",
+          blob1: "rgba(34, 197, 94, 0.24)", blob2: "rgba(132, 204, 22, 0.2)", blob3: "rgba(20, 184, 166, 0.18)",
+          accentFrom: "#16a34a", accentTo: "#0d9488", accentSolid: "#16a34a",
+          accentSoft: "rgba(22, 163, 74, 0.14)", accentBorder: "rgba(22, 163, 74, 0.3)", accentText: "#166534",
+          chartStroke: "#16A34A", chartDot: "#65A30D", cardBg: "rgba(255, 255, 255, 0.82)"
+        }
+      },
+      {
+        id: 7,
+        nameEn: "7. Lavender Silk & Peach",
+        nameAr: "٧. الخزامى الحريري والخوخ",
+        descEn: "Dreamy periwinkle violet with soft warm peach & rose",
+        descAr: "بنفسجي ناعم وهادئ مع لمسات الخوخ الدافئة",
+        swatch: "linear-gradient(135deg, #4338ca, #a855f7, #fb923c)",
+        dark: {
+          bgStart: "#311042", bgMid: "#1e1b4b", bgEnd: "#2e1065",
+          blob1: "rgba(192, 132, 252, 0.4)", blob2: "rgba(251, 146, 60, 0.3)", blob3: "rgba(244, 114, 182, 0.3)",
+          accentFrom: "#8b5cf6", accentTo: "#fb923c", accentSolid: "#8b5cf6",
+          accentSoft: "rgba(139, 92, 246, 0.22)", accentBorder: "rgba(139, 92, 246, 0.4)", accentText: "#e9d5ff",
+          chartStroke: "#C084FC", chartDot: "#FB923C", cardBg: "rgba(255, 255, 255, 0.11)"
+        },
+        light: {
+          bgStart: "#d8b4fe", bgMid: "#faf5ff", bgEnd: "#ffedd5",
+          blob1: "rgba(168, 85, 247, 0.22)", blob2: "rgba(251, 146, 60, 0.22)", blob3: "rgba(244, 114, 182, 0.2)",
+          accentFrom: "#7c3aed", accentTo: "#ea580c", accentSolid: "#7c3aed",
+          accentSoft: "rgba(124, 58, 237, 0.14)", accentBorder: "rgba(124, 58, 237, 0.3)", accentText: "#5b21b6",
+          chartStroke: "#7C3AED", chartDot: "#EA580C", cardBg: "rgba(255, 255, 255, 0.84)"
+        }
+      },
+      {
+        id: 8,
+        nameEn: "8. Obsidian Pearl Glass",
+        nameAr: "٨. زجاج الأوبسيديان واللؤلؤ",
+        descEn: "Sleek dark monochrome glass with subtle silver & violet rim light",
+        descAr: "تصميم زجاجي داكن فائق الأناقة بلمسات فضية هادئة",
+        swatch: "linear-gradient(135deg, #18181b, #52525b, #a1a1aa)",
+        dark: {
+          bgStart: "#09090b", bgMid: "#18181b", bgEnd: "#1e1b4b",
+          blob1: "rgba(161, 161, 170, 0.25)", blob2: "rgba(129, 140, 248, 0.22)", blob3: "rgba(244, 114, 182, 0.16)",
+          accentFrom: "#6366f1", accentTo: "#a855f7", accentSolid: "#6366f1",
+          accentSoft: "rgba(99, 102, 241, 0.2)", accentBorder: "rgba(255, 255, 255, 0.28)", accentText: "#e4e4e7",
+          chartStroke: "#A1A1AA", chartDot: "#818CF8", cardBg: "rgba(255, 255, 255, 0.07)"
+        },
+        light: {
+          bgStart: "#e4e4e7", bgMid: "#f8fafc", bgEnd: "#f1f5f9",
+          blob1: "rgba(100, 116, 139, 0.18)", blob2: "rgba(99, 102, 241, 0.15)", blob3: "rgba(148, 163, 184, 0.2)",
+          accentFrom: "#334155", accentTo: "#4f46e5", accentSolid: "#334155",
+          accentSoft: "rgba(51, 65, 85, 0.12)", accentBorder: "rgba(51, 65, 85, 0.25)", accentText: "#1e293b",
+          chartStroke: "#475569", chartDot: "#4F46E5", cardBg: "rgba(255, 255, 255, 0.88)"
+        }
+      }
+    ];
+
+    // Exact Mood Options from src/lib/moods.ts
+    const MOODS = [
+      { label: "Happy", ar: "سعيد", emoji: "😊", color: "#4ADE80", blob: "rgba(74, 222, 128, 0.45)" },
+      { label: "Calm", ar: "هادئ", emoji: "😌", color: "#60A5FA", blob: "rgba(96, 165, 250, 0.45)" },
+      { label: "Sad", ar: "حزين", emoji: "😢", color: "#818CF8", blob: "rgba(129, 140, 248, 0.45)" },
+      { label: "Frustrated", ar: "محبط", emoji: "😤", color: "#F87171", blob: "rgba(248, 113, 113, 0.45)" },
+      { label: "Tired", ar: "متعب", emoji: "😴", color: "#A78BFA", blob: "rgba(167, 139, 250, 0.45)" }
+    ];
+
+    const TAGS = [
+      { en: "Work", ar: "العمل" },
+      { en: "Family", ar: "العائلة" },
+      { en: "Exercise", ar: "الرياضة" },
+      { en: "Sleep", ar: "النوم" },
+      { en: "Study", ar: "الدراسة" },
+      { en: "Friends", ar: "الأصدقاء" },
+      { en: "Prayer", ar: "الصلاة" },
+      { en: "Relaxing", ar: "الاسترخاء" }
+    ];
+
+    const PROMPTS = {
+      Happy: {
+        en: ["What made you smile today?", "Who shared this joyful moment with you?"],
+        ar: ["ما الذي رسم الابتسامة على وجهك اليوم؟", "من شاركك هذه اللحظة الجميلة؟"]
+      },
+      Calm: {
+        en: ["What helped you feel grounded and peaceful?", "How can you carry this calm into tomorrow?"],
+        ar: ["ما الذي ساعدك على الشعور بالسكينة والهدوء؟", "كيف يمكنك الحفاظ على هذا الصفاء غداً؟"]
+      },
+      Sad: {
+        en: ["What is weighing on your heart right now?", "What is one gentle thing you can do for yourself?"],
+        ar: ["ما الذي يثقل قلبك في هذه اللحظة؟", "ما هو الشيء اللطيف الذي يمكنك تقديمه لنفسك الآن؟"]
+      },
+      Frustrated: {
+        en: ["What triggered this tension today?", "What part of this situation is within your control?"],
+        ar: ["ما الذي أثار هذا التوتر اليوم؟", "ما هو الجزء الذي يقع تحت سيطرتك في هذا الموقف؟"]
+      },
+      Tired: {
+        en: ["What drained your energy the most today?", "How can you give yourself permission to rest tonight?"],
+        ar: ["ما الذي استنزف طاقتك اليوم؟", "كيف يمكنك منح نفسك قسطاً كافياً من الراحة الليلة؟"]
+      }
+    };
+
+    const state = {
+      paletteId: 1,
+      mode: "dark",
+      motion: "elastic",
+      moodReactive: true,
+      locale: "en",
+      activeTab: "home", // home | history | settings
+      selectedMood: 0, // default Happy selected so user immediately sees the full MoodFlow card
+      intensity: 75,
+      selectedTags: ["Exercise", "Prayer"],
+      journalText: "",
+      showReflection: true,
+      entries: [
+        { id: "1", mood: "Happy", intensity: 85, time: "09:30 AM", dateEn: "Today", dateAr: "اليوم", tags: ["Exercise", "Prayer"], textEn: "Morning workout and peaceful start to the day.", textAr: "تمرين صباحي وبداية يوم هادئة وموفقة." },
+        { id: "2", mood: "Calm", intensity: 78, time: "09:15 PM", dateEn: "Yesterday", dateAr: "أمس", tags: ["Family", "Relaxing"], textEn: "Tea with family after finishing my tasks.", textAr: "جلسة هادئة مع العائلة بعد إنجاز المهام." },
+        { id: "3", mood: "Tired", intensity: 60, time: "11:00 PM", dateEn: "2 days ago", dateAr: "منذ يومين", tags: ["Study", "Work"], textEn: "Long study session, ready for good sleep.", textAr: "ساعات دراسة طويلة، أحتاج إلى نوم عميق." }
+      ]
+    };
+
+    function applyPaletteCSS() {
+      const pal = PALETTES.find(p => p.id === state.paletteId) || PALETTES[0];
+      const cfg = state.mode === "light" ? pal.light : pal.dark;
+      const root = document.documentElement;
+
+      root.style.setProperty("--bg-gradient-start", cfg.bgStart);
+      root.style.setProperty("--bg-gradient-mid", cfg.bgMid);
+      root.style.setProperty("--bg-gradient-end", cfg.bgEnd);
+
+      // If Mood-Reactive Blobs is ON and a mood is selected, blend blob-1 with the selected mood's aura
+      const moodObj = state.selectedMood !== null ? MOODS[state.selectedMood] : null;
+      root.style.setProperty("--blob-1", (state.moodReactive && moodObj) ? moodObj.blob : cfg.blob1);
+      root.style.setProperty("--blob-2", cfg.blob2);
+      root.style.setProperty("--blob-3", cfg.blob3);
+
+      root.style.setProperty("--accent-from", cfg.accentFrom);
+      root.style.setProperty("--accent-to", cfg.accentTo);
+      root.style.setProperty("--accent-solid", cfg.accentSolid);
+      root.style.setProperty("--accent-soft", cfg.accentSoft);
+      root.style.setProperty("--accent-border", cfg.accentBorder);
+      root.style.setProperty("--accent-text", cfg.accentText);
+      root.style.setProperty("--chart-stroke", cfg.chartStroke);
+      root.style.setProperty("--chart-dot", cfg.chartDot);
+      root.style.setProperty("--bg-card", cfg.cardBg);
+      root.style.setProperty("--bg-secondary", cfg.cardBg);
+      root.style.setProperty("--mood-glow", moodObj ? moodObj.blob : cfg.accentSoft);
+    }
+
+    function renderPaletteBar() {
+      const bar = document.getElementById("palette-bar");
+      const isAr = state.locale === "ar";
+      bar.innerHTML = PALETTES.map(p => {
+        const active = p.id === state.paletteId;
+        return `
+          <button
+            onclick="selectPalette(${p.id})"
+            class="flex items-center gap-2 px-2.5 py-1.5 rounded-xl text-start transition-all ${
+              active
+                ? "bg-white/25 ring-2 ring-white shadow-lg scale-[1.02]"
+                : "bg-white/5 hover:bg-white/15 opacity-80 hover:opacity-100"
+            }"
+          >
+            <span class="w-4 h-4 rounded-full shrink-0 border border-white/40 shadow-sm" style="background: ${p.swatch};"></span>
+            <span class="text-[11px] font-semibold truncate text-white">${isAr ? p.nameAr : p.nameEn}</span>
+          </button>
+        `;
+      }).join("");
+    }
+
+    function renderBottomNav() {
+      const isAr = state.locale === "ar";
+      const items = [
+        { id: "home", label: isAr ? "الرئيسية" : "Home", icon: "🏠" },
+        { id: "history", label: isAr ? "السجل" : "History", icon: "🕒" },
+        { id: "settings", label: isAr ? "الإعدادات" : "Settings", icon: "⚙️" }
+      ];
+      document.getElementById("bottom-nav-items").innerHTML = items.map(item => {
+        const isActive = state.activeTab === item.id;
+        return `
+          <button
+            onclick="setTab('${item.id}')"
+            class="relative flex flex-col items-center gap-0.5 px-4 py-1.5 rounded-full transition-all min-w-[68px]"
+          >
+            ${isActive ? `<div class="absolute inset-0 nav-active-pill rounded-full"></div>` : ""}
+            <span class="text-sm relative z-10">${item.icon}</span>
+            <span class="text-[10px] relative z-10 theme-text-primary ${isActive ? "font-bold" : "opacity-65"}">${item.label}</span>
+          </button>
+        `;
+      }).join("");
+      document.getElementById("nav-lang-label").textContent = isAr ? "EN" : "عربي";
+    }
+
+    function renderTodayPage() {
+      const isAr = state.locale === "ar";
+      const pal = PALETTES.find(p => p.id === state.paletteId) || PALETTES[0];
+      const moodObj = state.selectedMood !== null ? MOODS[state.selectedMood] : null;
+      const prompts = moodObj ? (isAr ? PROMPTS[moodObj.label].ar : PROMPTS[moodObj.label].en) : [];
+
+      return `
+        <!-- Active Palette Info Pill -->
+        <div class="flex items-center justify-center mb-4 animate-enter">
+          <div class="glass rounded-full px-4 py-1.5 flex items-center gap-2 text-xs shadow-sm">
+            <span class="w-2.5 h-2.5 rounded-full" style="background: ${pal.swatch};"></span>
+            <span class="theme-text-primary font-semibold">${isAr ? pal.nameAr : pal.nameEn}</span>
+            <span class="theme-text-muted">·</span>
+            <span class="theme-text-secondary">${isAr ? pal.descAr : pal.descEn}</span>
+          </div>
+        </div>
+
+        <!-- 1. Hero User Banner (Exact TodayPage.tsx lines 325-370) -->
+        <div class="glass rounded-full px-4 py-2.5 mb-6 shadow-lg animate-enter">
+          <div class="flex items-center justify-between">
+            <div class="flex items-center gap-3">
+              <div class="w-10 h-10 rounded-full accent-avatar flex items-center justify-center shadow-md font-bold text-base">
+                A
+              </div>
+              <div>
+                <p class="theme-text-secondary text-xs">${isAr ? "مرحباً بعودتك" : "Welcome back"}</p>
+                <p class="theme-text-primary font-semibold text-sm">@abdelrhman</p>
+              </div>
+            </div>
+
+            <div class="flex items-center gap-2">
+              <button
+                onclick="openBreathingModal()"
+                class="flex items-center gap-1.5 px-3 py-1.5 accent-pill rounded-full text-xs font-medium transition-transform hover:scale-105"
+              >
+                <span>🌬️</span>
+                <span>${isAr ? "تنفس هادئ" : "Calm Breath"}</span>
+              </button>
+
+              <div class="flex items-center gap-1.5 px-3 py-1.5 bg-white/10 surface-soft rounded-full">
+                <span class="flame-animated inline-block">🔥</span>
+                <div class="flex items-baseline gap-1">
+                  <span class="theme-text-primary font-bold text-sm">7</span>
+                  <span class="theme-text-secondary text-[10px]">${isAr ? "أيام متتالية" : "day streak"}</span>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- 2. Header Greeting (Exact TodayPage.tsx lines 373-394) -->
+        <div class="text-center mb-8 animate-enter" style="animation-delay: 0.05s;">
+          <div class="inline-flex items-center gap-2 px-4 py-1.5 glass rounded-full mb-3">
+            <span>✨</span>
+            <span class="text-xs theme-text-secondary font-medium">
+              ${isAr ? "تتبع مستمر منذ ٧ أيام" : "You're on a streak!"}
+            </span>
+            <span class="flame-animated">🔥</span>
+          </div>
+          <h1 class="text-3xl md:text-4xl font-bold theme-text-primary mb-2">
+            ${isAr ? "كيف تشعر الآن؟" : "How are you feeling?"}
+          </h1>
+          <p class="theme-text-secondary text-sm">
+            ${isAr ? "خذ لحظة هادئة للتواصل مع مشاعرك" : "Take a moment to check in with yourself"}
+          </p>
+        </div>
+
+        <!-- 3. Mood Selector Card (Exact TodayPage.tsx lines 397-655) -->
+        <div class="glass rounded-[2rem] p-5 md:p-6 mb-6 shadow-xl animate-enter" style="animation-delay: 0.1s;">
+          <div class="flex items-center justify-between mb-4">
+            <h2 class="text-sm font-semibold theme-text-primary flex items-center gap-2">
+              <span>💗</span>
+              <span>${isAr ? "اختر حالتك المزاجية" : "Select your mood"}</span>
+            </h2>
+
+            <!-- New subtle Today / Yesterday pill built into the original card header -->
+            <div class="inline-flex rounded-full bg-white/10 surface-soft p-0.5 text-[11px]">
+              <span class="px-2.5 py-0.5 rounded-full accent-gradient-btn font-semibold">${isAr ? "اليوم" : "Today"}</span>
+              <span class="px-2.5 py-0.5 rounded-full theme-text-secondary cursor-pointer">${isAr ? "أمس" : "Yesterday"}</span>
+            </div>
+          </div>
+
+          <!-- 5 Mood Options with Active Selection Ring & Mood-Colored Halo -->
+          <div class="grid grid-cols-5 gap-2 md:gap-3 mb-5">
+            ${MOODS.map((m, idx) => {
+              const isSelected = state.selectedMood === idx;
+              return `
+                <button
+                  onclick="selectMood(${idx})"
+                  class="mood-btn ${isSelected ? "selected" : ""} relative flex flex-col items-center justify-center p-2.5 md:p-4 rounded-2xl transition-all min-h-[76px] md:min-h-[90px] ${
+                    isSelected
+                      ? "ring-2 ring-white shadow-xl scale-105 bg-white/20 border border-white/40"
+                      : "bg-white/5 surface-soft hover:bg-white/10 border border-white/10"
+                  }"
+                  style="${isSelected ? `box-shadow: 0 10px 28px -6px ${m.blob};` : ""}"
+                >
+                  <span class="text-2xl md:text-3xl emoji emoji-icon">${m.emoji}</span>
+                  <span class="text-[11px] md:text-xs mt-1.5 font-medium theme-text-primary ${isSelected ? "font-bold" : "opacity-75"}">
+                    ${isAr ? m.ar : m.label}
+                  </span>
+                </button>
+              `;
+            }).join("")}
+          </div>
+
+          <!-- Mood Intensity Slider -->
+          <div class="mb-5 px-1">
+            <div class="flex justify-between items-center mb-2">
+              <span class="text-xs theme-text-secondary font-medium">${isAr ? "شدة الشعور" : "Mood Intensity"}</span>
+              <span id="intensity-readout" class="text-xs theme-text-primary font-bold">${state.intensity}%</span>
+            </div>
+            <div class="relative h-2.5 rounded-full bg-white/10 surface-soft overflow-hidden">
+              <div
+                id="intensity-fill"
+                class="absolute inset-y-0 start-0 rounded-full transition-all duration-150"
+                style="width: ${state.intensity}%; background: linear-gradient(to right, var(--accent-from), var(--accent-to));"
+              ></div>
+              <input
+                type="range"
+                min="1"
+                max="100"
+                value="${state.intensity}"
+                oninput="updateIntensity(this.value)"
+                class="absolute inset-0 w-full h-full opacity-0 cursor-pointer"
+              />
+            </div>
+          </div>
+
+          <!-- Tags + Guided Prompts + Journal Textarea -->
+          <div class="pt-4 border-t border-white/10">
+            <span class="text-xs theme-text-secondary mb-2 block">${isAr ? "الأنشطة والعوامل المؤثرة" : "What have you been up to?"}</span>
+            <div class="flex flex-wrap items-center gap-1.5 mb-4">
+              ${TAGS.map(tag => {
+                const active = state.selectedTags.includes(tag.en);
+                return `
+                  <button
+                    onclick="toggleTag('${tag.en}')"
+                    class="px-3 py-1 rounded-full text-xs font-medium transition-all ${
+                      active
+                        ? "accent-tag-active"
+                        : "bg-white/10 surface-soft theme-text-secondary hover:bg-white/20"
+                    }"
+                  >
+                    ${isAr ? tag.ar : tag.en}
+                  </button>
+                `;
+              }).join("")}
+            </div>
+
+            <!-- Guided Prompts -->
+            <div class="mb-3">
+              <span class="text-xs theme-text-secondary mb-1.5 flex items-center gap-1">
+                <span>✨</span>
+                <span>${isAr ? "أسئلة ملهمة للتدوين" : "Guided Reflection Prompts"}</span>
+              </span>
+              <div class="flex flex-wrap gap-1.5">
+                ${prompts.map(p => `
+                  <button
+                    onclick="appendPrompt('${p.replace(/'/g, "\\'")}')"
+                    class="px-2.5 py-1 rounded-xl text-[11px] accent-pill transition-transform hover:scale-[1.02] text-start"
+                  >
+                    ${p}
+                  </button>
+                `).join("")}
+              </div>
+            </div>
+
+            <textarea
+              id="journal-box"
+              oninput="state.journalText = this.value"
+              placeholder="${isAr ? "اكتب أفكارك ومشاعرك بحرية... (مشفر بالكامل)" : "Write your thoughts freely... (End-to-End Encrypted)"}"
+              class="w-full h-24 p-3.5 backdrop-blur-sm bg-white/10 surface-soft rounded-2xl border border-white/20 outline-none resize-none transition-all theme-text-primary text-sm"
+            >${state.journalText}</textarea>
+
+            <button
+              onclick="saveMoodEntry(event)"
+              class="mt-3.5 w-full py-3 rounded-xl font-semibold flex items-center justify-center gap-2 accent-gradient-btn shadow-lg"
+            >
+              <span>＋</span>
+              <span>${isAr ? "حفظ الحالة المزاجية" : "Save Mood Entry"}</span>
+            </button>
+          </div>
+        </div>
+
+        <!-- 4. Weekly AI Reflection Card (Exact TodayPage.tsx lines 713-783) -->
+        <div class="glass rounded-2xl p-4 md:p-5 mb-6 shadow-md animate-enter" style="animation-delay: 0.15s;">
+          <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-3 mb-2.5">
+            <div class="flex items-center gap-2">
+              <span>✨</span>
+              <span class="text-xs font-semibold theme-text-primary">
+                ${isAr ? "تأملات الذكاء الاصطناعي الأسبوعية" : "Weekly AI Reflection"}
+              </span>
+            </div>
+            <button
+              onclick="state.showReflection = !state.showReflection; renderPage();"
+              class="inline-flex items-center gap-1.5 px-3 py-1.5 accent-gradient-btn rounded-xl text-xs font-medium shadow self-start sm:self-auto"
+            >
+              <span>✨</span>
+              <span>${isAr ? "تحديث التأمل الأسبوعي" : "Generate Reflection"}</span>
+            </button>
+          </div>
+
+          <p class="theme-text-secondary text-xs font-medium leading-relaxed">
+            ${isAr
+              ? "يُظهر هذا الأسبوع توازناً إيجابياً ملحوظاً، خاصة في الأيام التي تبدأ فيها بالرياضة والصلاة."
+              : "Your week shows strong emotional balance, especially on mornings anchored by exercise and mindful routines."}
+          </p>
+
+          ${state.showReflection ? `
+            <div class="grid grid-cols-1 md:grid-cols-3 gap-2.5 mt-3.5 pt-3.5 border-t border-white/10">
+              <div class="p-3 bg-white/5 surface-soft rounded-xl border border-white/10">
+                <p class="text-[11px] font-semibold mb-1" style="color: var(--accent-text);">
+                  ${isAr ? "النمط الأسبوعي" : "Weekly Pattern"}
+                </p>
+                <p class="text-xs theme-text-secondary leading-relaxed">
+                  ${isAr ? "يرتفع صفاء ذهنك بنسبة ٢٦٪ في الفترات الصباحية." : "Your mood clarity rises by 26% during morning check-ins."}
+                </p>
+              </div>
+              <div class="p-3 bg-white/5 surface-soft rounded-xl border border-white/10">
+                <p class="text-[11px] font-semibold text-pink-300 mb-1">
+                  ${isAr ? "أقوى داعم إيجابي" : "Top Mood Booster"}
+                </p>
+                <p class="text-xs theme-text-secondary leading-relaxed">
+                  ${isAr ? "الرياضة والوقت العائلي كانا الأكثر ارتباطاً بالسعادة." : "Exercise and family downtime were your strongest positive drivers."}
+                </p>
+              </div>
+              <div class="p-3 bg-white/5 surface-soft rounded-xl border border-white/10">
+                <p class="text-[11px] font-semibold text-emerald-300 mb-1">
+                  ${isAr ? "عادة مقترحة" : "Suggested Habit"}
+                </p>
+                <p class="text-xs theme-text-secondary leading-relaxed">
+                  ${isAr ? "خصص ٥ دقائق للتنفس الهادئ قبل النوم لتقليل إجهاد الدراسة." : "Take 5 minutes of calm breathing before bed on heavy study days."}
+                </p>
+              </div>
+            </div>
+          ` : ""}
+        </div>
+
+        <!-- 5. Three-Card Stats Grid (Exact TodayPage.tsx lines 801-843) -->
+        <div class="grid grid-cols-3 gap-3 md:gap-4 mb-6 animate-enter" style="animation-delay: 0.2s;">
+          <div class="glass rounded-2xl p-4 text-center shadow-md">
+            <div class="flex items-center justify-center gap-1.5 mb-1" style="color: var(--accent-text);">
+              <span>📖</span>
+              <span class="text-2xl font-bold theme-text-primary">${state.entries.length + 24}</span>
+            </div>
+            <p class="text-xs theme-text-muted">${isAr ? "إجمالي التدوينات" : "Total Entries"}</p>
+          </div>
+
+          <div class="glass rounded-2xl p-4 text-center shadow-md">
+            <div class="flex items-center justify-center gap-1.5 text-orange-400 mb-1">
+              <span class="flame-animated">🔥</span>
+              <span class="text-2xl font-bold theme-text-primary">7</span>
+            </div>
+            <p class="text-xs theme-text-muted">${isAr ? "السلسلة الحالية" : "Day Streak"}</p>
+          </div>
+
+          <div class="glass rounded-2xl p-4 text-center shadow-md">
+            <div class="flex items-center justify-center gap-1.5 text-pink-400 mb-1">
+              <span>📅</span>
+              <span class="text-2xl font-bold theme-text-primary">5</span>
+            </div>
+            <p class="text-xs theme-text-muted">${isAr ? "هذا الأسبوع" : "This Week"}</p>
+          </div>
+        </div>
+
+        <!-- 6. Milestone Achievement Badges (Exact AchievementBadges.tsx) -->
+        <div class="glass rounded-3xl p-6 mb-6 shadow-xl animate-enter" style="animation-delay: 0.25s;">
+          <div class="flex items-center justify-between mb-4">
+            <div class="flex items-center gap-2">
+              <div class="w-8 h-8 rounded-xl bg-amber-500/20 flex items-center justify-center">🏆</div>
+              <div>
+                <h2 class="theme-text-primary font-semibold text-base">${isAr ? "شارات الإنجاز" : "Milestone Badges"}</h2>
+                <p class="theme-text-muted text-xs">${isAr ? "احتفل بالتزامك واستمراريتك" : "Celebrate your consistency and milestones"}</p>
+              </div>
+            </div>
+            <span class="text-xs font-semibold px-2.5 py-1 bg-white/10 surface-soft rounded-full theme-text-primary">3 / 5</span>
+          </div>
+
+          <div class="grid grid-cols-2 sm:grid-cols-5 gap-3">
+            ${[
+              { icon: "✨", titleEn: "First Check-In", titleAr: "أول تسجيل", reqEn: "1 entry", reqAr: "إدخال واحد", unlocked: true, grad: "from-emerald-400 to-teal-500" },
+              { icon: "⚡", titleEn: "3-Day Spark", titleAr: "شعلة ٣ أيام", reqEn: "3-day streak", reqAr: "سلسلة ٣ أيام", unlocked: true, grad: "from-amber-400 to-orange-500" },
+              { icon: "🔥", titleEn: "7-Day Flame", titleAr: "لهب ٧ أيام", reqEn: "7-day streak", reqAr: "سلسلة ٧ أيام", unlocked: true, grad: "from-orange-500 to-red-500" },
+              { icon: "💗", titleEn: "14-Day Mindful", titleAr: "وعي ١٤ يوماً", reqEn: "14-day streak", reqAr: "سلسلة ١٤ يوماً", unlocked: false, grad: "from-pink-500 to-rose-500" },
+              { icon: "🏆", titleEn: "30-Day Master", titleAr: "سيد المزاج", reqEn: "30-day streak", reqAr: "سلسلة ٣٠ يوماً", unlocked: false, grad: "from-yellow-400 to-amber-500" }
+            ].map(b => `
+              <div class="p-3.5 rounded-2xl flex flex-col items-center text-center transition-all ${
+                b.unlocked ? "bg-white/10 surface-soft border border-white/20" : "bg-white/5 surface-soft opacity-50"
+              }">
+                <div class="w-11 h-11 rounded-xl flex items-center justify-center mb-2 shadow-lg text-lg ${
+                  b.unlocked ? `bg-gradient-to-br ${b.grad} text-white` : "bg-white/10"
+                }">${b.icon}</div>
+                <span class="text-xs font-semibold theme-text-primary mb-0.5">${isAr ? b.titleAr : b.titleEn}</span>
+                <span class="text-[10px] theme-text-muted">${isAr ? b.reqAr : b.reqEn}</span>
+              </div>
+            `).join("")}
+          </div>
+        </div>
+
+        <!-- 7. Weekly Trend Area Chart (Exact TodayPage.tsx lines 852-873) -->
+        <div class="glass rounded-3xl p-6 mb-6 shadow-xl animate-enter" style="animation-delay: 0.3s;">
+          <div class="flex items-center justify-between mb-4">
+            <h2 class="text-base font-semibold theme-text-primary flex items-center gap-2">
+              <span>📈</span>
+              <span>${isAr ? "اتجاه المزاج الأسبوعي" : "Weekly Mood Trend"}</span>
+            </h2>
+            <span class="text-xs theme-text-muted">${isAr ? "آخر ٧ أيام" : "Last 7 days"}</span>
+          </div>
+
+          <div class="w-full h-36">
+            <svg viewBox="0 0 600 130" class="w-full h-full overflow-visible">
+              <defs>
+                <linearGradient id="areaGrad" x1="0" y1="0" x2="0" y2="1">
+                  <stop offset="0%" stop-color="var(--chart-stroke)" stop-opacity="0.45" />
+                  <stop offset="100%" stop-color="var(--chart-stroke)" stop-opacity="0.0" />
+                </linearGradient>
+              </defs>
+              <path d="M 20,75 C 90,65 130,35 190,40 C 250,45 290,80 350,55 C 410,30 460,25 510,30 C 550,34 570,22 585,18 L 585,105 L 20,105 Z" fill="url(#areaGrad)" />
+              <path d="M 20,75 C 90,65 130,35 190,40 C 250,45 290,80 350,55 C 410,30 460,25 510,30 C 550,34 570,22 585,18" fill="none" stroke="var(--chart-stroke)" stroke-width="3" stroke-linecap="round" />
+              ${[
+                { x: 20, y: 75, dEn: "Sat", dAr: "السبت" },
+                { x: 115, y: 52, dEn: "Sun", dAr: "الأحد" },
+                { x: 210, y: 42, dEn: "Mon", dAr: "الإثنين" },
+                { x: 305, y: 65, dEn: "Tue", dAr: "الثلاثاء" },
+                { x: 400, y: 38, dEn: "Wed", dAr: "الأربعاء" },
+                { x: 495, y: 28, dEn: "Thu", dAr: "الخميس" },
+                { x: 585, y: 18, dEn: "Fri", dAr: "الجمعة" }
+              ].map((pt, i) => `
+                <circle cx="${pt.x}" cy="${pt.y}" r="${i === 6 ? 5.5 : 4}" fill="${i === 6 ? "var(--chart-dot)" : "var(--chart-stroke)"}" />
+                <text x="${pt.x}" y="124" text-anchor="middle" fill="currentColor" class="text-[11px] opacity-65">${isAr ? pt.dAr : pt.dEn}</text>
+              `).join("")}
+            </svg>
+          </div>
+        </div>
+
+        <!-- 8. Today's Entries List (Exact TodayPage.tsx lines 876-935) -->
+        <div class="glass rounded-3xl p-6 shadow-xl mb-6 animate-enter" style="animation-delay: 0.35s;">
+          <h2 class="text-base font-semibold theme-text-primary mb-4 flex items-center gap-2">
+            <span>📖</span>
+            <span>${isAr ? "تدويناتك الأخيرة" : "Today's & Recent Check-ins"}</span>
+          </h2>
+          <div class="space-y-3">
+            ${state.entries.map(e => {
+              const m = MOODS.find(x => x.label === e.mood) || MOODS[0];
+              return `
+                <div class="p-4 backdrop-blur-sm bg-white/5 surface-soft rounded-2xl border border-white/10">
+                  <div class="flex items-center justify-between mb-2">
+                    <div class="flex items-center gap-3">
+                      <span class="text-2xl emoji">${m.emoji}</span>
+                      <div class="flex items-center gap-1.5">
+                        <span class="font-semibold theme-text-primary text-sm">${isAr ? m.ar : m.label}</span>
+                        <span class="theme-text-muted text-xs">·</span>
+                        <span class="theme-text-muted text-xs">${isAr ? e.dateAr : e.dateEn}</span>
+                      </div>
+                    </div>
+                    <span class="text-xs theme-text-secondary font-medium">${e.intensity}%</span>
+                  </div>
+                  <p class="theme-text-secondary text-sm leading-relaxed mb-2">${isAr ? e.textAr : e.textEn}</p>
+                  <div class="flex flex-wrap gap-1">
+                    ${e.tags.map(t => {
+                      const tObj = TAGS.find(x => x.en === t);
+                      return `<span class="px-2 py-0.5 bg-white/10 surface-soft rounded-full text-[10px] theme-text-secondary">#${isAr && tObj ? tObj.ar : t}</span>`;
+                    }).join("")}
+                  </div>
+                </div>
+              `;
+            }).join("")}
+          </div>
+        </div>
+      `;
+    }
+
+    function renderHistoryPage() {
+      const isAr = state.locale === "ar";
+      const cells = Array.from({ length: 91 }, (_, i) => {
+        const mod = (i * 7 + 3) % 11;
+        if (mod === 0) return "rgba(255,255,255,0.1)";
+        if (mod < 5) return "#4ADE80";
+        if (mod < 8) return "#60A5FA";
+        if (mod === 8) return "#A78BFA";
+        if (mod === 9) return "#818CF8";
+        return "#F87171";
+      });
+
+      return `
+        <div class="flex items-center justify-between mb-6 animate-enter">
+          <div>
+            <h1 class="text-3xl font-extrabold theme-text-primary mb-1">${isAr ? "سجل المزاج" : "Mood History"}</h1>
+            <p class="theme-text-secondary text-sm">${isAr ? "٢٧ تدوينة مسجلة" : "27 entries recorded"}</p>
+          </div>
+          <button class="px-4 py-2 accent-pill rounded-2xl text-xs font-semibold">
+            📄 ${isAr ? "التقرير الشهري" : "Monthly Report"}
+          </button>
+        </div>
+
+        <!-- 90-Day Year in Pixels Heatmap (Exact MoodHeatmap.tsx) -->
+        <div class="glass rounded-3xl p-6 mb-6 shadow-xl animate-enter" style="animation-delay: 0.05s;">
+          <div class="flex items-center justify-between mb-4">
+            <div class="flex items-center gap-2">
+              <div class="w-8 h-8 rounded-xl accent-pill flex items-center justify-center">📅</div>
+              <div>
+                <h2 class="theme-text-primary font-semibold text-base">${isAr ? "رحلتك بالألوان" : "Mood Heatmap"}</h2>
+                <p class="theme-text-muted text-xs">${isAr ? "آخر ٩٠ يوماً من رحلتك" : "Last 90 days of your journey"}</p>
+              </div>
+            </div>
+          </div>
+          <div class="overflow-x-auto pb-2">
+            <div class="inline-grid grid-rows-7 grid-flow-col gap-1.5">
+              ${cells.map(c => `<div class="w-3.5 h-3.5 sm:w-4 sm:h-4 rounded-[3px] transition-transform hover:scale-125" style="background: ${c};"></div>`).join("")}
+            </div>
+          </div>
+        </div>
+
+        <!-- Tag Impact Bar Card (Natural addition to HistoryPage using exact .glass card style) -->
+        <div class="glass rounded-3xl p-6 mb-6 shadow-xl animate-enter" style="animation-delay: 0.1s;">
+          <h2 class="text-base font-semibold theme-text-primary mb-3 flex items-center gap-2">
+            <span>✨</span>
+            <span>${isAr ? "تأثير الأنشطة على مزاجك" : "What Lifts vs. Drains Your Mood"}</span>
+          </h2>
+          <div class="space-y-2.5 text-xs">
+            <div class="flex items-center justify-between p-2.5 bg-white/5 surface-soft rounded-xl">
+              <span class="theme-text-primary font-medium">🏃 ${isAr ? "الرياضة" : "Exercise"}</span>
+              <span class="text-emerald-400 font-bold">+26%</span>
+            </div>
+            <div class="flex items-center justify-between p-2.5 bg-white/5 surface-soft rounded-xl">
+              <span class="theme-text-primary font-medium">🕌 ${isAr ? "الصلاة" : "Prayer"}</span>
+              <span class="text-emerald-400 font-bold">+22%</span>
+            </div>
+            <div class="flex items-center justify-between p-2.5 bg-white/5 surface-soft rounded-xl">
+              <span class="theme-text-primary font-medium">📚 ${isAr ? "ضغط الدراسة" : "Heavy Study"}</span>
+              <span class="text-rose-400 font-bold">-14%</span>
+            </div>
+          </div>
+        </div>
+      `;
+    }
+
+    function renderSettingsPage() {
+      const isAr = state.locale === "ar";
+      return `
+        <div class="mb-6 animate-enter">
+          <h1 class="text-3xl font-extrabold theme-text-primary mb-1">${isAr ? "الإعدادات" : "Settings"}</h1>
+          <p class="theme-text-secondary text-sm">${isAr ? "خصص تجربتك في مد فلو" : "Customize your MoodFlow experience"}</p>
+        </div>
+
+        <div class="glass rounded-2xl p-4 mb-4 flex items-center justify-between animate-enter">
+          <div>
+            <p class="theme-text-primary font-medium text-sm">${isAr ? "لوحة الألوان" : "Color Theme Palette"}</p>
+            <p class="theme-text-secondary text-xs">${isAr ? "اختر من ٨ لوحات ألوان متناسقة" : "Choose from 8 curated color palettes"}</p>
+          </div>
+          <span class="px-3 py-1 rounded-xl text-xs font-bold accent-gradient-btn">
+            #${state.paletteId}
+          </span>
+        </div>
+
+        <div class="glass rounded-2xl p-4 mb-4 flex items-center justify-between animate-enter" style="animation-delay: 0.05s;">
+          <div>
+            <p class="theme-text-primary font-medium text-sm">🔒 ${isAr ? "قفل التطبيق بالبصمة والرمز" : "PIN & Biometric App Lock"}</p>
+            <p class="theme-text-secondary text-xs">${isAr ? "حماية يومياتك المشفرة" : "Protect your encrypted journal"}</p>
+          </div>
+          <span class="px-3 py-1 rounded-xl text-xs font-semibold accent-pill">${isAr ? "مفعّل" : "Active"}</span>
+        </div>
+      `;
+    }
+
+    function renderPage() {
+      applyPaletteCSS();
+      renderPaletteBar();
+      renderBottomNav();
+
+      const container = document.getElementById("page-container");
+      if (state.activeTab === "home") {
+        container.innerHTML = renderTodayPage();
+      } else if (state.activeTab === "history") {
+        container.innerHTML = renderHistoryPage();
+      } else {
+        container.innerHTML = renderSettingsPage();
+      }
+    }
+
+    function selectPalette(id) {
+      state.paletteId = id;
+      renderPage();
+    }
+
+    function setMotion(motionType) {
+      state.motion = motionType;
+      document.body.setAttribute("data-motion", motionType);
+      ["elastic", "aurora", "calm"].forEach(m => {
+        const btn = document.getElementById("mot-" + m);
+        if (m === motionType) {
+          btn.className = "px-2 py-1 rounded-lg font-medium transition-all bg-white/25 text-white";
+        } else {
+          btn.className = "px-2 py-1 rounded-lg font-medium transition-all text-white/70 hover:text-white";
+        }
+      });
+    }
+
+    function toggleMoodReactive() {
+      state.moodReactive = !state.moodReactive;
+      const btn = document.getElementById("btn-reactive");
+      const isAr = state.locale === "ar";
+      if (state.moodReactive) {
+        btn.className = "px-2.5 py-1 rounded-xl text-[11px] font-medium bg-emerald-500/25 border border-emerald-400/40 text-emerald-200 transition-all";
+        btn.textContent = isAr ? "تفاعل الخلفية مع المزاج: مفعل" : "Mood-Reactive Blobs: ON";
+      } else {
+        btn.className = "px-2.5 py-1 rounded-xl text-[11px] font-medium bg-white/10 border border-white/15 text-white/70 transition-all";
+        btn.textContent = isAr ? "تفاعل الخلفية مع المزاج: متوقف" : "Mood-Reactive Blobs: OFF";
+      }
+      applyPaletteCSS();
+    }
+
+    function toggleThemeMode() {
+      state.mode = state.mode === "dark" ? "light" : "dark";
+      const root = document.documentElement;
+      root.classList.toggle("dark", state.mode === "dark");
+      root.classList.toggle("light", state.mode === "light");
+      document.getElementById("btn-mode").textContent = state.mode === "dark" ? "🌙 Dark" : "☀️ Light";
+      renderPage();
+    }
+
+    function toggleLocale() {
+      state.locale = state.locale === "en" ? "ar" : "en";
+      const isAr = state.locale === "ar";
+      document.documentElement.dir = isAr ? "rtl" : "ltr";
+      document.documentElement.lang = state.locale;
+      document.getElementById("btn-lang").textContent = isAr ? "EN" : "عربي";
+      document.getElementById("studio-bar-label").textContent = isAr
+        ? "نفس تصميم التطبيق الأصلي — اختر الألوان وحركة المؤثرات المفضلة لديك"
+        : "Same Original App Base — Pick Your Color Palette & Animation Feel";
+      toggleMoodReactive();
+      toggleMoodReactive();
+      renderPage();
+    }
+
+    function setTab(tab) {
+      state.activeTab = tab;
+      renderPage();
+    }
+
+    function selectMood(idx) {
+      state.selectedMood = idx;
+      renderPage();
+    }
+
+    function updateIntensity(val) {
+      state.intensity = parseInt(val, 10) || 50;
+      const r = document.getElementById("intensity-readout");
+      const f = document.getElementById("intensity-fill");
+      if (r) r.textContent = state.intensity + "%";
+      if (f) f.style.width = state.intensity + "%";
+    }
+
+    function toggleTag(tagEn) {
+      if (state.selectedTags.includes(tagEn)) {
+        state.selectedTags = state.selectedTags.filter(t => t !== tagEn);
+      } else {
+        state.selectedTags.push(tagEn);
+      }
+      renderPage();
+    }
+
+    function appendPrompt(text) {
+      state.journalText = state.journalText ? state.journalText + "\n" + text + " " : text + " ";
+      renderPage();
+    }
+
+    function spawnEmojiBurst(x, y, emoji) {
+      for (let i = 0; i < 10; i++) {
+        const el = document.createElement("div");
+        el.className = "burst-particle text-xl emoji";
+        el.textContent = emoji;
+        const angle = (Math.PI * 2 * i) / 10;
+        const dist = 45 + Math.random() * 55;
+        el.style.left = x + "px";
+        el.style.top = y + "px";
+        el.style.setProperty("--tx", Math.cos(angle) * dist + "px");
+        el.style.setProperty("--ty", Math.sin(angle) * dist - 25 + "px");
+        document.body.appendChild(el);
+        setTimeout(() => el.remove(), 900);
+      }
+    }
+
+    function saveMoodEntry(e) {
+      const m = MOODS[state.selectedMood ?? 0];
+      if (e && e.clientX) {
+        spawnEmojiBurst(e.clientX, e.clientY, m.emoji);
+      }
+      state.entries.unshift({
+        id: String(Date.now()),
+        mood: m.label,
+        intensity: state.intensity,
+        time: "Just now",
+        dateEn: "Today",
+        dateAr: "الآن",
+        tags: [...state.selectedTags],
+        textEn: state.journalText || "Checked in feeling " + m.label.toLowerCase() + ".",
+        textAr: state.journalText || "تم تسجيل الحالة المزاجية."
+      });
+      state.journalText = "";
+      const toast = document.getElementById("save-toast");
+      document.getElementById("save-toast-text").textContent =
+        state.locale === "ar" ? "تم حفظ حالتك المزاجية بنجاح!" : "Mood entry saved!";
+      toast.classList.remove("hidden");
+      toast.classList.add("flex");
+      setTimeout(() => {
+        toast.classList.add("hidden");
+        toast.classList.remove("flex");
+      }, 2200);
+      renderPage();
+    }
+
+    function openBreathingModal() {
+      const isAr = state.locale === "ar";
+      const modal = document.getElementById("breathing-modal");
+      modal.innerHTML = `
+        <div class="glass-modal rounded-3xl p-6 max-w-sm w-full text-center text-white border border-white/20 shadow-2xl">
+          <div class="flex items-center justify-between mb-4">
+            <span class="font-semibold text-sm">🌬️ ${isAr ? "تمرين التنفس ٤-٧-٨" : "4-7-8 Mindful Breathing"}</span>
+            <button onclick="closeBreathingModal()" class="p-1.5 rounded-full bg-white/10 hover:bg-white/20 text-xs">✕</button>
+          </div>
+          <div class="my-8 flex items-center justify-center">
+            <div class="w-40 h-40 rounded-full flex flex-col items-center justify-center border-2 border-white/40 shadow-2xl" style="background: radial-gradient(circle, var(--blob-1) 0%, transparent 70%); animation: floatBlob1 6s ease-in-out infinite;">
+              <span class="text-3xl font-bold">4</span>
+              <span class="text-xs uppercase tracking-widest opacity-80 mt-1">${isAr ? "شهيق هادئ" : "Inhale"}</span>
+            </div>
+          </div>
+          <p class="text-xs text-white/70">${isAr ? "استرخِ ودع التوتر يتلاشى" : "Relax your shoulders and breathe slowly"}</p>
+        </div>
+      `;
+      modal.classList.remove("hidden");
+      modal.classList.add("flex");
+    }
+
+    function closeBreathingModal() {
+      const modal = document.getElementById("breathing-modal");
+      modal.classList.add("hidden");
+      modal.classList.remove("flex");
+    }
+
+    function copySelection() {
+      const pal = PALETTES.find(p => p.id === state.paletteId) || PALETTES[0];
+      const text = `MoodFlow Theme #${pal.id} (${pal.nameEn}) | Motion: ${state.motion} | Mood-Reactive Blobs: ${state.moodReactive ? "ON" : "OFF"}`;
+      if (navigator.clipboard) {
+        navigator.clipboard.writeText(text).catch(() => {});
+      }
+      const btn = document.getElementById("btn-copy");
+      btn.textContent = state.locale === "ar" ? "تم النسخ ✓" : "Copied ✓";
+      setTimeout(() => {
+        btn.textContent = state.locale === "ar" ? "نسخ الاختيار" : "Copy Choice";
+      }, 1800);
+    }
+
+    renderPage();
+  </script>
+</body>
+</html>

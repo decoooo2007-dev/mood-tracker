@@ -1,0 +1,1448 @@
+<!DOCTYPE html>
+<html lang="en" class="dark" dir="ltr">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>MoodFlow — 11.html Visual MVP (Nile Sapphire, Readable Heatmap &amp; Editable Factors)</title>
+  <script src="https://www.gstatic.com/antigravity/web/dev/tailwindcss.min.js"></script>
+  <style>
+    :root {
+      --font-sans: 'Inter', system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Cairo', sans-serif;
+
+      /* Palette Variables (populated dynamically by JS for coherent Dark & Light) */
+      --bg-primary: #060C1A;
+      --bg-card-base: rgba(255, 255, 255, 0.06);
+      --text-primary: #FFFFFF;
+      --text-secondary: rgba(255, 255, 255, 0.72);
+      --text-tertiary: rgba(255, 255, 255, 0.50);
+      --border-color: rgba(255, 255, 255, 0.22);
+
+      --accent-from: #3b82f6;
+      --accent-via: #14b8a6;
+      --accent-to: #eab308;
+      --accent-solid: #3b82f6;
+      --accent-soft: rgba(59, 130, 246, 0.22);
+      --accent-border: rgba(96, 165, 250, 0.45);
+      --accent-text: #bfdbfe;
+
+      --chart-stroke: #60A5FA;
+      --chart-dot: #FACC15;
+
+      --bg-gradient-start: #070d1f;
+      --bg-gradient-mid: #172554;
+      --bg-gradient-end: #083344;
+      --blob-1: rgba(59, 130, 246, 0.42);
+      --blob-2: rgba(20, 184, 166, 0.30);
+      --blob-3: rgba(234, 179, 8, 0.24);
+
+      --spotlight-color: rgba(255, 255, 255, 0.18);
+      --spotlight-size: 520px;
+      --card-shadow: 0 24px 48px -12px rgba(0, 0, 0, 0.50);
+      --rim-top: rgba(255, 255, 255, 0.55);
+      --rim-left: rgba(255, 255, 255, 0.25);
+
+      --well-bg: rgba(8, 10, 20, 0.42);
+      --well-border: rgba(255, 255, 255, 0.14);
+
+      --card-spring: cubic-bezier(0.22, 1, 0.36, 1);
+      --mouse-x: 50%;
+      --mouse-y: 25%;
+    }
+
+    * {
+      box-sizing: border-box;
+      -webkit-tap-highlight-color: transparent;
+    }
+
+    html {
+      scroll-behavior: smooth;
+    }
+
+    body {
+      margin: 0;
+      padding: 0;
+      font-family: var(--font-sans);
+      -webkit-font-smoothing: antialiased;
+      background: var(--bg-primary);
+      color: var(--text-primary);
+      transition: background-color 0.4s ease, color 0.3s ease;
+      overflow-x: hidden;
+    }
+
+    /* ==================== VISION CRYSTAL SURFACE + CRYSTAL PEARL SPOTLIGHT ==================== */
+    .glass {
+      position: relative;
+      backdrop-filter: blur(28px) saturate(185%);
+      -webkit-backdrop-filter: blur(28px) saturate(185%);
+      background:
+        radial-gradient(
+          var(--spotlight-size) circle at var(--mouse-x, 50%) var(--mouse-y, 25%),
+          var(--spotlight-color),
+          var(--bg-card-base) 62%
+        );
+      border: 1px solid var(--border-color);
+      box-shadow:
+        inset 0 1.5px 0 0 var(--rim-top),
+        inset 1px 0 0 0 var(--rim-left),
+        inset 0 -1px 0 0 rgba(255, 255, 255, 0.08),
+        var(--card-shadow);
+      transition: transform 0.32s var(--card-spring),
+                  box-shadow 0.32s var(--card-spring),
+                  border-color 0.3s ease;
+    }
+
+    html.light .glass {
+      backdrop-filter: blur(28px) saturate(190%);
+      -webkit-backdrop-filter: blur(28px) saturate(190%);
+      background:
+        radial-gradient(
+          var(--spotlight-size) circle at var(--mouse-x, 50%) var(--mouse-y, 25%),
+          var(--spotlight-color),
+          var(--bg-card-base) 65%
+        );
+      border: 1px solid var(--border-color);
+      box-shadow:
+        inset 0 2px 0 0 rgba(255, 255, 255, 0.96),
+        inset 1px 0 0 0 rgba(255, 255, 255, 0.72),
+        var(--card-shadow);
+    }
+
+    .glass-modal {
+      backdrop-filter: blur(26px) saturate(180%);
+      -webkit-backdrop-filter: blur(26px) saturate(180%);
+      background: rgba(12, 16, 30, 0.94);
+      border: 1px solid rgba(255, 255, 255, 0.22);
+      box-shadow: 0 24px 60px rgba(0, 0, 0, 0.55);
+    }
+    html.light .glass-modal {
+      background: rgba(255, 255, 255, 0.95);
+      border: 1px solid rgba(15, 23, 42, 0.14);
+      box-shadow: 0 24px 55px rgba(15, 23, 42, 0.18);
+      color: #0F172A;
+    }
+
+    .recessed-well {
+      background: var(--well-bg);
+      border: 1px solid var(--well-border);
+      box-shadow: inset 0 2px 6px rgba(0, 0, 0, 0.28);
+    }
+    html.light .recessed-well {
+      background: var(--well-bg);
+      border: 1px solid var(--well-border);
+      box-shadow: inset 0 2px 5px rgba(15, 23, 42, 0.08);
+    }
+
+    /* ==================== HYBRID ORB-KEYCAPS, 3D KEYCAPS & GLOWING ORBS ==================== */
+    .mood-btn-hybrid {
+      border-radius: 1.65rem;
+      background: radial-gradient(circle at 35% 22%, rgba(255, 255, 255, 0.28), rgba(255, 255, 255, 0.05) 75%);
+      border: 1px solid rgba(255, 255, 255, 0.30);
+      box-shadow:
+        0 6px 0 0 rgba(0, 0, 0, 0.38),
+        0 12px 24px rgba(0, 0, 0, 0.30),
+        inset 0 2px 6px rgba(255, 255, 255, 0.45);
+      transform: translateY(-2px);
+      transition: transform 0.22s var(--card-spring), box-shadow 0.22s ease;
+    }
+    .mood-btn-hybrid:hover {
+      transform: translateY(-4px);
+    }
+    .mood-btn-hybrid:active,
+    .mood-btn-hybrid.selected {
+      transform: translateY(3px) scale(1.03) !important;
+      background: radial-gradient(circle at 35% 22%, rgba(255, 255, 255, 0.44), var(--mood-glow, var(--accent-soft)) 82%);
+      border-color: rgba(255, 255, 255, 0.85);
+      box-shadow:
+        0 1px 0 0 rgba(0, 0, 0, 0.4),
+        0 0 30px var(--mood-glow, var(--accent-soft)),
+        inset 0 2px 8px rgba(255, 255, 255, 0.65);
+    }
+    html.light .mood-btn-hybrid {
+      background: radial-gradient(circle at 35% 22%, #ffffff, rgba(241, 245, 249, 0.88) 78%);
+      border: 1px solid rgba(15, 23, 42, 0.12);
+      box-shadow:
+        0 5px 0 0 rgba(100, 116, 139, 0.25),
+        0 10px 20px rgba(15, 23, 42, 0.08),
+        inset 0 2px 5px #ffffff;
+    }
+    html.light .mood-btn-hybrid:active,
+    html.light .mood-btn-hybrid.selected {
+      background: radial-gradient(circle at 35% 22%, #ffffff, var(--mood-glow, var(--accent-soft)) 84%);
+      border-color: var(--mood-color, var(--accent-solid));
+      box-shadow:
+        0 1px 0 0 rgba(100, 116, 139, 0.28),
+        0 0 24px var(--mood-glow, var(--accent-soft)),
+        inset 0 2px 6px #ffffff;
+    }
+
+    .mood-btn-keycaps {
+      border-radius: 1.15rem;
+      background: linear-gradient(180deg, rgba(255, 255, 255, 0.18), rgba(255, 255, 255, 0.05));
+      border: 1px solid rgba(255, 255, 255, 0.26);
+      box-shadow:
+        0 6px 0 0 rgba(0, 0, 0, 0.42),
+        0 12px 22px rgba(0, 0, 0, 0.34),
+        inset 0 1.5px 0 rgba(255, 255, 255, 0.48);
+      transform: translateY(-2px);
+      transition: transform 0.2s var(--card-spring), box-shadow 0.2s ease;
+    }
+    .mood-btn-keycaps:active,
+    .mood-btn-keycaps.selected {
+      transform: translateY(3px) !important;
+      background: linear-gradient(180deg, rgba(255, 255, 255, 0.28), rgba(255, 255, 255, 0.12));
+      box-shadow:
+        0 1px 0 0 rgba(0, 0, 0, 0.45),
+        0 0 26px var(--mood-glow, var(--accent-soft)),
+        inset 0 1.5px 0 rgba(255, 255, 255, 0.6);
+    }
+    html.light .mood-btn-keycaps {
+      background: linear-gradient(180deg, rgba(255, 255, 255, 0.96), rgba(241, 245, 249, 0.85));
+      border: 1px solid rgba(15, 23, 42, 0.12);
+      box-shadow:
+        0 5px 0 0 rgba(100, 116, 139, 0.28),
+        0 10px 18px rgba(15, 23, 42, 0.08),
+        inset 0 2px 0 #ffffff;
+    }
+    html.light .mood-btn-keycaps.selected {
+      border-color: var(--mood-color, var(--accent-solid));
+      box-shadow:
+        0 1px 0 0 rgba(100, 116, 139, 0.3),
+        0 0 24px var(--mood-glow, var(--accent-soft)),
+        inset 0 2px 0 #ffffff;
+    }
+
+    .mood-btn-orbs {
+      border-radius: 9999px !important;
+      aspect-ratio: 1 / 1;
+      max-width: 96px;
+      margin: 0 auto;
+      width: 100%;
+      background: radial-gradient(circle at 30% 26%, rgba(255, 255, 255, 0.34), rgba(255, 255, 255, 0.05) 72%);
+      border: 1.5px solid rgba(255, 255, 255, 0.28);
+      box-shadow:
+        inset 0 2px 8px rgba(255, 255, 255, 0.4),
+        0 10px 24px rgba(0, 0, 0, 0.32);
+      transition: transform 0.25s var(--card-spring), box-shadow 0.25s ease;
+    }
+    .mood-btn-orbs.selected {
+      transform: scale(1.08);
+      border-color: rgba(255, 255, 255, 0.85);
+      background: radial-gradient(circle at 30% 26%, rgba(255, 255, 255, 0.5), var(--mood-glow, var(--accent-soft)) 78%);
+      box-shadow:
+        inset 0 2px 10px rgba(255, 255, 255, 0.65),
+        0 0 32px var(--mood-glow, var(--accent-soft));
+    }
+    html.light .mood-btn-orbs {
+      background: radial-gradient(circle at 30% 26%, #ffffff, rgba(226, 232, 240, 0.78) 76%);
+      border: 1.5px solid rgba(255, 255, 255, 0.95);
+    }
+    html.light .mood-btn-orbs.selected {
+      background: radial-gradient(circle at 30% 26%, #ffffff, var(--mood-glow, var(--accent-soft)) 82%);
+      border-color: var(--mood-color, var(--accent-solid));
+    }
+
+    /* ==================== ACCENTS & TEXT CONTRAST ==================== */
+    .accent-gradient-btn {
+      background: linear-gradient(110deg, var(--accent-from), var(--accent-via), var(--accent-to));
+      color: #ffffff !important;
+      transition: transform 0.25s var(--card-spring), box-shadow 0.25s ease, opacity 0.2s ease;
+    }
+    .accent-gradient-btn:hover {
+      opacity: 0.96;
+      box-shadow: 0 12px 28px -6px var(--accent-soft);
+    }
+    .accent-avatar {
+      background: linear-gradient(135deg, var(--accent-from), var(--accent-via), var(--accent-to));
+      color: #ffffff !important;
+    }
+    .accent-pill {
+      background: var(--accent-soft);
+      border: 1px solid var(--accent-border);
+      color: var(--accent-text);
+    }
+    .accent-tag-active {
+      background: linear-gradient(120deg, var(--accent-from), var(--accent-via)) !important;
+      color: #ffffff !important;
+      border-color: transparent !important;
+      box-shadow: 0 4px 14px var(--accent-soft);
+    }
+    .nav-active-pill {
+      background: linear-gradient(135deg, var(--accent-from), var(--accent-via), var(--accent-to));
+      opacity: 0.42;
+    }
+    html.light .nav-active-pill {
+      opacity: 0.24;
+    }
+
+    .stat-positive { color: #34d399; }
+    html.light .stat-positive { color: #059669; }
+    .stat-negative { color: #fb7185; }
+    html.light .stat-negative { color: #e11d48; }
+
+    /* ==================== ANIMATIONS & CHART HORIZONTAL FLIP ==================== */
+    @keyframes floatBlob1 {
+      0%, 100% { transform: translate(0px, 0px) scale(1); }
+      50% { transform: translate(90px, 45px) scale(1.07); }
+    }
+    @keyframes floatBlob2 {
+      0%, 100% { transform: translate(0px, 0px) scale(1); }
+      50% { transform: translate(-75px, -55px) scale(1.09); }
+    }
+    @keyframes floatBlob3 {
+      0%, 100% { transform: translate(-45px, -25px) scale(1); }
+      50% { transform: translate(45px, 25px) scale(1.06); }
+    }
+    @keyframes floatParticle {
+      0%, 100% { transform: translateY(0px); opacity: 0.35; }
+      50% { transform: translateY(-22px); opacity: 0.72; }
+    }
+    @keyframes flamePulse {
+      0%, 100% { transform: scale(1) rotate(0deg); }
+      50% { transform: scale(1.16) rotate(-4deg); }
+    }
+    @keyframes emojiFloat {
+      0%, 100% { transform: translateY(0px) scale(1); }
+      50% { transform: translateY(-4px) scale(1.08); }
+    }
+    @keyframes cardEntrance {
+      from { opacity: 0; transform: translateY(14px) scale(0.99); }
+      to { opacity: 1; transform: translateY(0) scale(1); }
+    }
+    @keyframes chartFlipAnim {
+      0% { transform: perspective(900px) rotateY(90deg) scaleX(0.75); opacity: 0.25; }
+      60% { transform: perspective(900px) rotateY(-6deg) scaleX(1.02); opacity: 1; }
+      100% { transform: perspective(900px) rotateY(0deg) scaleX(1); opacity: 1; }
+    }
+
+    .chart-flip-active {
+      animation: chartFlipAnim 0.6s cubic-bezier(0.22, 1, 0.36, 1) both;
+      transform-origin: center center;
+    }
+
+    .blob-1 {
+      background: radial-gradient(circle, var(--blob-1) 0%, transparent 70%);
+      animation: floatBlob1 20s ease-in-out infinite;
+      transition: background 0.8s ease;
+    }
+    .blob-2 {
+      background: radial-gradient(circle, var(--blob-2) 0%, transparent 70%);
+      animation: floatBlob2 25s ease-in-out infinite;
+      transition: background 0.8s ease;
+    }
+    .blob-3 {
+      background: radial-gradient(circle, var(--blob-3) 0%, transparent 70%);
+      animation: floatBlob3 18s ease-in-out infinite;
+      transition: background 0.8s ease;
+    }
+
+    .animate-enter {
+      animation: cardEntrance 0.42s var(--card-spring) both;
+    }
+    .flame-animated {
+      animation: flamePulse 2.4s ease-in-out infinite;
+    }
+    .mood-selected-emoji {
+      animation: emojiFloat 2.2s ease-in-out infinite;
+    }
+
+    input[type="range"] {
+      -webkit-appearance: none;
+      appearance: none;
+      background: transparent;
+      cursor: pointer;
+    }
+
+    .theme-text-primary { color: var(--text-primary); }
+    .theme-text-secondary { color: var(--text-secondary); }
+    .theme-text-muted { color: var(--text-tertiary); }
+
+    .emoji {
+      font-family: "Apple Color Emoji", "Segoe UI Emoji", "Noto Color Emoji", sans-serif;
+    }
+
+    @keyframes burstOut {
+      0% { transform: translate(0, 0) scale(0.5); opacity: 1; }
+      100% { transform: translate(var(--tx), var(--ty)) scale(1.3); opacity: 0; }
+    }
+    .burst-particle {
+      position: fixed;
+      pointer-events: none;
+      z-index: 100;
+      animation: burstOut 0.85s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+    }
+  </style>
+</head>
+<body data-spot="classic">
+
+  <!-- ==================== STUDIO CONTROL BAR ==================== -->
+  <div class="sticky top-0 z-50 px-3 pt-2.5 pb-2.5 bg-slate-950/80 backdrop-blur-2xl border-b border-white/15 text-white">
+    <div class="max-w-5xl mx-auto flex flex-col gap-2">
+      <!-- Row 1: Locked User Defaults & Controls -->
+      <div class="flex flex-wrap items-center justify-between gap-2">
+        <div class="flex items-center gap-2">
+          <span id="studio-badge" class="px-2.5 py-0.5 rounded-full text-[11px] font-bold accent-gradient-btn shadow">11.html MVP</span>
+          <span id="studio-title" class="text-xs font-semibold text-white/95">
+            Locked Defaults: Nile Sapphire × Hybrid Orb-Keycaps × Crystal Pearl (Dark: Reactive OFF · Light: Reactive ON)
+          </span>
+        </div>
+
+        <div class="flex flex-wrap items-center gap-1.5 text-[11px]">
+          <select onchange="setMoodStyle(this.value)" id="sel-mood-style" class="px-2.5 py-1 rounded-xl bg-white/10 border border-white/20 text-white outline-none cursor-pointer">
+            <option value="hybrid" class="bg-slate-900">Buttons: Hybrid Orb-Keycaps</option>
+            <option value="keycaps" class="bg-slate-900">Buttons: 3D Keycaps</option>
+            <option value="orbs" class="bg-slate-900">Buttons: Glowing Orbs</option>
+          </select>
+
+          <select onchange="setSpotlightStyle(this.value)" id="sel-spot-style" class="px-2.5 py-1 rounded-xl bg-white/10 border border-white/20 text-white outline-none cursor-pointer">
+            <option value="classic" class="bg-slate-900">Cursor Light: Crystal Pearl</option>
+            <option value="accent" class="bg-slate-900">Cursor Light: Accent Prism</option>
+          </select>
+
+          <button onclick="toggleMoodReactive()" id="btn-reactive" class="px-2.5 py-1 rounded-xl font-medium bg-white/10 border border-white/15 text-white/75 transition-all">
+            Mood-Reactive: OFF
+          </button>
+
+          <button onclick="toggleThemeMode()" id="btn-mode" class="px-2.5 py-1 rounded-xl font-semibold bg-white/15 hover:bg-white/25 border border-white/20 text-white transition-all">
+            🌙 Dark
+          </button>
+
+          <button onclick="toggleLocale()" id="btn-lang" class="px-2.5 py-1 rounded-xl font-semibold bg-white/15 hover:bg-white/25 border border-white/20 text-white transition-all">
+            عربي
+          </button>
+        </div>
+      </div>
+
+      <!-- Row 2: 8 Coherent Multi-Hue Palettes (#4 Nile Sapphire Selected by Default) -->
+      <div id="palette-bar" class="grid grid-cols-2 sm:grid-cols-4 lg:grid-cols-8 gap-1.5"></div>
+    </div>
+  </div>
+
+  <!-- ==================== EXACT MOODFLOW ROOT ==================== -->
+  <div class="min-h-screen relative overflow-hidden" id="moodflow-root">
+    <!-- Background Gradient + Floating Blobs -->
+    <div class="fixed inset-0 overflow-hidden pointer-events-none z-0">
+      <div
+        id="bg-mesh"
+        class="absolute inset-0 transition-all duration-700"
+        style="background: linear-gradient(135deg, var(--bg-gradient-start), var(--bg-gradient-mid), var(--bg-gradient-end));"
+      ></div>
+      <div class="blob-1 absolute w-[760px] h-[760px] rounded-full" style="top: -18%; left: -8%;"></div>
+      <div class="blob-2 absolute w-[620px] h-[620px] rounded-full" style="bottom: -12%; right: -6%;"></div>
+      <div class="blob-3 absolute w-[520px] h-[520px] rounded-full" style="top: 42%; left: 42%;"></div>
+
+      <div class="absolute w-3.5 h-3.5 rounded-full bg-white/15 backdrop-blur-sm" style="top: 20%; left: 14%; animation: floatParticle 3.8s ease-in-out infinite;"></div>
+      <div class="absolute w-3 h-3 rounded-full bg-white/15 backdrop-blur-sm" style="top: 38%; left: 78%; animation: floatParticle 4.6s ease-in-out infinite 0.5s;"></div>
+      <div class="absolute w-4 h-4 rounded-full bg-white/10 backdrop-blur-sm" style="top: 58%; left: 22%; animation: floatParticle 5.4s ease-in-out infinite 1s;"></div>
+    </div>
+
+    <!-- Main Content Container -->
+    <div id="page-container" class="relative z-10 max-w-4xl mx-auto px-4 py-7 md:px-6 md:py-9 pb-32"></div>
+
+    <!-- Save Toast -->
+    <div id="save-toast" class="fixed top-20 left-1/2 -translate-x-1/2 z-50 hidden px-6 py-3 backdrop-blur-xl bg-emerald-500/95 text-white rounded-full border border-white/25 shadow-2xl items-center gap-2">
+      <span>✨</span>
+      <span id="save-toast-text" class="font-medium text-sm">Mood entry saved!</span>
+    </div>
+
+    <!-- Full 4-Tab Floating Bottom Pill Navigation (Exact Navigation.tsx) -->
+    <nav class="fixed bottom-5 left-0 right-0 z-40 flex justify-center pointer-events-none px-2">
+      <div class="pointer-events-auto max-w-[calc(100vw-1.5rem)]">
+        <div class="glass rounded-full px-2 py-1.5 flex items-center gap-1 shadow-2xl">
+          <div class="flex items-center" id="bottom-nav-items"></div>
+          <div class="w-px h-6 bg-white/20 mx-0.5"></div>
+          <div class="flex items-center gap-0.5">
+            <button onclick="toggleLocale()" class="flex items-center gap-1 px-2.5 py-1.5 hover:bg-white/10 rounded-full transition-colors theme-text-primary text-[11px] font-semibold">
+              <span>🌐</span>
+              <span id="nav-lang-label">عربي</span>
+            </button>
+            <button title="Sign Out" class="p-2 hover:bg-white/10 rounded-full transition-colors theme-text-secondary text-xs">
+              🚪
+            </button>
+          </div>
+        </div>
+      </div>
+    </nav>
+  </div>
+
+  <script>
+    // Track cursor position inside each Vision Crystal card
+    window.addEventListener("mousemove", (e) => {
+      document.querySelectorAll(".glass").forEach((card) => {
+        const rect = card.getBoundingClientRect();
+        card.style.setProperty("--mouse-x", `${e.clientX - rect.left}px`);
+        card.style.setProperty("--mouse-y", `${e.clientY - rect.top}px`);
+      });
+    });
+
+    const PALETTES = [
+      {
+        id: 1,
+        nameEn: "1. Amethyst × Rose × Sky",
+        nameAr: "١. بنفسجي × وردي × سماوي",
+        swatch: "linear-gradient(135deg, #7c3aed, #ec4899, #38bdf8)",
+        dark: { bgPrimary: "#0A0914", bgStart: "#3b0764", bgMid: "#1e1b4b", bgEnd: "#0c4a6e", blob1: "rgba(168, 85, 247, 0.42)", blob2: "rgba(236, 72, 153, 0.30)", blob3: "rgba(56, 189, 248, 0.28)", accentFrom: "#a855f7", accentVia: "#ec4899", accentTo: "#38bdf8", accentSolid: "#a855f7", accentSoft: "rgba(168, 85, 247, 0.24)", accentBorder: "rgba(192, 132, 252, 0.44)", accentText: "#e9d5ff", spotPrism: "rgba(192, 132, 252, 0.24)", cardBase: "rgba(255, 255, 255, 0.065)", chartStroke: "#C084FC", chartDot: "#38BDF8" },
+        light: { bgPrimary: "#F3EFFE", bgStart: "#ddd6fe", bgMid: "#fce7f3", bgEnd: "#e0f2fe", blob1: "rgba(139, 92, 246, 0.36)", blob2: "rgba(236, 72, 153, 0.26)", blob3: "rgba(14, 165, 233, 0.28)", accentFrom: "#7c3aed", accentVia: "#db2777", accentTo: "#0284c7", accentSolid: "#7c3aed", accentSoft: "rgba(124, 58, 237, 0.13)", accentBorder: "rgba(124, 58, 237, 0.32)", accentText: "#5b21b6", spotPrism: "rgba(168, 85, 247, 0.18)", cardBase: "rgba(255, 255, 255, 0.64)", lightShadow: "rgba(109, 40, 217, 0.14)", chartStroke: "#7C3AED", chartDot: "#0284C7" }
+      },
+      {
+        id: 2,
+        nameEn: "2. Borealis Emerald × Violet",
+        nameAr: "٢. زمردي × فيروزي × بنفسجي",
+        swatch: "linear-gradient(135deg, #10b981, #06b6d4, #8b5cf6)",
+        dark: { bgPrimary: "#051116", bgStart: "#042f2e", bgMid: "#0f172a", bgEnd: "#2e1065", blob1: "rgba(16, 185, 129, 0.40)", blob2: "rgba(6, 182, 212, 0.32)", blob3: "rgba(139, 92, 246, 0.28)", accentFrom: "#10b981", accentVia: "#06b6d4", accentTo: "#8b5cf6", accentSolid: "#10b981", accentSoft: "rgba(16, 185, 129, 0.22)", accentBorder: "rgba(52, 211, 153, 0.44)", accentText: "#a7f3d0", spotPrism: "rgba(45, 212, 191, 0.22)", cardBase: "rgba(255, 255, 255, 0.06)", chartStroke: "#34D399", chartDot: "#A78BFA" },
+        light: { bgPrimary: "#ECFDF7", bgStart: "#d1fae5", bgMid: "#e0f2fe", bgEnd: "#ede9fe", blob1: "rgba(16, 185, 129, 0.34)", blob2: "rgba(6, 182, 212, 0.28)", blob3: "rgba(139, 92, 246, 0.24)", accentFrom: "#059669", accentVia: "#0891b2", accentTo: "#7c3aed", accentSolid: "#059669", accentSoft: "rgba(5, 150, 105, 0.13)", accentBorder: "rgba(5, 150, 105, 0.32)", accentText: "#065f46", spotPrism: "rgba(16, 185, 129, 0.18)", cardBase: "rgba(255, 255, 255, 0.66)", lightShadow: "rgba(5, 150, 105, 0.13)", chartStroke: "#059669", chartDot: "#7C3AED" }
+      },
+      {
+        id: 3,
+        nameEn: "3. Velvet Dusk: Indigo × Amber",
+        nameAr: "٣. نيلي × قرمزي × عنبر ذهبي",
+        swatch: "linear-gradient(135deg, #4f46e5, #f43f5e, #f59e0b)",
+        dark: { bgPrimary: "#110B14", bgStart: "#0f172a", bgMid: "#3b0764", bgEnd: "#431407", blob1: "rgba(99, 102, 241, 0.38)", blob2: "rgba(244, 63, 94, 0.32)", blob3: "rgba(245, 158, 11, 0.26)", accentFrom: "#6366f1", accentVia: "#f43f5e", accentTo: "#f59e0b", accentSolid: "#f43f5e", accentSoft: "rgba(244, 63, 94, 0.22)", accentBorder: "rgba(251, 113, 133, 0.44)", accentText: "#fecdd3", spotPrism: "rgba(251, 146, 60, 0.22)", cardBase: "rgba(255, 255, 255, 0.065)", chartStroke: "#FB7185", chartDot: "#FBBF24" },
+        light: { bgPrimary: "#FFF5F7", bgStart: "#e0e7ff", bgMid: "#ffe4e6", bgEnd: "#fef3c7", blob1: "rgba(99, 102, 241, 0.28)", blob2: "rgba(244, 63, 94, 0.28)", blob3: "rgba(245, 158, 11, 0.26)", accentFrom: "#4f46e5", accentVia: "#e11d48", accentTo: "#d97706", accentSolid: "#e11d48", accentSoft: "rgba(225, 29, 72, 0.12)", accentBorder: "rgba(225, 29, 72, 0.3)", accentText: "#9f1239", spotPrism: "rgba(244, 63, 94, 0.16)", cardBase: "rgba(255, 255, 255, 0.68)", lightShadow: "rgba(225, 29, 72, 0.12)", chartStroke: "#E11D48", chartDot: "#D97706" }
+      },
+      {
+        id: 4,
+        nameEn: "4. Nile Sapphire × Gold",
+        nameAr: "٤. ياقوت النيل × تركواز × ذهب",
+        swatch: "linear-gradient(135deg, #2563eb, #14b8a6, #eab308)",
+        dark: { bgPrimary: "#060C1A", bgStart: "#070d1f", bgMid: "#172554", bgEnd: "#083344", blob1: "rgba(59, 130, 246, 0.42)", blob2: "rgba(20, 184, 166, 0.30)", blob3: "rgba(234, 179, 8, 0.24)", accentFrom: "#3b82f6", accentVia: "#14b8a6", accentTo: "#eab308", accentSolid: "#3b82f6", accentSoft: "rgba(59, 130, 246, 0.22)", accentBorder: "rgba(96, 165, 250, 0.45)", accentText: "#bfdbfe", spotPrism: "rgba(234, 179, 8, 0.20)", cardBase: "rgba(255, 255, 255, 0.06)", chartStroke: "#60A5FA", chartDot: "#FACC15" },
+        light: { bgPrimary: "#EFF6FF", bgStart: "#dbeafe", bgMid: "#ccfbf1", bgEnd: "#fef9c3", blob1: "rgba(59, 130, 246, 0.30)", blob2: "rgba(20, 184, 166, 0.28)", blob3: "rgba(234, 179, 8, 0.24)", accentFrom: "#1d4ed8", accentVia: "#0d9488", accentTo: "#ca8a04", accentSolid: "#1d4ed8", accentSoft: "rgba(29, 78, 216, 0.12)", accentBorder: "rgba(29, 78, 216, 0.3)", accentText: "#1e3a8a", spotPrism: "rgba(59, 130, 246, 0.18)", cardBase: "rgba(255, 255, 255, 0.66)", lightShadow: "rgba(29, 78, 216, 0.12)", chartStroke: "#2563EB", chartDot: "#CA8A04" }
+      },
+      {
+        id: 5,
+        nameEn: "5. Cyber Prism: Cyan × Magenta",
+        nameAr: "٥. سايبر أزرق × نيلي × أرجواني",
+        swatch: "linear-gradient(135deg, #06b6d4, #6366f1, #e879f9)",
+        dark: { bgPrimary: "#070914", bgStart: "#082f49", bgMid: "#1e1b4b", bgEnd: "#4a044e", blob1: "rgba(34, 211, 238, 0.38)", blob2: "rgba(99, 102, 241, 0.35)", blob3: "rgba(232, 121, 249, 0.28)", accentFrom: "#06b6d4", accentVia: "#6366f1", accentTo: "#d946ef", accentSolid: "#0ea5e9", accentSoft: "rgba(6, 182, 212, 0.22)", accentBorder: "rgba(56, 189, 248, 0.44)", accentText: "#bae6fd", spotPrism: "rgba(56, 189, 248, 0.24)", cardBase: "rgba(255, 255, 255, 0.065)", chartStroke: "#22D3EE", chartDot: "#E879F9" },
+        light: { bgPrimary: "#ECFEFF", bgStart: "#cffafe", bgMid: "#e0e7ff", bgEnd: "#fae8ff", blob1: "rgba(6, 182, 212, 0.32)", blob2: "rgba(99, 102, 241, 0.26)", blob3: "rgba(217, 70, 239, 0.24)", accentFrom: "#0284c7", accentVia: "#4f46e5", accentTo: "#c026d3", accentSolid: "#0284c7", accentSoft: "rgba(2, 132, 199, 0.13)", accentBorder: "rgba(2, 132, 199, 0.32)", accentText: "#075985", spotPrism: "rgba(6, 182, 212, 0.2)", cardBase: "rgba(255, 255, 255, 0.66)", lightShadow: "rgba(2, 132, 199, 0.13)", chartStroke: "#0284C7", chartDot: "#C026D3" }
+      },
+      {
+        id: 6,
+        nameEn: "6. Oasis Sage × Sand",
+        nameAr: "٦. واحة خضراء × فيروزي × رمل دافئ",
+        swatch: "linear-gradient(135deg, #22c55e, #0d9488, #d97706)",
+        dark: { bgPrimary: "#06120D", bgStart: "#052e16", bgMid: "#112a2e", bgEnd: "#292018", blob1: "rgba(34, 197, 94, 0.38)", blob2: "rgba(20, 184, 166, 0.30)", blob3: "rgba(245, 158, 11, 0.22)", accentFrom: "#22c55e", accentVia: "#14b8a6", accentTo: "#f59e0b", accentSolid: "#22c55e", accentSoft: "rgba(34, 197, 94, 0.20)", accentBorder: "rgba(74, 222, 128, 0.42)", accentText: "#bbf7d0", spotPrism: "rgba(74, 222, 128, 0.22)", cardBase: "rgba(255, 255, 255, 0.06)", chartStroke: "#4ADE80", chartDot: "#FBBF24" },
+        light: { bgPrimary: "#F0FDF4", bgStart: "#dcfce7", bgMid: "#ccfbf1", bgEnd: "#fef3c7", blob1: "rgba(34, 197, 94, 0.30)", blob2: "rgba(20, 184, 166, 0.26)", blob3: "rgba(245, 158, 11, 0.24)", accentFrom: "#16a34a", accentVia: "#0d9488", accentTo: "#d97706", accentSolid: "#16a34a", accentSoft: "rgba(22, 163, 74, 0.13)", accentBorder: "rgba(22, 163, 74, 0.32)", accentText: "#166534", spotPrism: "rgba(34, 197, 94, 0.18)", cardBase: "rgba(255, 255, 255, 0.68)", lightShadow: "rgba(22, 163, 74, 0.12)", chartStroke: "#16A34A", chartDot: "#D97706" }
+      },
+      {
+        id: 7,
+        nameEn: "7. Celestial Plum × Peach",
+        nameAr: "٧. خزامى × أزرق سماوي × خوخ دافئ",
+        swatch: "linear-gradient(135deg, #8b5cf6, #3b82f6, #fb923c)",
+        dark: { bgPrimary: "#0E0B1A", bgStart: "#2e1065", bgMid: "#1e1b4b", bgEnd: "#431407", blob1: "rgba(167, 139, 250, 0.40)", blob2: "rgba(96, 165, 250, 0.30)", blob3: "rgba(251, 146, 60, 0.26)", accentFrom: "#8b5cf6", accentVia: "#3b82f6", accentTo: "#fb923c", accentSolid: "#8b5cf6", accentSoft: "rgba(139, 92, 246, 0.22)", accentBorder: "rgba(167, 139, 250, 0.44)", accentText: "#ddd6fe", spotPrism: "rgba(251, 146, 60, 0.22)", cardBase: "rgba(255, 255, 255, 0.068)", chartStroke: "#A78BFA", chartDot: "#FB923C" },
+        light: { bgPrimary: "#FAF5FF", bgStart: "#f3e8ff", bgMid: "#dbeafe", bgEnd: "#ffedd5", blob1: "rgba(168, 85, 247, 0.28)", blob2: "rgba(59, 130, 246, 0.26)", blob3: "rgba(251, 146, 60, 0.26)", accentFrom: "#7c3aed", accentVia: "#2563eb", accentTo: "#ea580c", accentSolid: "#7c3aed", accentSoft: "rgba(124, 58, 237, 0.12)", accentBorder: "rgba(124, 58, 237, 0.3)", accentText: "#5b21b6", spotPrism: "rgba(168, 85, 247, 0.16)", cardBase: "rgba(255, 255, 255, 0.68)", lightShadow: "rgba(124, 58, 237, 0.12)", chartStroke: "#7C3AED", chartDot: "#EA580C" }
+      },
+      {
+        id: 8,
+        nameEn: "8. Obsidian × Iridescent Pearl",
+        nameAr: "٨. أوبسيديان × لؤلؤي قزحي",
+        swatch: "linear-gradient(135deg, #334155, #818cf8, #f472b6)",
+        dark: { bgPrimary: "#09090D", bgStart: "#09090b", bgMid: "#18181b", bgEnd: "#1e1b4b", blob1: "rgba(148, 163, 184, 0.26)", blob2: "rgba(129, 140, 248, 0.26)", blob3: "rgba(244, 114, 182, 0.20)", accentFrom: "#6366f1", accentVia: "#a855f7", accentTo: "#ec4899", accentSolid: "#6366f1", accentSoft: "rgba(129, 140, 248, 0.22)", accentBorder: "rgba(165, 180, 252, 0.4)", accentText: "#e0e7ff", spotPrism: "rgba(255, 255, 255, 0.22)", cardBase: "rgba(255, 255, 255, 0.055)", chartStroke: "#94A3B8", chartDot: "#818CF8" },
+        light: { bgPrimary: "#F1F5F9", bgStart: "#e2e8f0", bgMid: "#ede9fe", bgEnd: "#fce7f3", blob1: "rgba(100, 116, 139, 0.24)", blob2: "rgba(99, 102, 241, 0.24)", blob3: "rgba(236, 72, 153, 0.2)", accentFrom: "#334155", accentVia: "#4f46e5", accentTo: "#db2777", accentSolid: "#334155", accentSoft: "rgba(51, 65, 85, 0.12)", accentBorder: "rgba(51, 65, 85, 0.28)", accentText: "#1e293b", spotPrism: "rgba(99, 102, 241, 0.16)", cardBase: "rgba(255, 255, 255, 0.72)", lightShadow: "rgba(51, 65, 85, 0.12)", chartStroke: "#475569", chartDot: "#4F46E5" }
+      }
+    ];
+
+    const MOODS = [
+      { label: "Happy", ar: "سعيد", emoji: "😊", color: "#4ADE80", blob: "rgba(74, 222, 128, 0.44)", days: 14 },
+      { label: "Calm", ar: "هادئ", emoji: "😌", color: "#60A5FA", blob: "rgba(96, 165, 250, 0.44)", days: 8 },
+      { label: "Tired", ar: "متعب", emoji: "😴", color: "#A78BFA", blob: "rgba(167, 139, 250, 0.44)", days: 3 },
+      { label: "Sad", ar: "حزين", emoji: "😢", color: "#818CF8", blob: "rgba(129, 140, 248, 0.44)", days: 1 },
+      { label: "Frustrated", ar: "محبط", emoji: "😤", color: "#F87171", blob: "rgba(248, 113, 113, 0.44)", days: 1 }
+    ];
+
+    const TAGS = [
+      { en: "Work", ar: "العمل" },
+      { en: "Family", ar: "العائلة" },
+      { en: "Exercise", ar: "الرياضة" },
+      { en: "Sleep", ar: "النوم" },
+      { en: "Study", ar: "الدراسة" },
+      { en: "Friends", ar: "الأصدقاء" },
+      { en: "Prayer", ar: "الصلاة" },
+      { en: "Relaxing", ar: "الاسترخاء" }
+    ];
+
+    const WEEKLY_SERIES = [
+      { xBase: 24,  y: 78, dEn: "Sat", dAr: "السبت" },
+      { xBase: 116, y: 54, dEn: "Sun", dAr: "الأحد" },
+      { xBase: 208, y: 42, dEn: "Mon", dAr: "الإثنين" },
+      { xBase: 300, y: 66, dEn: "Tue", dAr: "الثلاثاء" },
+      { xBase: 392, y: 38, dEn: "Wed", dAr: "الأربعاء" },
+      { xBase: 484, y: 26, dEn: "Thu", dAr: "الخميس" },
+      { xBase: 576, y: 18, dEn: "Fri", dAr: "الجمعة" }
+    ];
+
+    const state = {
+      // LOCKED IN USER PREFERENCES FROM SCREENSHOT:
+      paletteId: 4,             // 4. Nile Sapphire x Gold
+      moodStyle: "hybrid",      // Hybrid Orb-Keycaps
+      spotStyle: "classic",     // Crystal Pearl
+      mode: "dark",
+      moodReactive: false,      // Dark Mode = OFF, Light Mode = ON automatically
+      locale: "en",
+      activeTab: "home",
+      selectedMood: 0,
+      intensity: 75,
+      selectedDay: "today",
+      selectedTags: ["Exercise", "Prayer"],
+      customTags: ["Morning Coffee"],
+      journalText: "Morning workout and calm focus before work.",
+      chartJustFlipped: false,
+      entries: [
+        { id: "1", mood: "Happy", intensity: 85, dateEn: "Today", dateAr: "اليوم", tags: ["Exercise", "Prayer"], textEn: "Morning workout and peaceful start to the day.", textAr: "تمرين صباحي وبداية يوم هادئة وموفقة." },
+        { id: "2", mood: "Calm", intensity: 78, dateEn: "Yesterday", dateAr: "أمس", tags: ["Family", "Relaxing"], textEn: "Tea with family after finishing my tasks.", textAr: "جلسة هادئة مع العائلة بعد إنجاز المهام." }
+      ]
+    };
+
+    function applyCSSVariables() {
+      const pal = PALETTES.find(p => p.id === state.paletteId) || PALETTES[3];
+      const isLight = state.mode === "light";
+      const cfg = isLight ? pal.light : pal.dark;
+      const root = document.documentElement;
+      const moodObj = state.selectedMood !== null ? MOODS[state.selectedMood] : null;
+
+      root.style.setProperty("--bg-primary", cfg.bgPrimary);
+      root.style.setProperty("--bg-card-base", cfg.cardBase);
+      root.style.setProperty("--text-primary", isLight ? "#0F172A" : "#FFFFFF");
+      root.style.setProperty("--text-secondary", isLight ? "#334155" : "rgba(255, 255, 255, 0.72)");
+      root.style.setProperty("--text-tertiary", isLight ? "#64748B" : "rgba(255, 255, 255, 0.50)");
+      root.style.setProperty("--border-color", isLight ? "rgba(255, 255, 255, 0.90)" : "rgba(255, 255, 255, 0.22)");
+
+      root.style.setProperty("--bg-gradient-start", cfg.bgStart);
+      root.style.setProperty("--bg-gradient-mid", cfg.bgMid);
+      root.style.setProperty("--bg-gradient-end", cfg.bgEnd);
+
+      root.style.setProperty("--blob-1", (state.moodReactive && moodObj) ? moodObj.blob : cfg.blob1);
+      root.style.setProperty("--blob-2", cfg.blob2);
+      root.style.setProperty("--blob-3", cfg.blob3);
+
+      root.style.setProperty("--accent-from", cfg.accentFrom);
+      root.style.setProperty("--accent-via", cfg.accentVia);
+      root.style.setProperty("--accent-to", cfg.accentTo);
+      root.style.setProperty("--accent-solid", cfg.accentSolid);
+      root.style.setProperty("--accent-soft", cfg.accentSoft);
+      root.style.setProperty("--accent-border", cfg.accentBorder);
+      root.style.setProperty("--accent-text", cfg.accentText);
+      root.style.setProperty("--chart-stroke", cfg.chartStroke);
+      root.style.setProperty("--chart-dot", cfg.chartDot);
+
+      const spotVal = state.spotStyle === "classic"
+        ? (isLight ? "rgba(255, 255, 255, 0.96)" : "rgba(255, 255, 255, 0.18)")
+        : cfg.spotPrism;
+      root.style.setProperty("--spotlight-color", spotVal);
+
+      root.style.setProperty("--card-shadow", isLight
+        ? `0 18px 40px -10px ${cfg.lightShadow}`
+        : "0 24px 48px -12px rgba(0, 0, 0, 0.50)");
+      root.style.setProperty("--well-bg", isLight ? "rgba(15, 23, 42, 0.055)" : "rgba(8, 10, 20, 0.42)");
+      root.style.setProperty("--well-border", isLight ? "rgba(15, 23, 42, 0.10)" : "rgba(255, 255, 255, 0.14)");
+      root.style.setProperty("--mood-glow", moodObj ? moodObj.blob : cfg.accentSoft);
+    }
+
+    function buildWeeklySvgChart(isAr) {
+      const pts = WEEKLY_SERIES.map(p => ({
+        x: isAr ? (600 - p.xBase) : p.xBase,
+        y: p.y,
+        label: isAr ? p.dAr : p.dEn,
+        isLatest: p.dEn === "Fri"
+      }));
+
+      let lineD = `M ${pts[0].x},${pts[0].y}`;
+      for (let i = 1; i < pts.length; i++) {
+        const prev = pts[i - 1];
+        const curr = pts[i];
+        const midX = (prev.x + curr.x) / 2;
+        lineD += ` C ${midX},${prev.y} ${midX},${curr.y} ${curr.x},${curr.y}`;
+      }
+      const areaD = `${lineD} L ${pts[pts.length - 1].x},105 L ${pts[0].x},105 Z`;
+
+      return `
+        <svg viewBox="0 0 600 132" class="w-full h-full overflow-visible ${state.chartJustFlipped ? "chart-flip-active" : ""}" dir="ltr">
+          <defs>
+            <linearGradient id="areaGrad11" x1="0" y1="0" x2="0" y2="1">
+              <stop offset="0%" stop-color="var(--chart-stroke)" stop-opacity="0.45" />
+              <stop offset="100%" stop-color="var(--chart-stroke)" stop-opacity="0.0" />
+            </linearGradient>
+          </defs>
+          <path d="${areaD}" fill="url(#areaGrad11)" />
+          <path d="${lineD}" fill="none" stroke="var(--chart-stroke)" stroke-width="3" stroke-linecap="round" />
+          ${pts.map(pt => `
+            <circle cx="${pt.x}" cy="${pt.y}" r="${pt.isLatest ? 6 : 4}" fill="${pt.isLatest ? "var(--chart-dot)" : "var(--chart-stroke)"}" />
+            <text x="${pt.x}" y="124" text-anchor="middle" fill="currentColor" class="text-[11px] font-medium theme-text-secondary">${pt.label}</text>
+          `).join("")}
+        </svg>
+      `;
+    }
+
+    /* ==================== REDESIGNED ULTRA-READABLE MOOD HEATMAP VISUAL MVP ==================== */
+    function renderReadableHeatmapCard(isAr, isMvpBanner = false) {
+      const emptyColor = state.mode === "light" ? "rgba(15, 23, 42, 0.09)" : "rgba(255, 255, 255, 0.10)";
+      const rows = 7;
+      const cols = 13; // 91 days (13 weeks aligned Sat -> Fri)
+      const weekdayLabels = isAr
+        ? ["السبت", "", "الإثنين", "", "الأربعاء", "", "الجمعة"]
+        : ["Sat", "", "Mon", "", "Wed", "", "Fri"];
+      const monthHeaders = isAr
+        ? ["سبتمبر", "أكتوبر", "نوفمبر"]
+        : ["Sep", "Oct", "Nov"];
+
+      const cellGrid = Array.from({ length: cols * rows }, (_, i) => {
+        const mod = (i * 7 + 5) % 13;
+        if (i === cols * rows - 1) return { color: "#4ADE80", ring: true }; // Today highlighted
+        if (mod <= 1) return { color: emptyColor, ring: false };
+        if (mod <= 6) return { color: "#4ADE80", ring: false };
+        if (mod <= 9) return { color: "#60A5FA", ring: false };
+        if (mod === 10) return { color: "#A78BFA", ring: false };
+        if (mod === 11) return { color: "#818CF8", ring: false };
+        return { color: "#F87171", ring: false };
+      });
+
+      return `
+        <div class="glass rounded-3xl p-5 sm:p-6 mb-6">
+          <div class="flex flex-wrap items-center justify-between gap-2 mb-4">
+            <div class="flex items-center gap-2.5">
+              <div class="w-9 h-9 rounded-xl accent-pill flex items-center justify-center text-base">📅</div>
+              <div>
+                <h2 class="theme-text-primary font-bold text-base">
+                  ${isAr ? "خريطة المزاج المقروءة (نموذج بصري)" : "Readable Mood Heatmap (Visual MVP)"}
+                </h2>
+                <p class="theme-text-muted text-xs">
+                  ${isAr ? "آخر ٩٠ يوماً — كل لون يوضح حالتك بوضوح تام" : "Last 90 days — self-explanatory color & emoji key"}
+                </p>
+              </div>
+            </div>
+
+            ${isMvpBanner ? `
+              <span class="px-2.5 py-1 rounded-full text-[10px] font-semibold recessed-well theme-text-secondary">
+                ${isAr ? "معاينة تصميم فقط" : "Visual MVP Only"}
+              </span>
+            ` : ""}
+          </div>
+
+          <!-- Always-Visible Clear Legend with Emoji + Color Swatch + Day Count -->
+          <div class="flex flex-wrap items-center gap-2 p-3 recessed-well rounded-2xl mb-4">
+            ${MOODS.map(m => `
+              <div class="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full bg-white/5 border border-white/10 text-[11px]">
+                <span class="w-3 h-3 rounded-sm shrink-0" style="background: ${m.color};"></span>
+                <span class="emoji">${m.emoji}</span>
+                <span class="theme-text-primary font-medium">${isAr ? m.ar : m.label}</span>
+                <span class="theme-text-muted">(${m.days})</span>
+              </div>
+            `).join("")}
+            <div class="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full bg-white/5 border border-white/10 text-[11px]">
+              <span class="w-3 h-3 rounded-sm shrink-0" style="background: ${emptyColor};"></span>
+              <span class="theme-text-muted">${isAr ? "لا يوجد تسجيل" : "No Entry"}</span>
+            </div>
+          </div>
+
+          <!-- Month Labels + Weekday-Aligned Grid (Visual Non-Clickable Preview) -->
+          <div class="overflow-x-auto pb-2 pointer-events-none select-none">
+            <div class="inline-block min-w-full">
+              <!-- Month Header Row -->
+              <div class="flex justify-between text-[11px] font-semibold theme-text-muted ps-12 pe-2 mb-1.5">
+                ${monthHeaders.map(m => `<span>${m}</span>`).join("")}
+              </div>
+
+              <div class="flex items-start gap-2.5">
+                <!-- Weekday Axis -->
+                <div class="grid grid-rows-7 gap-1.5 text-[10px] theme-text-muted font-medium py-0.5 shrink-0">
+                  ${weekdayLabels.map(d => `<div class="h-4 sm:h-5 flex items-center">${d}</div>`).join("")}
+                </div>
+
+                <!-- 13 Weeks x 7 Days Matrix -->
+                <div class="grid grid-rows-7 grid-flow-col gap-1.5">
+                  ${cellGrid.map(c => `
+                    <div
+                      class="w-4 h-4 sm:w-5 sm:h-5 rounded-md ${c.ring ? "ring-2 ring-white scale-110" : ""}"
+                      style="background: ${c.color};"
+                    ></div>
+                  `).join("")}
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <!-- Selected Day Detail Strip -->
+          <div class="mt-3 p-3 recessed-well rounded-2xl flex flex-wrap items-center justify-between gap-2 text-xs">
+            <div class="flex items-center gap-2">
+              <span class="emoji text-base">😊</span>
+              <span class="theme-text-primary font-semibold">
+                ${isAr ? "الجمعة ١٥ نوفمبر · سعيد (شدة ٨٥٪)" : "Friday, Nov 15 · Happy (85% intensity)"}
+              </span>
+            </div>
+            <div class="flex items-center gap-1.5">
+              <span class="px-2 py-0.5 rounded-full accent-pill text-[10px]">${isAr ? "#الرياضة" : "#Exercise"}</span>
+              <span class="px-2 py-0.5 rounded-full accent-pill text-[10px]">${isAr ? "#الصلاة" : "#Prayer"}</span>
+            </div>
+          </div>
+        </div>
+      `;
+    }
+
+    /* ==================== EDITABLE "WHAT LIFTS VS. DRAINS YOUR MOOD" VISUAL MVP ==================== */
+    function renderEditableLiftsDrainsMvpCard(isAr) {
+      const lifters = [
+        { icon: "🏃", labelEn: "Exercise", labelAr: "الرياضة", pct: "+26%", width: "86%", samplesEn: "12 check-ins", samplesAr: "١٢ تدوينة", pinned: true },
+        { icon: "🕌", labelEn: "Prayer", labelAr: "الصلاة", pct: "+22%", width: "74%", samplesEn: "18 check-ins", samplesAr: "١٨ تدوينة", pinned: true },
+        { icon: "😴", labelEn: "8h Sleep", labelAr: "نوم ٨ ساعات", pct: "+15%", width: "54%", samplesEn: "9 check-ins", samplesAr: "٩ تدوينات", pinned: false }
+      ];
+      const drainers = [
+        { icon: "📚", labelEn: "Heavy Study", labelAr: "ضغط الدراسة", pct: "-18%", width: "66%", samplesEn: "7 check-ins", samplesAr: "٧ تدوينات" },
+        { icon: "💼", labelEn: "Late Work", labelAr: "العمل المتأخر", pct: "-14%", width: "52%", samplesEn: "10 check-ins", samplesAr: "١٠ تدوينات" }
+      ];
+
+      return `
+        <div class="glass rounded-3xl p-5 sm:p-6 mb-6 pointer-events-none select-none">
+          <div class="flex flex-wrap items-center justify-between gap-2 mb-4">
+            <div class="flex items-center gap-2.5">
+              <div class="w-9 h-9 rounded-xl accent-pill flex items-center justify-center text-base">⚖️</div>
+              <div>
+                <h2 class="theme-text-primary font-bold text-base">
+                  ${isAr ? "ما يرفع مزاجك أو يرهقك (معاينة قابلة للتعديل)" : "What Lifts vs. Drains Your Mood (Editable MVP)"}
+                </h2>
+                <p class="theme-text-muted text-xs">
+                  ${isAr ? "محسوب تلقائياً من وسومك مع إمكانية التعديل والتثبيت والإخفاء" : "Auto-computed from your tags — customize, pin, rename, or hide any factor"}
+                </p>
+              </div>
+            </div>
+
+            <!-- Visual Editable Controls Pill Bar (Non-Clickable MVP Preview) -->
+            <div class="flex items-center gap-1.5">
+              <span class="px-2.5 py-1 rounded-xl accent-gradient-btn text-[11px] font-semibold">
+                ${isAr ? "＋ عامل مخصص" : "+ Add Custom Factor"}
+              </span>
+              <span class="px-2.5 py-1 rounded-xl recessed-well text-[11px] font-medium theme-text-secondary">
+                ${isAr ? "✏️ إدارة العوامل" : "✏️ Edit List"}
+              </span>
+            </div>
+          </div>
+
+          <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+            <!-- Left: What Lifts You -->
+            <div class="p-4 recessed-well rounded-2xl space-y-3">
+              <div class="flex items-center justify-between">
+                <span class="text-xs font-bold stat-positive">
+                  ${isAr ? "🌟 عوامل ترفع مزاجك" : "🌟 Top Mood Lifters"}
+                </span>
+                <span class="text-[10px] theme-text-muted">${isAr ? "تأثير إيجابي" : "Positive Delta"}</span>
+              </div>
+
+              ${lifters.map(item => `
+                <div class="space-y-1.5">
+                  <div class="flex items-center justify-between text-xs">
+                    <div class="flex items-center gap-1.5">
+                      <span>${item.icon}</span>
+                      <span class="theme-text-primary font-semibold">${isAr ? item.labelAr : item.labelEn}</span>
+                      <span class="text-[10px] theme-text-muted">(${isAr ? item.samplesAr : item.samplesEn})</span>
+                    </div>
+                    <div class="flex items-center gap-1.5">
+                      <span class="font-bold stat-positive">${item.pct}</span>
+                      <span class="text-[10px] px-1.5 py-0.5 rounded bg-white/10 theme-text-muted">${item.pinned ? "📌" : "✏️"}</span>
+                      <span class="text-[10px] px-1.5 py-0.5 rounded bg-white/10 theme-text-muted">👁️</span>
+                    </div>
+                  </div>
+                  <div class="h-2 rounded-full bg-white/10 overflow-hidden">
+                    <div class="h-full rounded-full bg-emerald-400" style="width: ${item.width};"></div>
+                  </div>
+                </div>
+              `).join("")}
+            </div>
+
+            <!-- Right: What Drains You -->
+            <div class="p-4 recessed-well rounded-2xl space-y-3">
+              <div class="flex items-center justify-between">
+                <span class="text-xs font-bold stat-negative">
+                  ${isAr ? "⚡ عوامل تستنزف طاقتك" : "⚡ Energy Drainers"}
+                </span>
+                <span class="text-[10px] theme-text-muted">${isAr ? "تأثير سلبي" : "Negative Delta"}</span>
+              </div>
+
+              ${drainers.map(item => `
+                <div class="space-y-1.5">
+                  <div class="flex items-center justify-between text-xs">
+                    <div class="flex items-center gap-1.5">
+                      <span>${item.icon}</span>
+                      <span class="theme-text-primary font-semibold">${isAr ? item.labelAr : item.labelEn}</span>
+                      <span class="text-[10px] theme-text-muted">(${isAr ? item.samplesAr : item.samplesEn})</span>
+                    </div>
+                    <div class="flex items-center gap-1.5">
+                      <span class="font-bold stat-negative">${item.pct}</span>
+                      <span class="text-[10px] px-1.5 py-0.5 rounded bg-white/10 theme-text-muted">✏️</span>
+                      <span class="text-[10px] px-1.5 py-0.5 rounded bg-white/10 theme-text-muted">👁️</span>
+                    </div>
+                  </div>
+                  <div class="h-2 rounded-full bg-white/10 overflow-hidden">
+                    <div class="h-full rounded-full bg-rose-400" style="width: ${item.width};"></div>
+                  </div>
+                </div>
+              `).join("")}
+
+              <div class="pt-1 text-[11px] theme-text-muted">
+                ${isAr
+                  ? "ملاحظة: يمكن تعديل الأسماء أو إخفاء أي وسم لا ترغب بظهوره هنا."
+                  : "Note: Every factor can be renamed, pinned, or hidden in the real build."}
+              </div>
+            </div>
+          </div>
+        </div>
+      `;
+    }
+
+    function renderPaletteBar() {
+      const bar = document.getElementById("palette-bar");
+      const isAr = state.locale === "ar";
+      bar.innerHTML = PALETTES.map(p => {
+        const active = p.id === state.paletteId;
+        return `
+          <button
+            onclick="selectPalette(${p.id})"
+            class="flex items-center gap-2 px-2.5 py-1.5 rounded-xl text-start transition-all ${
+              active
+                ? "bg-white/25 ring-2 ring-white shadow-lg scale-[1.02]"
+                : "bg-white/5 hover:bg-white/15 opacity-85 hover:opacity-100"
+            }"
+          >
+            <span class="w-4 h-4 rounded-full shrink-0 border border-white/45 shadow-sm" style="background: ${p.swatch};"></span>
+            <span class="text-[11px] font-semibold truncate text-white">${isAr ? p.nameAr : p.nameEn}</span>
+          </button>
+        `;
+      }).join("");
+    }
+
+    function renderBottomNav() {
+      const isAr = state.locale === "ar";
+      const items = [
+        { id: "home", label: isAr ? "الرئيسية" : "Home", icon: "🏠" },
+        { id: "feedback", label: isAr ? "التقييم" : "Feedback", icon: "💬" },
+        { id: "history", label: isAr ? "السجل" : "History", icon: "🕒" },
+        { id: "settings", label: isAr ? "الإعدادات" : "Settings", icon: "⚙️" }
+      ];
+      document.getElementById("bottom-nav-items").innerHTML = items.map(item => {
+        const isActive = state.activeTab === item.id;
+        return `
+          <button
+            onclick="state.activeTab='${item.id}'; state.chartJustFlipped=false; renderAll();"
+            class="relative flex flex-col items-center gap-0.5 px-3 sm:px-4 py-1.5 rounded-full transition-all min-w-[54px] sm:min-w-[64px]"
+          >
+            ${isActive ? `<div class="absolute inset-0 nav-active-pill rounded-full"></div>` : ""}
+            <span class="text-sm relative z-10">${item.icon}</span>
+            <span class="text-[10px] relative z-10 theme-text-primary ${isActive ? "font-bold" : "opacity-70"}">${item.label}</span>
+          </button>
+        `;
+      }).join("");
+      document.getElementById("nav-lang-label").textContent = isAr ? "EN" : "عربي";
+    }
+
+    function renderTodayPage() {
+      const isAr = state.locale === "ar";
+      const moodBtnClass =
+        state.moodStyle === "orbs" ? "mood-btn-orbs" :
+        state.moodStyle === "keycaps" ? "mood-btn-keycaps" : "mood-btn-hybrid";
+      const selectedMoodObj = MOODS[state.selectedMood ?? 0];
+      const isHeavyMood = selectedMoodObj.label === "Sad" || selectedMoodObj.label === "Frustrated";
+
+      return `
+        <!-- 1. Hero User Banner -->
+        <div class="glass rounded-full px-4 py-2.5 mb-6 animate-enter">
+          <div class="flex items-center justify-between">
+            <div class="flex items-center gap-3">
+              <div class="w-10 h-10 rounded-full accent-avatar flex items-center justify-center shadow-md font-bold text-base">
+                A
+              </div>
+              <div>
+                <p class="theme-text-secondary text-xs">${isAr ? "مرحباً بعودتك" : "Welcome back"}</p>
+                <p class="theme-text-primary font-semibold text-sm">@abdelrhman</p>
+              </div>
+            </div>
+
+            <div class="flex items-center gap-2">
+              <div class="hidden sm:flex items-center gap-1.5 px-3 py-1.5 accent-pill rounded-full text-xs font-medium">
+                <span>🌬️</span>
+                <span>${isAr ? "تنفس هادئ" : "Calm Breath"}</span>
+              </div>
+
+              <div class="flex items-center gap-1.5 px-3 py-1.5 recessed-well rounded-full">
+                <span class="flame-animated inline-block">🔥</span>
+                <div class="flex items-baseline gap-1">
+                  <span class="theme-text-primary font-bold text-sm">7</span>
+                  <span class="theme-text-secondary text-[10px]">${isAr ? "أيام متتالية" : "day streak"}</span>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- 2. Header Greeting -->
+        <div class="text-center mb-7 animate-enter">
+          <div class="inline-flex items-center gap-2 px-4 py-1.5 glass rounded-full mb-3">
+            <span>✨</span>
+            <span class="text-xs theme-text-secondary font-medium">
+              ${isAr ? "سلسلة متواصلة منذ ٧ أيام" : "You're on a 7-day streak!"}
+            </span>
+            <span class="flame-animated">🔥</span>
+          </div>
+          <h1 class="text-3xl md:text-4xl font-bold theme-text-primary mb-2">
+            ${isAr ? "كيف تشعر الآن؟" : "How are you feeling?"}
+          </h1>
+          <p class="theme-text-secondary text-sm">
+            ${isAr ? "خذ لحظة هادئة للتواصل مع مشاعرك" : "Take a moment to check in with yourself"}
+          </p>
+        </div>
+
+        <!-- 3. Mood Selector Card (With All Original Characteristics Restored) -->
+        <div class="glass rounded-[2rem] p-5 md:p-6 mb-6 animate-enter">
+          <div class="flex items-center justify-between mb-4">
+            <h2 class="text-sm font-semibold theme-text-primary flex items-center gap-2">
+              <span>💗</span>
+              <span>${isAr ? "اختر حالتك المزاجية" : "Select your mood"}</span>
+            </h2>
+            <div class="inline-flex rounded-full recessed-well p-0.5 text-[11px]">
+              <button
+                onclick="state.selectedDay='today'; state.chartJustFlipped=false; renderAll();"
+                class="px-3 py-1 rounded-full font-semibold ${state.selectedDay === 'today' ? 'accent-gradient-btn' : 'theme-text-secondary'}"
+              >${isAr ? "اليوم" : "Today"}</button>
+              <button
+                onclick="state.selectedDay='yesterday'; state.chartJustFlipped=false; renderAll();"
+                class="px-3 py-1 rounded-full font-semibold ${state.selectedDay === 'yesterday' ? 'accent-gradient-btn' : 'theme-text-secondary'}"
+              >${isAr ? "أمس" : "Yesterday"}</button>
+            </div>
+          </div>
+
+          <!-- 5 Mood Buttons (Locked Hybrid Orb-Keycaps) -->
+          <div class="grid grid-cols-5 gap-2.5 md:gap-4 mb-5 pt-1">
+            ${MOODS.map((m, idx) => {
+              const isSelected = state.selectedMood === idx;
+              return `
+                <button
+                  onclick="selectMood(${idx})"
+                  class="${moodBtnClass} ${isSelected ? "selected" : ""} relative flex flex-col items-center justify-center p-2.5 md:p-3.5 min-h-[76px] md:min-h-[88px]"
+                  style="--mood-glow: ${m.blob}; --mood-color: ${m.color};"
+                >
+                  <span class="text-2xl md:text-3xl emoji ${isSelected ? "mood-selected-emoji" : ""}">${m.emoji}</span>
+                  <span class="text-[11px] md:text-xs mt-1.5 font-semibold theme-text-primary ${isSelected ? "" : "opacity-80"}">
+                    ${isAr ? m.ar : m.label}
+                  </span>
+                </button>
+              `;
+            }).join("")}
+          </div>
+
+          <!-- Gentle Callout Banner (Restored Original Feature when Sad/Frustrated tapped) -->
+          ${isHeavyMood ? `
+            <div class="p-3.5 rounded-2xl accent-pill flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3 mb-5">
+              <div class="flex items-start gap-2.5">
+                <span class="text-lg">🌬️</span>
+                <div>
+                  <p class="theme-text-primary font-semibold text-xs">
+                    ${isAr ? "تبدو هذه اللحظة ثقيلة بعض الشيء" : "This moment sounds heavy"}
+                  </p>
+                  <p class="theme-text-secondary text-xs">
+                    ${isAr ? "خذ ٤ دقائق مع تمرين التنفس ٤-٧-٨ لتهدئة جهازك العصبي." : "Take 60 seconds with guided 4-7-8 breathing to settle your nervous system."}
+                  </p>
+                </div>
+              </div>
+              <span class="px-3 py-1.5 rounded-xl accent-gradient-btn text-xs font-medium shrink-0">
+                ${isAr ? "ابدأ التنفس" : "Start Breathing"}
+              </span>
+            </div>
+          ` : ""}
+
+          <!-- Locked Favorite: Thick Capsule Intensity Slider -->
+          <div class="mb-5 px-1">
+            <div class="flex justify-between items-center mb-2">
+              <span class="text-xs theme-text-secondary font-medium">${isAr ? "شدة الشعور" : "Mood Intensity"}</span>
+              <span id="intensity-readout" class="text-xs theme-text-primary font-bold font-mono">${state.intensity}%</span>
+            </div>
+            <div class="relative h-6 rounded-full recessed-well p-1 overflow-hidden">
+              <div
+                id="intensity-fill"
+                class="h-full rounded-full transition-all duration-150"
+                style="width: ${state.intensity}%; background: linear-gradient(90deg, var(--accent-from), var(--accent-via), var(--accent-to)); box-shadow: 0 0 14px var(--accent-soft);"
+              ></div>
+              <input
+                type="range"
+                min="1"
+                max="100"
+                value="${state.intensity}"
+                oninput="updateIntensity(this.value)"
+                class="absolute inset-0 w-full h-full opacity-0 cursor-pointer"
+              />
+            </div>
+          </div>
+
+          <!-- Tags + Custom Tag Chip + Guided Prompts -->
+          <div class="pt-4 border-t border-white/10">
+            <span class="text-xs theme-text-secondary mb-2 block">${isAr ? "الأنشطة والعوامل المؤثرة" : "What have you been up to?"}</span>
+            <div class="flex flex-wrap items-center gap-1.5 mb-4">
+              ${TAGS.map(tag => {
+                const active = state.selectedTags.includes(tag.en);
+                return `
+                  <button
+                    onclick="toggleTag('${tag.en}')"
+                    class="px-3 py-1 rounded-full text-xs font-medium transition-all ${
+                      active ? "accent-tag-active" : "recessed-well theme-text-secondary"
+                    }"
+                  >
+                    ${isAr ? tag.ar : tag.en}
+                  </button>
+                `;
+              }).join("")}
+              <!-- Restored Original Custom Tag Chip -->
+              <span class="px-3 py-1 rounded-full text-xs font-medium accent-pill flex items-center gap-1">
+                <span>＋</span>
+                <span>${isAr ? "وسم مخصص" : "Custom Tag"}</span>
+              </span>
+            </div>
+
+            <textarea
+              id="journal-box"
+              oninput="state.journalText = this.value"
+              placeholder="${isAr ? "اكتب أفكارك ومشاعرك بحرية..." : "Write your thoughts freely..."}"
+              class="w-full h-24 p-3.5 recessed-well rounded-2xl outline-none resize-none theme-text-primary text-sm"
+            >${state.journalText}</textarea>
+
+            <button
+              onclick="saveMoodEntry(event)"
+              class="mt-3.5 w-full py-3 rounded-xl font-semibold flex items-center justify-center gap-2 accent-gradient-btn shadow-lg"
+            >
+              <span>＋</span>
+              <span>${isAr ? "حفظ الحالة المزاجية" : "Save Mood Entry"}</span>
+            </button>
+          </div>
+        </div>
+
+        <!-- 4. Live AI Sentiment Insight Card (Restored Original Feature) -->
+        <div class="glass rounded-2xl p-4 mb-6 animate-enter">
+          <div class="flex items-start gap-3">
+            <div class="w-9 h-9 rounded-xl accent-pill flex items-center justify-center shrink-0">✨</div>
+            <div class="flex-1">
+              <div class="flex items-center gap-2 mb-1">
+                <span class="theme-text-primary font-semibold text-sm">
+                  ${isAr ? "تحليل المشاعر الفوري" : "Live Sentiment Insight"}
+                </span>
+                <span class="px-2 py-0.5 rounded-full text-[10px] font-bold bg-emerald-500/20 stat-positive">
+                  ${isAr ? "إيجابي" : "Positive"}
+                </span>
+              </div>
+              <p class="theme-text-secondary text-xs leading-relaxed">
+                ${isAr
+                  ? "كلماتك تعكس طاقة إيجابية متوازنة وتركيزاً هادئاً."
+                  : "Positive mindset detected! Words like workout and calm reflect steady emotional balance."}
+              </p>
+              <div class="flex flex-wrap gap-1 mt-2">
+                <span class="px-2 py-0.5 recessed-well rounded-full text-[10px] theme-text-secondary">${isAr ? "#تمرين" : "#workout"}</span>
+                <span class="px-2 py-0.5 recessed-well rounded-full text-[10px] theme-text-secondary">${isAr ? "#هدوء" : "#calm"}</span>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- 5. Three Stats Grid -->
+        <div class="grid grid-cols-3 gap-3 md:gap-4 mb-6 animate-enter">
+          <div class="glass rounded-2xl p-4 text-center">
+            <div class="flex items-center justify-center gap-1.5 mb-1">
+              <span>📖</span>
+              <span class="text-2xl font-bold theme-text-primary">27</span>
+            </div>
+            <p class="text-xs theme-text-muted">${isAr ? "إجمالي التدوينات" : "Total Entries"}</p>
+          </div>
+          <div class="glass rounded-2xl p-4 text-center">
+            <div class="flex items-center justify-center gap-1.5 mb-1">
+              <span class="flame-animated">🔥</span>
+              <span class="text-2xl font-bold theme-text-primary">7</span>
+            </div>
+            <p class="text-xs theme-text-muted">${isAr ? "السلسلة الحالية" : "Day Streak"}</p>
+          </div>
+          <div class="glass rounded-2xl p-4 text-center">
+            <div class="flex items-center justify-center gap-1.5 mb-1">
+              <span>📅</span>
+              <span class="text-2xl font-bold theme-text-primary">5</span>
+            </div>
+            <p class="text-xs theme-text-muted">${isAr ? "هذا الأسبوع" : "This Week"}</p>
+          </div>
+        </div>
+
+        <!-- 6. Milestone Achievement Badges Card (Restored Original Feature) -->
+        <div class="glass rounded-3xl p-5 sm:p-6 mb-6 animate-enter">
+          <div class="flex items-center justify-between mb-4">
+            <div class="flex items-center gap-2">
+              <div class="w-8 h-8 rounded-xl bg-amber-500/20 flex items-center justify-center">🏆</div>
+              <div>
+                <h2 class="theme-text-primary font-semibold text-base">${isAr ? "شارات الإنجاز" : "Milestone Badges"}</h2>
+                <p class="theme-text-muted text-xs">${isAr ? "احتفل بالتزامك واستمراريتك" : "Celebrate your consistency and milestones"}</p>
+              </div>
+            </div>
+            <span class="text-xs font-semibold px-2.5 py-1 recessed-well rounded-full theme-text-primary">3 / 5</span>
+          </div>
+          <div class="grid grid-cols-2 sm:grid-cols-5 gap-3">
+            ${[
+              { icon: "✨", en: "First Entry", ar: "أول تسجيل", reqEn: "1 entry", reqAr: "إدخال واحد", on: true, grad: "from-emerald-400 to-teal-500" },
+              { icon: "⚡", en: "3-Day Spark", ar: "شعلة ٣ أيام", reqEn: "3-day streak", reqAr: "سلسلة ٣ أيام", on: true, grad: "from-amber-400 to-orange-500" },
+              { icon: "🔥", en: "7-Day Flame", ar: "لهب ٧ أيام", reqEn: "7-day streak", reqAr: "سلسلة ٧ أيام", on: true, grad: "from-orange-500 to-red-500" },
+              { icon: "💗", en: "14-Day Mindful", ar: "وعي ١٤ يوماً", reqEn: "14-day streak", reqAr: "سلسلة ١٤ يوماً", on: false, grad: "" },
+              { icon: "🏆", en: "30-Day Master", ar: "سيد المزاج", reqEn: "30-day streak", reqAr: "سلسلة ٣٠ يوماً", on: false, grad: "" }
+            ].map(b => `
+              <div class="p-3 rounded-2xl flex flex-col items-center text-center recessed-well ${b.on ? "" : "opacity-50"}">
+                <div class="w-10 h-10 rounded-xl flex items-center justify-center mb-1.5 text-base shadow ${b.on ? `bg-gradient-to-br ${b.grad} text-white` : "bg-white/10"}">${b.icon}</div>
+                <span class="text-xs font-semibold theme-text-primary">${isAr ? b.ar : b.en}</span>
+                <span class="text-[10px] theme-text-muted">${isAr ? b.reqAr : b.reqEn}</span>
+              </div>
+            `).join("")}
+          </div>
+        </div>
+
+        <!-- 7. Weekly Mood Trend Area Chart (Animated Flip on RTL <-> LTR Switch!) -->
+        <div class="glass rounded-3xl p-6 mb-6 animate-enter">
+          <div class="flex flex-wrap items-center justify-between gap-2 mb-4">
+            <h2 class="text-base font-semibold theme-text-primary flex items-center gap-2">
+              <span>📈</span>
+              <span>${isAr ? "اتجاه المزاج الأسبوعي" : "Weekly Mood Trend"}</span>
+            </h2>
+            <button
+              onclick="toggleLocale()"
+              class="text-xs accent-pill px-3 py-1 rounded-full font-medium"
+            >
+              ${isAr ? "تم قلب الرسم لليمين ↔ اضغط للمقارنة" : "Auto-flips on EN ↔ AR · Click to Flip"}
+            </button>
+          </div>
+          <div class="w-full h-36">
+            ${buildWeeklySvgChart(isAr)}
+          </div>
+        </div>
+
+        <!-- 8. NON-CLICKABLE VISUAL MVP SHOWCASE: Redesigned Heatmap + Editable Lifts/Drains -->
+        <div class="pt-2 mb-2 text-center">
+          <span class="inline-flex items-center gap-2 px-4 py-1.5 rounded-full accent-pill text-xs font-bold">
+            <span>👁️</span>
+            <span>${isAr ? "معاينة التصميم البصري الجديد للسجل (غير قابل للنقر)" : "Visual MVP Preview of Redesigned History Cards (Non-Clickable Showcase)"}</span>
+          </span>
+        </div>
+
+        ${renderReadableHeatmapCard(isAr, true)}
+        ${renderEditableLiftsDrainsMvpCard(isAr)}
+      `;
+    }
+
+    function renderHistoryPage() {
+      const isAr = state.locale === "ar";
+      return `
+        <div class="flex items-center justify-between mb-6 animate-enter">
+          <div>
+            <h1 class="text-3xl font-extrabold theme-text-primary mb-1">${isAr ? "سجل المزاج" : "Mood History"}</h1>
+            <p class="theme-text-secondary text-sm">${isAr ? "٢٧ تدوينة مسجلة" : "27 entries recorded"}</p>
+          </div>
+          <span class="px-4 py-2 accent-pill rounded-2xl text-xs font-semibold">
+            📄 ${isAr ? "التقرير الشهري" : "Monthly Report"}
+          </span>
+        </div>
+
+        ${renderReadableHeatmapCard(isAr, true)}
+        ${renderEditableLiftsDrainsMvpCard(isAr)}
+
+        <!-- Restored Mood Distribution Donut Chart (HistoryPage.tsx) -->
+        <div class="glass rounded-3xl p-6 mb-6 animate-enter">
+          <h2 class="text-base font-semibold theme-text-primary mb-4 flex items-center gap-2">
+            <span>🥯</span>
+            <span>${isAr ? "توزيع الحالات المزاجية" : "Mood Distribution"}</span>
+          </h2>
+          <div class="flex flex-col sm:flex-row items-center justify-center gap-6">
+            <svg viewBox="0 0 120 120" class="w-36 h-36 -rotate-90">
+              <circle cx="60" cy="60" r="42" fill="none" stroke="#4ADE80" stroke-width="18" stroke-dasharray="137 264" stroke-dashoffset="0" />
+              <circle cx="60" cy="60" r="42" fill="none" stroke="#60A5FA" stroke-width="18" stroke-dasharray="78 264" stroke-dashoffset="-140" />
+              <circle cx="60" cy="60" r="42" fill="none" stroke="#A78BFA" stroke-width="18" stroke-dasharray="29 264" stroke-dashoffset="-221" />
+              <circle cx="60" cy="60" r="42" fill="none" stroke="#F87171" stroke-width="18" stroke-dasharray="14 264" stroke-dashoffset="-252" />
+            </svg>
+            <div class="grid grid-cols-2 gap-x-6 gap-y-2 text-xs">
+              ${MOODS.map(m => `
+                <div class="flex items-center gap-2">
+                  <span class="w-3 h-3 rounded-full" style="background: ${m.color};"></span>
+                  <span class="theme-text-secondary">${isAr ? m.ar : m.label} (${m.days})</span>
+                </div>
+              `).join("")}
+            </div>
+          </div>
+        </div>
+      `;
+    }
+
+    function renderFeedbackPage() {
+      const isAr = state.locale === "ar";
+      return `
+        <div class="max-w-xl mx-auto animate-enter">
+          <div class="text-center mb-6">
+            <div class="inline-flex items-center justify-center w-14 h-14 rounded-2xl accent-avatar text-2xl mb-3 shadow-lg">⭐</div>
+            <h1 class="text-2xl font-bold theme-text-primary">${isAr ? "شاركنا رأيك" : "Share Your Feedback"}</h1>
+            <p class="theme-text-secondary text-xs">${isAr ? "ساعدنا في تحسين مد فلو" : "Help us improve MoodFlow"}</p>
+          </div>
+          <div class="glass rounded-3xl p-6 space-y-4 text-center">
+            <div class="text-3xl tracking-widest">⭐⭐⭐⭐⭐</div>
+            <p class="text-xs theme-text-secondary">${isAr ? "اختر تقييمك وأرسل اقتراحك بسهولة" : "Rate your experience and send suggestions anytime"}</p>
+          </div>
+        </div>
+      `;
+    }
+
+    function renderSettingsPage() {
+      const isAr = state.locale === "ar";
+      const pal = PALETTES.find(p => p.id === state.paletteId) || PALETTES[3];
+      return `
+        <div class="mb-6 animate-enter">
+          <h1 class="text-3xl font-extrabold theme-text-primary mb-1">${isAr ? "الإعدادات" : "Settings"}</h1>
+          <p class="theme-text-secondary text-sm">${isAr ? "خصص تجربتك في مد فلو" : "Customize your MoodFlow experience"}</p>
+        </div>
+
+        <div class="glass rounded-2xl p-4 mb-4 flex items-center justify-between animate-enter">
+          <div>
+            <p class="theme-text-primary font-medium text-sm">${isAr ? "الوضع الداكن: تفاعل الخلفية متوقف · النهاري: مفعل" : "Auto Aura: Dark Mode OFF · Light Mode ON"}</p>
+            <p class="theme-text-secondary text-xs">${isAr ? pal.nameAr : pal.nameEn}</p>
+          </div>
+          <span class="w-8 h-8 rounded-full shadow-md border border-white/50" style="background: ${pal.swatch};"></span>
+        </div>
+
+        <div class="glass rounded-2xl p-4 mb-4 flex items-center justify-between animate-enter">
+          <div>
+            <p class="theme-text-primary font-medium text-sm">🔒 ${isAr ? "قفل التطبيق بالبصمة والرمز" : "PIN & Biometric App Lock"}</p>
+            <p class="theme-text-secondary text-xs">${isAr ? "حماية يومياتك المشفرة بالكامل" : "Protect your encrypted journal"}</p>
+          </div>
+          <span class="px-3 py-1 rounded-xl text-xs font-semibold accent-pill">${isAr ? "مفعّل" : "Active"}</span>
+        </div>
+      `;
+    }
+
+    function selectPalette(id) {
+      state.paletteId = id;
+      state.chartJustFlipped = false;
+      renderAll();
+    }
+
+    function setMoodStyle(val) {
+      state.moodStyle = val;
+      state.chartJustFlipped = false;
+      renderAll();
+    }
+
+    function setSpotlightStyle(val) {
+      state.spotStyle = val;
+      state.chartJustFlipped = false;
+      renderAll();
+    }
+
+    function toggleMoodReactive() {
+      state.moodReactive = !state.moodReactive;
+      updateReactiveBtn();
+      applyCSSVariables();
+    }
+
+    function updateReactiveBtn() {
+      const btn = document.getElementById("btn-reactive");
+      const isAr = state.locale === "ar";
+      if (state.moodReactive) {
+        btn.className = "px-2.5 py-1 rounded-xl font-medium bg-emerald-500/25 border border-emerald-400/40 text-emerald-200 transition-all";
+        btn.textContent = isAr ? "تفاعل الخلفية: مفعل" : "Mood-Reactive: ON";
+      } else {
+        btn.className = "px-2.5 py-1 rounded-xl font-medium bg-white/10 border border-white/15 text-white/75 transition-all";
+        btn.textContent = isAr ? "تفاعل الخلفية: متوقف" : "Mood-Reactive: OFF";
+      }
+    }
+
+    // Automatically enforces User's Preference: Dark Mode -> Mood-Reactive OFF | Light Mode -> Mood-Reactive ON
+    function toggleThemeMode() {
+      state.mode = state.mode === "dark" ? "light" : "dark";
+      state.moodReactive = (state.mode === "light");
+      document.documentElement.classList.toggle("dark", state.mode === "dark");
+      document.documentElement.classList.toggle("light", state.mode === "light");
+      const isAr = state.locale === "ar";
+      document.getElementById("btn-mode").textContent =
+        state.mode === "dark" ? (isAr ? "🌙 داكن" : "🌙 Dark") : (isAr ? "☀️ نهاري" : "☀️ Light");
+      updateReactiveBtn();
+      state.chartJustFlipped = false;
+      renderAll();
+    }
+
+    function toggleLocale() {
+      state.locale = state.locale === "en" ? "ar" : "en";
+      const isAr = state.locale === "ar";
+      document.documentElement.dir = isAr ? "rtl" : "ltr";
+      document.documentElement.lang = state.locale;
+      document.getElementById("btn-lang").textContent = isAr ? "EN" : "عربي";
+      document.getElementById("studio-badge").textContent = isAr ? "نموذج ١١" : "11.html MVP";
+      document.getElementById("studio-title").textContent = isAr
+        ? "ياقوت النيل الذهبي مع الأزرار الهجينة وتفاعل النهاري التلقائي"
+        : "Locked Defaults: Nile Sapphire × Hybrid Orb-Keycaps × Crystal Pearl (Dark: Reactive OFF · Light: Reactive ON)";
+      document.getElementById("btn-mode").textContent =
+        state.mode === "dark" ? (isAr ? "🌙 داكن" : "🌙 Dark") : (isAr ? "☀️ نهاري" : "☀️ Light");
+      updateReactiveBtn();
+      state.chartJustFlipped = true;
+      renderAll();
+    }
+
+    function selectMood(idx) {
+      state.selectedMood = idx;
+      state.chartJustFlipped = false;
+      renderAll();
+    }
+
+    function updateIntensity(val) {
+      state.intensity = parseInt(val, 10) || 50;
+      const r = document.getElementById("intensity-readout");
+      const f = document.getElementById("intensity-fill");
+      if (r) r.textContent = state.intensity + "%";
+      if (f) f.style.width = state.intensity + "%";
+    }
+
+    function toggleTag(tagEn) {
+      if (state.selectedTags.includes(tagEn)) {
+        state.selectedTags = state.selectedTags.filter(t => t !== tagEn);
+      } else {
+        state.selectedTags.push(tagEn);
+      }
+      state.chartJustFlipped = false;
+      renderAll();
+    }
+
+    function saveMoodEntry(e) {
+      const m = MOODS[state.selectedMood ?? 0];
+      if (e && e.clientX) {
+        for (let i = 0; i < 10; i++) {
+          const el = document.createElement("div");
+          el.className = "burst-particle text-xl emoji";
+          el.textContent = m.emoji;
+          const angle = (Math.PI * 2 * i) / 10;
+          const dist = 45 + Math.random() * 55;
+          el.style.left = e.clientX + "px";
+          el.style.top = e.clientY + "px";
+          el.style.setProperty("--tx", Math.cos(angle) * dist + "px");
+          el.style.setProperty("--ty", Math.sin(angle) * dist - 25 + "px");
+          document.body.appendChild(el);
+          setTimeout(() => el.remove(), 880);
+        }
+      }
+      const toast = document.getElementById("save-toast");
+      document.getElementById("save-toast-text").textContent =
+        state.locale === "ar" ? "تم حفظ حالتك المزاجية بنجاح!" : "Mood entry saved!";
+      toast.classList.remove("hidden");
+      toast.classList.add("flex");
+      setTimeout(() => {
+        toast.classList.add("hidden");
+        toast.classList.remove("flex");
+      }, 2100);
+    }
+
+    function renderAll() {
+      applyCSSVariables();
+      renderPaletteBar();
+      renderBottomNav();
+      const container = document.getElementById("page-container");
+      if (state.activeTab === "home") {
+        container.innerHTML = renderTodayPage();
+      } else if (state.activeTab === "history") {
+        container.innerHTML = renderHistoryPage();
+      } else if (state.activeTab === "feedback") {
+        container.innerHTML = renderFeedbackPage();
+      } else {
+        container.innerHTML = renderSettingsPage();
+      }
+    }
+
+    renderAll();
+  </script>
+</body>
+</html>

@@ -81,13 +81,13 @@ export default function CookieConsent() {
                 </Link>
                 <button
                   onClick={handleDecline}
-                  className="px-4 py-2 rounded-xl bg-white/10 text-white/80 hover:bg-white/20 transition-all text-sm"
+                  className="px-4 py-2 rounded-xl recessed-well theme-text-secondary hover:opacity-90 transition-all text-sm"
                 >
                   {t("legal.decline")}
                 </button>
                 <button
                   onClick={handleAccept}
-                  className="px-4 py-2 rounded-xl bg-gradient-to-r from-purple-500 to-pink-500 text-white hover:opacity-90 transition-all text-sm font-medium"
+                  className="px-4 py-2 rounded-xl accent-gradient-btn transition-all text-sm font-medium"
                 >
                   {t("legal.accept")}
                 </button>

@@ -62,19 +62,19 @@ export default function PrivacyPage() {
           {sections.map((section, index) => (
             <motion.div
               key={section.key}
-              className="backdrop-blur-xl bg-white/10 rounded-2xl p-5 md:p-6 border border-white/20"
+              className="glass rounded-2xl p-5 md:p-6"
               initial={{ opacity: 0, y: 20 }}
               animate={{ opacity: 1, y: 0 }}
               transition={{ delay: 0.3 + index * 0.04 }}
             >
               <div className="flex items-start gap-4">
-                <div className="w-10 h-10 rounded-xl bg-purple-500/20 flex items-center justify-center flex-shrink-0 text-purple-400">
+                <div className="w-10 h-10 rounded-xl accent-pill flex items-center justify-center flex-shrink-0">
                   <section.icon className="w-5 h-5" />
                 </div>
                 <div className="flex-1">
-                  <h2 className="text-base font-semibold text-white mb-1.5">{section.title}</h2>
+                  <h2 className="text-base font-semibold theme-text-primary mb-1.5">{section.title}</h2>
                   {section.desc && (
-                    <p className="text-white/70 text-sm leading-relaxed">{section.desc}</p>
+                    <p className="theme-text-secondary text-sm leading-relaxed">{section.desc}</p>
                   )}
                 </div>
               </div>

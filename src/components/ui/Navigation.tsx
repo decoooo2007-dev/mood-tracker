@@ -32,7 +32,7 @@ export default function Navigation() {
   };
 
   return (
-    <nav className="fixed bottom-6 left-0 right-0 z-50 flex justify-center pointer-events-none px-2">
+    <nav className="fixed bottom-5 left-0 right-0 z-50 flex justify-center pointer-events-none px-2">
       <div className="pointer-events-auto max-w-[calc(100vw-1.5rem)]">
         <motion.div
           className="glass rounded-full px-2 py-1.5 flex items-center gap-1 shadow-2xl"
@@ -53,13 +53,13 @@ export default function Navigation() {
                   aria-label={t(item.labelKey)}
                   className={`relative flex flex-col items-center gap-0.5 px-2.5 sm:px-4 py-1.5 rounded-full transition-all min-w-[52px] sm:min-w-[64px] ${
                     isActive
-                      ? "text-white"
-                      : "text-white/60 hover:text-white"
+                      ? "theme-text-primary"
+                      : "theme-text-secondary hover:opacity-100 opacity-75"
                   }`}
                 >
                   {isActive && (
                     <motion.div
-                      className="absolute inset-0 bg-gradient-to-br from-purple-500/40 to-pink-500/40 rounded-full"
+                      className="absolute inset-0 nav-active-pill rounded-full"
                       initial={false}
                       animate={{ opacity: 1 }}
                       transition={{ duration: 0.15 }}
@@ -67,10 +67,14 @@ export default function Navigation() {
                   )}
                   <Icon
                     className={`w-5 h-5 relative z-10 ${
-                      isActive ? "text-white" : ""
+                      isActive ? "theme-text-primary" : ""
                     }`}
                   />
-                  <span className={`text-[10px] relative z-10 ${isActive ? "font-semibold text-white" : ""}`}>
+                  <span
+                    className={`text-[10px] relative z-10 ${
+                      isActive ? "font-bold theme-text-primary" : ""
+                    }`}
+                  >
                     {t(item.labelKey)}
                   </span>
                 </Link>
@@ -84,21 +88,23 @@ export default function Navigation() {
           <div className="flex items-center gap-0.5">
             {/* Language Toggle */}
             <button
+              type="button"
               onClick={toggleLanguage}
-              className="flex items-center gap-1 px-2.5 py-1.5 hover:bg-white/10 rounded-full transition-colors"
+              className="flex items-center gap-1 px-2.5 py-1.5 hover:bg-white/10 rounded-full transition-colors theme-text-primary"
               aria-label={locale === "en" ? "تبديل إلى العربية" : "Switch to English"}
               title={locale === "en" ? "العربية" : "English"}
             >
-              <Globe className="w-4 h-4 text-white/80" />
-              <span className="text-[10px] font-semibold text-white/80 uppercase">
+              <Globe className="w-4 h-4 theme-text-secondary" />
+              <span className="text-[10px] font-semibold theme-text-primary uppercase">
                 {locale === "en" ? "عربي" : "EN"}
               </span>
             </button>
 
             {/* Sign Out */}
             <button
+              type="button"
               onClick={handleSignOut}
-              className="p-2 hover:bg-white/10 rounded-full transition-colors text-white/60 hover:text-white"
+              className="p-2 hover:bg-white/10 rounded-full transition-colors theme-text-secondary hover:opacity-100"
               aria-label={t("settings.signOut")}
               title={t("settings.signOut")}
             >

@@ -28,6 +28,12 @@ import {
   clearCachedEntries,
   type OfflineMutationItem,
 } from "@/lib/offline-queue";
+import {
+  applyAppearanceTokens,
+  dispatchAppearanceChange,
+  getStoredAppearance,
+  setStoredMoodReactive,
+} from "@/lib/theme";
 
 const UUID_REGEX =
   /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
@@ -283,6 +289,19 @@ export function useSyncStore() {
 
   const settings = serverSettings || localSettings;
 
+  useEffect(() => {
+    if (!serverSettings?.theme) return;
+    const stored = localStorage.getItem("moodflow-theme");
+    if (stored !== serverSettings.theme) {
+      localStorage.setItem("moodflow-theme", serverSettings.theme);
+      applyAppearanceTokens({
+        ...getStoredAppearance(),
+        theme: serverSettings.theme,
+      });
+      dispatchAppearanceChange();
+    }
+  }, [serverSettings?.theme]);
+
   // Create entry mutation with E2EE, optimistic update, and offline queue fallback
   const createEntryMutation = useMutation({
     mutationFn: async (params: {
@@ -387,11 +406,16 @@ export function useSyncStore() {
       const tempId = generateId();
       newParams._tempId = tempId;
       const sentiment = analyzeSentiment(newParams.text);
+      const dateStr =
+        newParams.date && /^\d{4}-\d{2}-\d{2}$/.test(newParams.date)
+          ? newParams.date
+          : toLocalDateStr(new Date());
+      const timeStr = newParams.time?.trim() || formatTime(new Date());
 
       const optimisticEntry: MoodEntry = {
         id: tempId,
-        date: toLocalDateStr(new Date()),
-        time: formatTime(new Date()),
+        date: dateStr,
+        time: timeStr,
         mood: newParams.mood,
         intensity: newParams.intensity,
         text: newParams.text || "",
@@ -657,7 +681,7 @@ export function useSyncStore() {
     },
   });
 
-  // Theme change - works immediately offline or online
+  // Theme change - works immediately offline or online & enforces Mode-Aware Aura Rule
   const changeTheme = useCallback(
     (theme: "dark" | "light") => {
       setLocalSettings((prev) => ({ ...prev, theme }));
@@ -671,6 +695,14 @@ export function useSyncStore() {
       }
 
       localStorage.setItem("moodflow-theme", theme);
+      // Automatic Mode-Aware Aura Rule: OFF in Dark Mode, ON in Light Mode
+      setStoredMoodReactive(theme === "light");
+      applyAppearanceTokens({
+        ...getStoredAppearance(),
+        theme,
+        moodReactive: theme === "light",
+      });
+      dispatchAppearanceChange();
 
       const currentSession = getSession();
       const currentUserId = currentSession?.userId ?? "guest";

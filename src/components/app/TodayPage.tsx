@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useMemo } from "react";
+import { useState, useMemo, useEffect, useRef } from "react";
 import dynamic from "next/dynamic";
 import Link from "next/link";
 import { motion, AnimatePresence } from "framer-motion";
@@ -24,19 +24,31 @@ import {
   commonTags,
   getRelativeDate,
   isToday,
+  toLocalDateStr,
   getWeeklyData,
   getCustomTags,
   saveCustomTag,
   getMoodPrompts,
 } from "@/lib/moods";
-import { analyzeSentiment, generateWeeklyInsight } from "@/lib/sentiment";
+import {
+  analyzeSentiment,
+  computeCompositeMoodScore,
+  generateWeeklyInsight,
+  getDimensionLabel,
+} from "@/lib/sentiment";
+import {
+  dispatchAppearanceChange,
+  getStoredAppearance,
+  MOOD_AURA_BLOBS,
+  type MoodButtonStyle,
+} from "@/lib/theme";
 import GlassBackground from "@/components/ui/GlassBackground";
 import Navigation from "@/components/ui/Navigation";
 import Disclaimer from "@/components/ui/Disclaimer";
 import BreathingExerciseModal from "@/components/ui/BreathingExerciseModal";
 import AchievementBadges from "@/components/ui/AchievementBadges";
 
-// Dynamic import for Recharts with ssr: false (F15)
+// Dynamic import for Recharts with ssr: false
 const DynamicWeeklyChart = dynamic(
   () =>
     import("recharts").then((mod) => {
@@ -67,8 +79,8 @@ const DynamicWeeklyChart = dynamic(
               >
                 <defs>
                   <linearGradient id="glassGradient" x1="0" y1="0" x2="0" y2="1">
-                    <stop offset="0%" stopColor="#A78BFA" stopOpacity={0.4} />
-                    <stop offset="100%" stopColor="#A78BFA" stopOpacity={0} />
+                    <stop offset="0%" stopColor="var(--chart-stroke)" stopOpacity={0.45} />
+                    <stop offset="100%" stopColor="var(--chart-stroke)" stopOpacity={0} />
                   </linearGradient>
                 </defs>
 
@@ -77,7 +89,7 @@ const DynamicWeeklyChart = dynamic(
                   axisLine={false}
                   tickLine={false}
                   tick={{
-                    fill: isLight ? "#4B3F72" : "rgba(255,255,255,0.7)",
+                    fill: isLight ? "#334155" : "rgba(255,255,255,0.72)",
                     fontSize: 11,
                     fontWeight: 500,
                   }}
@@ -87,22 +99,26 @@ const DynamicWeeklyChart = dynamic(
                 <YAxis hide domain={[0, 5]} />
                 <Tooltip
                   contentStyle={{
-                    backgroundColor: isLight ? "rgba(255, 255, 255, 0.95)" : "rgba(15, 15, 30, 0.95)",
+                    backgroundColor: isLight
+                      ? "rgba(255, 255, 255, 0.96)"
+                      : "rgba(10, 16, 32, 0.95)",
                     backdropFilter: "blur(12px)",
-                    border: isLight ? "1px solid rgba(0,0,0,0.1)" : "1px solid rgba(255,255,255,0.2)",
+                    border: isLight
+                      ? "1px solid rgba(15, 23, 42, 0.12)"
+                      : "1px solid rgba(255, 255, 255, 0.2)",
                     borderRadius: "12px",
-                    color: isLight ? "#1F1A3A" : "#fff",
+                    color: isLight ? "#0F172A" : "#fff",
                     fontSize: "12px",
                   }}
                 />
                 <Area
                   type="monotone"
                   dataKey="score"
-                  stroke="#A78BFA"
-                  strokeWidth={2.5}
+                  stroke="var(--chart-stroke)"
+                  strokeWidth={2.75}
                   fill="url(#glassGradient)"
-                  dot={{ fill: "#A78BFA", strokeWidth: 0, r: 3.5 }}
-                  activeDot={{ r: 5, fill: "#F472B6", strokeWidth: 0 }}
+                  dot={{ fill: "var(--chart-stroke)", strokeWidth: 0, r: 4 }}
+                  activeDot={{ r: 5.5, fill: "var(--chart-dot)", strokeWidth: 0 }}
                 />
               </AreaChart>
             </ResponsiveContainer>
@@ -131,13 +147,20 @@ export default function TodayPage() {
   const { isRtl, locale, t, tmood, ttag } = useLanguage();
 
   const [selectedMood, setSelectedMood] = useState<number | null>(null);
+  const [selectedDay, setSelectedDay] = useState<"today" | "yesterday">("today");
   const [journalText, setJournalText] = useState("");
   const [selectedTags, setSelectedTags] = useState<string[]>([]);
   const [sliderValue, setSliderValue] = useState(50);
   const [showSuccess, setShowSuccess] = useState(false);
   const [isBreathingOpen, setIsBreathingOpen] = useState(false);
+  const [moodStyle, setMoodStyle] = useState<MoodButtonStyle>("hybrid");
 
-  // Phase 2: Custom tags & Guided prompts & Deep reflection state
+  // Animated Horizontal Flip tracking when EN <-> AR switches
+  const prevLocaleRef = useRef(locale);
+  const [chartFlipKey, setChartFlipKey] = useState(0);
+  const [isChartFlipping, setIsChartFlipping] = useState(false);
+
+  // Custom tags & Deep reflection state
   const [customTags, setCustomTags] = useState<string[]>(() => getCustomTags());
   const [isAddingTag, setIsAddingTag] = useState(false);
   const [newTagText, setNewTagText] = useState("");
@@ -147,6 +170,31 @@ export default function TodayPage() {
     booster: string;
     habit: string;
   } | null>(null);
+
+  useEffect(() => {
+    const syncStyle = () => {
+      setMoodStyle(getStoredAppearance().moodStyle);
+    };
+    syncStyle();
+    window.addEventListener("moodflow-appearance-change", syncStyle);
+    return () => window.removeEventListener("moodflow-appearance-change", syncStyle);
+  }, []);
+
+  useEffect(() => {
+    if (prevLocaleRef.current !== locale) {
+      prevLocaleRef.current = locale;
+      setChartFlipKey((k) => k + 1);
+      setIsChartFlipping(true);
+      const timer = setTimeout(() => setIsChartFlipping(false), 650);
+      return () => clearTimeout(timer);
+    }
+  }, [locale]);
+
+  const handleSelectMood = (index: number) => {
+    setSelectedMood(index);
+    const chosen = moodOptions[index]?.label || null;
+    dispatchAppearanceChange(chosen);
+  };
 
   const moodPrompts = useMemo(() => {
     if (selectedMood === null) return [];
@@ -182,13 +230,32 @@ export default function TodayPage() {
     [entries, locale]
   );
 
-  // Sentiment analysis on text typing
+  // Real mathematical trait & massive lexicon sentiment analysis
   const sentiment = useMemo(() => {
-    if (journalText.trim().length >= 5) {
-      return analyzeSentiment(journalText, locale);
+    const hasEnoughText = journalText.trim().length >= 3;
+    if (!hasEnoughText && selectedMood === null) return null;
+
+    const textResult = analyzeSentiment(journalText, locale);
+    if (selectedMood !== null) {
+      const moodLabel = moodOptions[selectedMood].label;
+      const composite = computeCompositeMoodScore({
+        mood: moodLabel,
+        intensity: sliderValue,
+        tags: selectedTags,
+        text: journalText,
+        locale,
+      });
+      return {
+        ...textResult,
+        wellnessIndex: composite.wellnessIndex,
+        dominantDimension: hasEnoughText
+          ? textResult.dominantDimension
+          : composite.dominantDimension,
+        score: hasEnoughText ? textResult.score : composite.score,
+      };
     }
-    return null;
-  }, [journalText, locale]);
+    return textResult;
+  }, [journalText, locale, selectedMood, sliderValue, selectedTags]);
 
   const toggleTag = (tag: string) => {
     setSelectedTags((prev) =>
@@ -229,7 +296,6 @@ export default function TodayPage() {
           return;
         }
       }
-      // Offline / guest heuristic fallback
       const isAr = locale === "ar";
       setDeepReflection({
         pattern: weeklyInsight,
@@ -260,6 +326,13 @@ export default function TodayPage() {
     if (selectedMood === null || isCreating) return;
 
     const clampedIntensity = Math.max(1, Math.min(100, Math.round(sliderValue)));
+    const targetDate = (() => {
+      const d = new Date();
+      if (selectedDay === "yesterday") {
+        d.setDate(d.getDate() - 1);
+      }
+      return toLocalDateStr(d);
+    })();
 
     try {
       await createEntry({
@@ -267,9 +340,9 @@ export default function TodayPage() {
         intensity: clampedIntensity,
         text: journalText.trim(),
         tags: selectedTags,
+        date: targetDate,
       });
 
-      // Show breathing modal suggestion if mood is heavy (Sad or Frustrated with high intensity)
       const currentMoodLabel = moodOptions[selectedMood].label;
       if (
         (currentMoodLabel === "Sad" || currentMoodLabel === "Frustrated") &&
@@ -280,8 +353,10 @@ export default function TodayPage() {
 
       setJournalText("");
       setSelectedMood(null);
+      setSelectedDay("today");
       setSelectedTags([]);
       setSliderValue(50);
+      dispatchAppearanceChange(null);
       setShowSuccess(true);
       setTimeout(() => setShowSuccess(false), 2500);
     } catch (err) {
@@ -294,7 +369,8 @@ export default function TodayPage() {
       <GlassBackground>
         <div className="flex items-center justify-center min-h-screen">
           <motion.div
-            className="w-12 h-12 border-4 border-purple-500 border-t-transparent rounded-full"
+            className="w-12 h-12 border-4 border-t-transparent rounded-full"
+            style={{ borderColor: "var(--accent-solid)", borderTopColor: "transparent" }}
             animate={{ rotate: 360 }}
             transition={{ duration: 1, repeat: Infinity, ease: "linear" }}
           />
@@ -309,6 +385,13 @@ export default function TodayPage() {
   const isHeavyMoodSelected =
     selectedMoodLabel === "Sad" || selectedMoodLabel === "Frustrated";
 
+  const moodBtnClass =
+    moodStyle === "orbs"
+      ? "mood-btn-orbs"
+      : moodStyle === "keycaps"
+      ? "mood-btn-keycaps"
+      : "mood-btn-hybrid";
+
   return (
     <GlassBackground>
       <Disclaimer />
@@ -318,10 +401,10 @@ export default function TodayPage() {
       />
 
       <div
-        className="max-w-4xl mx-auto px-4 py-8 md:px-6 md:py-12"
+        className="max-w-4xl mx-auto px-4 py-8 md:px-6 md:py-10"
         dir={isRtl ? "rtl" : "ltr"}
       >
-        {/* Hero User Banner */}
+        {/* 1. Hero User Banner */}
         <motion.div
           className="glass rounded-full px-4 py-2.5 mb-6 shadow-lg"
           initial={{ opacity: 0, y: -20 }}
@@ -329,38 +412,39 @@ export default function TodayPage() {
         >
           <div className="flex items-center justify-between">
             <div className="flex items-center gap-3">
-              <div className="w-10 h-10 rounded-full bg-gradient-to-br from-purple-500 to-pink-500 flex items-center justify-center shadow-md">
+              <div className="w-10 h-10 rounded-full accent-avatar flex items-center justify-center shadow-md">
                 <span className="text-base font-bold text-white">
                   {user?.username?.charAt(0).toUpperCase() || "U"}
                 </span>
               </div>
               <div>
-                <p className="text-white/60 text-xs">{t("greeting.welcome")}</p>
-                <p className="text-white font-semibold text-sm">@{user?.username}</p>
+                <p className="theme-text-secondary text-xs">{t("greeting.welcome")}</p>
+                <p className="theme-text-primary font-semibold text-sm">@{user?.username}</p>
               </div>
             </div>
 
             <div className="flex items-center gap-2">
               <button
+                type="button"
                 onClick={() => setIsBreathingOpen(true)}
-                className="hidden sm:flex items-center gap-1.5 px-3 py-1.5 bg-purple-500/20 hover:bg-purple-500/30 rounded-full border border-purple-500/30 text-xs text-purple-300 font-medium transition-colors"
+                className="hidden sm:flex items-center gap-1.5 px-3 py-1.5 accent-pill rounded-full text-xs font-medium transition-opacity hover:opacity-90"
                 aria-label={t("breathing.cta")}
               >
                 <Wind className="w-3.5 h-3.5" />
                 <span>{t("breathing.cta")}</span>
               </button>
 
-              <div className="flex items-center gap-1.5 px-3 py-1.5 bg-white/10 rounded-full">
+              <div className="flex items-center gap-1.5 px-3 py-1.5 recessed-well rounded-full">
                 <Flame
                   className={`w-4 h-4 ${
-                    stats.currentStreak > 0 ? "text-orange-400" : "text-white/40"
+                    stats.currentStreak > 0 ? "text-orange-400 flame-animated" : "theme-text-muted"
                   }`}
                 />
                 <div className="flex items-baseline gap-1">
-                  <span className="text-white font-bold text-sm">
+                  <span className="theme-text-primary font-bold text-sm">
                     {stats.currentStreak}
                   </span>
-                  <span className="text-white/60 text-[10px]">
+                  <span className="theme-text-secondary text-[10px]">
                     {t("stats.dayStreak")}
                   </span>
                 </div>
@@ -369,11 +453,11 @@ export default function TodayPage() {
           </div>
         </motion.div>
 
-        {/* Header Greeting */}
+        {/* 2. Header Greeting */}
         <motion.div
           initial={{ opacity: 0, y: -20 }}
           animate={{ opacity: 1, y: 0 }}
-          className="text-center mb-8"
+          className="text-center mb-7"
         >
           <motion.div
             className="inline-flex items-center gap-2 px-4 py-1.5 glass rounded-full mb-3"
@@ -381,64 +465,96 @@ export default function TodayPage() {
             animate={{ opacity: 1, scale: 1 }}
             transition={{ delay: 0.2 }}
           >
-            <Sparkles className="w-4 h-4 text-purple-400" />
-            <span className="text-xs text-white/80 font-medium">
+            <Sparkles className="w-4 h-4" style={{ color: "var(--accent-solid)" }} />
+            <span className="text-xs theme-text-secondary font-medium">
               {stats.currentStreak > 0 ? t("greeting.streak") : t("greeting.start")}
             </span>
-            {stats.currentStreak > 0 && <Flame className="w-4 h-4 text-orange-400" />}
+            {stats.currentStreak > 0 && <Flame className="w-4 h-4 text-orange-400 flame-animated" />}
           </motion.div>
-          <h1 className="text-3xl md:text-4xl font-bold text-white mb-2">
+          <h1 className="text-3xl md:text-4xl font-bold theme-text-primary mb-2">
             {t("greeting.feeling")}
           </h1>
-          <p className="text-white/60 text-sm">{t("greeting.moment")}</p>
+          <p className="theme-text-secondary text-sm">{t("greeting.moment")}</p>
         </motion.div>
 
-        {/* Mood Selector Card */}
+        {/* 3. Mood Selector Card */}
         <motion.div
           className="glass rounded-[2rem] p-4 md:p-6 mb-6 shadow-xl"
           initial={{ opacity: 0, y: 20 }}
           animate={{ opacity: 1, y: 0 }}
-          transition={{ delay: 0.3 }}
+          transition={{ delay: 0.25 }}
         >
-          <div className="flex items-center justify-between mb-4">
-            <h2 className="text-sm font-semibold text-white/90 flex items-center gap-2">
+          <div className="flex flex-wrap items-center justify-between gap-2 mb-4">
+            <h2 className="text-sm font-semibold theme-text-primary flex items-center gap-2">
               <Heart className="w-4 h-4 text-pink-400" />
               <span>{t("select.mood")}</span>
             </h2>
 
-            <button
-              onClick={() => setIsBreathingOpen(true)}
-              className="sm:hidden flex items-center gap-1 text-xs text-purple-300 hover:text-purple-200"
-            >
-              <Wind className="w-3.5 h-3.5" />
-              <span>{t("breathing.cta")}</span>
-            </button>
+            <div className="flex items-center gap-2">
+              {/* Today / Yesterday 1-tap Backfill Pill */}
+              <div className="inline-flex rounded-full recessed-well p-0.5 text-[11px]">
+                <button
+                  type="button"
+                  onClick={() => setSelectedDay("today")}
+                  className={`px-3 py-1 rounded-full font-semibold transition-all ${
+                    selectedDay === "today" ? "accent-gradient-btn" : "theme-text-secondary"
+                  }`}
+                >
+                  {t("time.today")}
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setSelectedDay("yesterday")}
+                  className={`px-3 py-1 rounded-full font-semibold transition-all ${
+                    selectedDay === "yesterday" ? "accent-gradient-btn" : "theme-text-secondary"
+                  }`}
+                >
+                  {t("time.yesterday")}
+                </button>
+              </div>
+
+              <button
+                type="button"
+                onClick={() => setIsBreathingOpen(true)}
+                className="sm:hidden flex items-center gap-1 text-xs accent-pill px-2.5 py-1 rounded-full"
+                aria-label={t("breathing.cta")}
+              >
+                <Wind className="w-3.5 h-3.5" />
+              </button>
+            </div>
           </div>
 
-          {/* 5 Mood Options with Active Selection Ring */}
-          <div className="grid grid-cols-5 gap-2 md:gap-3 mb-4">
+          {/* 5 Mood Buttons (Hybrid Orb-Keycaps Default / 3D Keycaps / Glowing Orbs) */}
+          <div className="grid grid-cols-5 gap-2 md:gap-4 mb-4 pt-1">
             {moodOptions.map((mood, index) => {
               const isSelected = selectedMood === index;
+              const aura = MOOD_AURA_BLOBS[mood.label];
               return (
                 <motion.button
                   key={mood.label}
-                  onClick={() => setSelectedMood(index)}
-                  className={`relative flex flex-col items-center justify-center p-2.5 md:p-4 rounded-2xl transition-all min-h-[72px] md:min-h-[88px] ${
-                    isSelected
-                      ? "ring-2 ring-white shadow-xl scale-105 bg-white/20 border-white/40"
-                      : "bg-white/5 hover:bg-white/10 border border-white/10"
-                  }`}
+                  type="button"
+                  onClick={() => handleSelectMood(index)}
+                  className={`${moodBtnClass} ${isSelected ? "selected" : ""} relative flex flex-col items-center justify-center p-2.5 md:p-3.5 min-h-[76px] md:min-h-[88px]`}
+                  style={
+                    {
+                      "--mood-glow": aura.blob,
+                      "--mood-color": aura.color,
+                    } as React.CSSProperties
+                  }
                   whileTap={{ scale: 0.95 }}
-                  initial={{ opacity: 0, y: 20 }}
-                  animate={{ opacity: 1, y: 0 }}
-                  transition={{ delay: 0.35 + index * 0.05 }}
                   aria-pressed={isSelected}
                   aria-label={tmood(mood.label)}
                 >
-                  <span className="text-2xl md:text-3xl emoji">{mood.emoji}</span>
                   <span
-                    className={`text-[10px] md:text-xs mt-1.5 font-medium ${
-                      isSelected ? "text-white font-bold" : "text-white/60"
+                    className={`text-2xl md:text-3xl emoji ${
+                      isSelected ? "mood-selected-emoji" : ""
+                    }`}
+                  >
+                    {mood.emoji}
+                  </span>
+                  <span
+                    className={`text-[10px] md:text-xs mt-1.5 font-semibold theme-text-primary ${
+                      isSelected ? "" : "opacity-80"
                     }`}
                   >
                     {tmood(mood.label)}
@@ -457,16 +573,16 @@ export default function TodayPage() {
                 exit={{ opacity: 0, height: 0 }}
                 className="overflow-hidden mb-4"
               >
-                <div className="p-3.5 rounded-2xl bg-purple-500/15 border border-purple-400/30 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3">
+                <div className="p-3.5 rounded-2xl accent-pill flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3">
                   <div className="flex items-start gap-2.5">
-                    <div className="w-8 h-8 rounded-xl bg-purple-500/25 flex items-center justify-center flex-shrink-0 text-purple-300 mt-0.5">
+                    <div className="w-8 h-8 rounded-xl recessed-well flex items-center justify-center flex-shrink-0 mt-0.5">
                       <Wind className="w-4 h-4" />
                     </div>
                     <div>
-                      <p className="text-white font-semibold text-xs">
+                      <p className="theme-text-primary font-semibold text-xs">
                         {t("breathing.calloutTitle")}
                       </p>
-                      <p className="text-white/70 text-xs leading-relaxed">
+                      <p className="theme-text-secondary text-xs leading-relaxed">
                         {t("breathing.calloutDesc")}
                       </p>
                     </div>
@@ -474,7 +590,7 @@ export default function TodayPage() {
                   <button
                     type="button"
                     onClick={() => setIsBreathingOpen(true)}
-                    className="px-3.5 py-2 rounded-xl bg-purple-500/30 hover:bg-purple-500/40 border border-purple-400/30 text-white text-xs font-medium transition-colors flex-shrink-0"
+                    className="px-3.5 py-2 rounded-xl accent-gradient-btn text-xs font-medium transition-opacity flex-shrink-0"
                   >
                     {t("breathing.cta")}
                   </button>
@@ -483,7 +599,7 @@ export default function TodayPage() {
             )}
           </AnimatePresence>
 
-          {/* Mood Intensity Slider */}
+          {/* Thick Capsule Mood Intensity Slider */}
           {selectedMood !== null && (
             <motion.div
               className="mb-5 px-1"
@@ -491,18 +607,22 @@ export default function TodayPage() {
               animate={{ opacity: 1, height: "auto" }}
             >
               <div className="flex justify-between items-center mb-2">
-                <span className="text-xs text-white/70 font-medium">
+                <span className="text-xs theme-text-secondary font-medium">
                   {t("entry.intensity")}
                 </span>
-                <span className="text-xs text-white font-bold">
+                <span className="text-xs theme-text-primary font-bold font-mono">
                   {sliderValue}%
                 </span>
               </div>
-              <div className="relative h-2 rounded-full bg-white/10">
-                <motion.div
-                  className="absolute inset-y-0 start-0 rounded-full bg-gradient-to-r from-purple-500 to-pink-500"
-                  style={{ width: `${sliderValue}%` }}
-                  animate={{ width: `${sliderValue}%` }}
+              <div className="relative h-6 rounded-full recessed-well p-1 overflow-hidden flex items-center">
+                <div
+                  className="h-full rounded-full transition-all duration-150"
+                  style={{
+                    width: `${sliderValue}%`,
+                    background:
+                      "linear-gradient(90deg, var(--accent-from), var(--accent-via), var(--accent-to))",
+                    boxShadow: "0 0 14px var(--accent-soft)",
+                  }}
                 />
                 <input
                   type="range"
@@ -521,7 +641,7 @@ export default function TodayPage() {
             </motion.div>
           )}
 
-          {/* Journal Entry (Optional note) */}
+          {/* Tags, Guided Prompts & Journal */}
           <AnimatePresence>
             {selectedMood !== null && (
               <motion.div
@@ -531,9 +651,9 @@ export default function TodayPage() {
                 className="overflow-hidden"
               >
                 <div className="pt-4 border-t border-white/10">
-                  {/* Tags (Preset + Custom) */}
+                  {/* Tags */}
                   <div className="mb-4">
-                    <span className="text-xs text-white/60 mb-2 block">
+                    <span className="text-xs theme-text-secondary mb-2 block">
                       {t("entry.tags")}
                     </span>
                     <div className="flex flex-wrap items-center gap-1.5">
@@ -544,20 +664,19 @@ export default function TodayPage() {
                           onClick={() => toggleTag(tag)}
                           className={`px-3 py-1 rounded-full text-xs font-medium transition-all ${
                             selectedTags.includes(tag)
-                              ? "bg-purple-500 text-white shadow-sm"
-                              : "bg-white/10 text-white/70 hover:bg-white/20"
+                              ? "accent-tag-active"
+                              : "recessed-well theme-text-secondary hover:opacity-90"
                           }`}
                         >
                           {ttag(tag)}
                         </button>
                       ))}
 
-                      {/* Add Custom Tag Chip */}
                       {!isAddingTag ? (
                         <button
                           type="button"
                           onClick={() => setIsAddingTag(true)}
-                          className="px-3 py-1 rounded-full text-xs font-medium bg-white/10 text-purple-300 hover:bg-white/20 border border-purple-500/30 flex items-center gap-1 transition-all"
+                          className="px-3 py-1 rounded-full text-xs font-medium accent-pill flex items-center gap-1 transition-all"
                         >
                           <Plus className="w-3 h-3" />
                           <span>{t("tag.addCustom")}</span>
@@ -569,7 +688,7 @@ export default function TodayPage() {
                             value={newTagText}
                             onChange={(e) => setNewTagText(e.target.value)}
                             placeholder={t("tag.newPlaceholder")}
-                            className="px-2.5 py-1 bg-white/15 rounded-lg text-xs text-white placeholder-white/40 border border-white/20 outline-none focus:border-purple-400"
+                            className="px-2.5 py-1 recessed-well rounded-lg text-xs theme-text-primary outline-none"
                             onKeyDown={(e) => {
                               if (e.key === "Enter") {
                                 e.preventDefault();
@@ -581,7 +700,7 @@ export default function TodayPage() {
                           <button
                             type="button"
                             onClick={handleSaveCustomTag}
-                            className="px-2.5 py-1 bg-purple-500 text-white rounded-lg text-xs font-semibold hover:bg-purple-600 transition-colors"
+                            className="px-2.5 py-1 accent-gradient-btn rounded-lg text-xs font-semibold"
                           >
                             {t("tag.save")}
                           </button>
@@ -591,7 +710,7 @@ export default function TodayPage() {
                               setIsAddingTag(false);
                               setNewTagText("");
                             }}
-                            className="px-2 py-1 bg-white/10 text-white/60 hover:text-white rounded-lg text-xs transition-colors"
+                            className="px-2 py-1 recessed-well theme-text-secondary rounded-lg text-xs"
                           >
                             {t("tag.cancel")}
                           </button>
@@ -600,11 +719,11 @@ export default function TodayPage() {
                     </div>
                   </div>
 
-                  {/* Phase 2: Guided Prompts */}
+                  {/* Guided Prompts */}
                   {moodPrompts.length > 0 && (
                     <div className="mb-3">
-                      <span className="text-xs text-white/60 mb-1.5 flex items-center gap-1">
-                        <Sparkles className="w-3 h-3 text-purple-300" />
+                      <span className="text-xs theme-text-secondary mb-1.5 flex items-center gap-1">
+                        <Sparkles className="w-3 h-3" style={{ color: "var(--accent-solid)" }} />
                         <span>{t("prompt.header")}</span>
                       </span>
                       <div className="flex flex-wrap gap-1.5">
@@ -617,7 +736,7 @@ export default function TodayPage() {
                                 prev.trim() ? `${prev.trim()}\n\n${p} ` : `${p} `
                               );
                             }}
-                            className="px-2.5 py-1 rounded-xl text-[11px] bg-purple-500/15 hover:bg-purple-500/25 border border-purple-400/25 text-purple-200 transition-colors text-start"
+                            className="px-2.5 py-1 rounded-xl text-[11px] accent-pill transition-opacity hover:opacity-90 text-start"
                           >
                             {p}
                           </button>
@@ -630,14 +749,14 @@ export default function TodayPage() {
                     value={journalText}
                     onChange={(e) => setJournalText(e.target.value)}
                     placeholder={t("entry.journal")}
-                    className="w-full h-24 p-3.5 backdrop-blur-sm bg-white/10 rounded-2xl border border-white/20 focus:border-white/40 focus:ring-2 focus:ring-white/20 outline-none resize-none transition-all text-white placeholder-white/40 text-sm"
+                    className="w-full h-24 p-3.5 recessed-well rounded-2xl outline-none resize-none transition-all theme-text-primary placeholder-white/40 text-sm"
                   />
 
-                  {/* Save Button (Optional Journal) */}
                   <motion.button
+                    type="button"
                     onClick={handleSaveMood}
                     disabled={selectedMood === null || isCreating}
-                    className="mt-3.5 w-full py-3 rounded-xl font-medium flex items-center justify-center gap-2 bg-gradient-to-r from-purple-500 to-pink-500 text-white shadow-lg hover:opacity-95 transition-all disabled:opacity-50 disabled:cursor-not-allowed"
+                    className="mt-3.5 w-full py-3 rounded-xl font-semibold flex items-center justify-center gap-2 accent-gradient-btn shadow-lg transition-all disabled:opacity-50 disabled:cursor-not-allowed"
                     whileHover={!isCreating ? { scale: 1.01 } : {}}
                     whileTap={!isCreating ? { scale: 0.99 } : {}}
                   >
@@ -654,41 +773,47 @@ export default function TodayPage() {
           </AnimatePresence>
         </motion.div>
 
-        {/* AI Sentiment Insight */}
+        {/* 4. Live Sentiment & 8-Dimension Trait Insight Card */}
         <AnimatePresence>
           {sentiment && (
             <motion.div
               initial={{ opacity: 0, y: 15, scale: 0.98 }}
               animate={{ opacity: 1, y: 0, scale: 1 }}
               exit={{ opacity: 0, y: -10, scale: 0.98 }}
-              className="backdrop-blur-xl bg-purple-500/20 rounded-2xl p-4 border border-purple-500/30 mb-6 shadow-md"
+              className="glass rounded-2xl p-4 mb-6 shadow-md"
             >
               <div className="flex items-start gap-3">
-                <div className="w-9 h-9 rounded-xl bg-purple-500/30 flex items-center justify-center flex-shrink-0">
-                  <Sparkles className="w-5 h-5 text-purple-300" />
+                <div className="w-9 h-9 rounded-xl accent-pill flex items-center justify-center flex-shrink-0">
+                  <Sparkles className="w-5 h-5" />
                 </div>
                 <div className="flex-1">
-                  <div className="flex items-center gap-2 mb-1">
-                    <span className="text-white font-semibold text-sm">
+                  <div className="flex flex-wrap items-center gap-2 mb-1.5">
+                    <span className="theme-text-primary font-semibold text-sm">
                       {t("ai.insight")}
                     </span>
                     <span
-                      className={`px-2 py-0.5 rounded-full text-[10px] font-semibold ${
-                        sentiment.score > 0.3
-                          ? "bg-green-500/30 text-green-300"
-                          : sentiment.score < -0.3
-                          ? "bg-red-500/30 text-red-300"
-                          : "bg-yellow-500/30 text-yellow-300"
+                      className={`px-2 py-0.5 rounded-full text-[10px] font-bold ${
+                        sentiment.score > 0.2
+                          ? "bg-emerald-500/20 stat-positive"
+                          : sentiment.score < -0.2
+                          ? "bg-rose-500/20 stat-negative"
+                          : "recessed-well theme-text-secondary"
                       }`}
                     >
-                      {sentiment.score > 0.3
+                      {sentiment.score > 0.2
                         ? t("sentiment.positive")
-                        : sentiment.score < -0.3
+                        : sentiment.score < -0.2
                         ? t("sentiment.negative")
                         : t("sentiment.neutral")}
                     </span>
+                    <span className="px-2 py-0.5 rounded-full text-[10px] font-bold accent-pill">
+                      {t("wellness.index")}: {sentiment.wellnessIndex}/100
+                    </span>
+                    <span className="px-2 py-0.5 rounded-full text-[10px] font-semibold recessed-well theme-text-primary">
+                      {t("wellness.dominant")}: {getDimensionLabel(sentiment.dominantDimension, locale)}
+                    </span>
                   </div>
-                  <p className="text-white/80 text-xs leading-relaxed">
+                  <p className="theme-text-secondary text-xs leading-relaxed">
                     {sentiment.insight}
                   </p>
                   {sentiment.keywords.length > 0 && (
@@ -696,7 +821,7 @@ export default function TodayPage() {
                       {sentiment.keywords.map((kw) => (
                         <span
                           key={kw}
-                          className="px-2 py-0.5 bg-white/10 rounded-full text-[10px] text-white/70"
+                          className="px-2 py-0.5 recessed-well rounded-full text-[10px] theme-text-secondary"
                         >
                           #{kw}
                         </span>
@@ -709,17 +834,17 @@ export default function TodayPage() {
           )}
         </AnimatePresence>
 
-        {/* Weekly AI Insight Bubble & Deep Reflection Card */}
+        {/* Weekly AI Insight & Deep Reflection Card */}
         <motion.div
           className="glass rounded-2xl p-4 md:p-5 mb-6 shadow-md"
           initial={{ opacity: 0, y: 15 }}
           animate={{ opacity: 1, y: 0 }}
-          transition={{ delay: 0.4 }}
+          transition={{ delay: 0.35 }}
         >
           <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 mb-2.5">
             <div className="flex items-center gap-2">
-              <Sparkles className="w-4 h-4 text-purple-400" />
-              <span className="text-xs font-semibold text-white/90">
+              <Sparkles className="w-4 h-4" style={{ color: "var(--accent-solid)" }} />
+              <span className="text-xs font-semibold theme-text-primary">
                 {t("ai.deepReflection")}
               </span>
             </div>
@@ -727,7 +852,7 @@ export default function TodayPage() {
               type="button"
               onClick={handleRequestDeepReflection}
               disabled={isReflecting}
-              className="inline-flex items-center gap-1.5 px-3 py-1.5 bg-gradient-to-r from-purple-500 to-pink-500 hover:opacity-95 text-white rounded-xl text-xs font-medium shadow transition-all disabled:opacity-50 self-start sm:self-auto"
+              className="inline-flex items-center gap-1.5 px-3 py-1.5 accent-gradient-btn rounded-xl text-xs font-medium shadow transition-all disabled:opacity-50 self-start sm:self-auto"
             >
               {isReflecting ? (
                 <Loader2 className="w-3.5 h-3.5 animate-spin" />
@@ -738,11 +863,10 @@ export default function TodayPage() {
             </button>
           </div>
 
-          <p className="text-white/80 text-xs font-medium leading-relaxed">
+          <p className="theme-text-secondary text-xs font-medium leading-relaxed">
             {weeklyInsight}
           </p>
 
-          {/* Deep Reflection 3-point structured output */}
           <AnimatePresence>
             {deepReflection && (
               <motion.div
@@ -752,27 +876,27 @@ export default function TodayPage() {
                 className="overflow-hidden mt-3.5 pt-3.5 border-t border-white/10"
               >
                 <div className="grid grid-cols-1 md:grid-cols-3 gap-2.5">
-                  <div className="p-3 bg-white/5 rounded-xl border border-white/10">
-                    <p className="text-[11px] font-semibold text-purple-300 mb-1">
+                  <div className="p-3 recessed-well rounded-xl">
+                    <p className="text-[11px] font-semibold theme-text-primary mb-1">
                       {t("ai.reflectionPattern")}
                     </p>
-                    <p className="text-xs text-white/80 leading-relaxed">
+                    <p className="text-xs theme-text-secondary leading-relaxed">
                       {deepReflection.pattern}
                     </p>
                   </div>
-                  <div className="p-3 bg-white/5 rounded-xl border border-white/10">
-                    <p className="text-[11px] font-semibold text-pink-300 mb-1">
+                  <div className="p-3 recessed-well rounded-xl">
+                    <p className="text-[11px] font-semibold stat-positive mb-1">
                       {t("ai.reflectionBooster")}
                     </p>
-                    <p className="text-xs text-white/80 leading-relaxed">
+                    <p className="text-xs theme-text-secondary leading-relaxed">
                       {deepReflection.booster}
                     </p>
                   </div>
-                  <div className="p-3 bg-white/5 rounded-xl border border-white/10">
-                    <p className="text-[11px] font-semibold text-emerald-300 mb-1">
+                  <div className="p-3 recessed-well rounded-xl">
+                    <p className="text-[11px] font-semibold theme-text-primary mb-1">
                       {t("ai.reflectionHabit")}
                     </p>
-                    <p className="text-xs text-white/80 leading-relaxed">
+                    <p className="text-xs theme-text-secondary leading-relaxed">
                       {deepReflection.habit}
                     </p>
                   </div>
@@ -789,7 +913,7 @@ export default function TodayPage() {
               initial={{ opacity: 0, y: 20, scale: 0.9 }}
               animate={{ opacity: 1, y: 0, scale: 1 }}
               exit={{ opacity: 0, y: -20, scale: 0.9 }}
-              className="fixed top-8 left-1/2 -translate-x-1/2 z-50 px-6 py-3 backdrop-blur-xl bg-emerald-500/90 text-white rounded-full border border-white/20 shadow-2xl flex items-center gap-2"
+              className="fixed top-8 left-1/2 -translate-x-1/2 z-50 px-6 py-3 backdrop-blur-xl bg-emerald-500/90 text-white keep-white rounded-full border border-white/20 shadow-2xl flex items-center gap-2"
             >
               <Sparkles className="w-5 h-5 text-white" />
               <span className="font-medium text-sm">{t("entry.saved")}</span>
@@ -797,91 +921,93 @@ export default function TodayPage() {
           )}
         </AnimatePresence>
 
-        {/* Stats Grid: Fixed Middle Card */}
+        {/* 5. Stats Grid */}
         <div className="grid grid-cols-3 gap-3 md:gap-4 mb-6">
-          {/* Card 1: Total Entries */}
+          <motion.div
+            className="glass rounded-2xl p-4 text-center shadow-md"
+            initial={{ opacity: 0, y: 15 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ delay: 0.4 }}
+          >
+            <div className="flex items-center justify-center gap-1.5 mb-1">
+              <BookOpen className="w-4 h-4" style={{ color: "var(--accent-solid)" }} />
+              <span className="text-2xl font-bold theme-text-primary">{stats.totalEntries}</span>
+            </div>
+            <p className="text-xs theme-text-muted">{t("stats.total")}</p>
+          </motion.div>
+
+          <motion.div
+            className="glass rounded-2xl p-4 text-center shadow-md"
+            initial={{ opacity: 0, y: 15 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ delay: 0.45 }}
+          >
+            <div className="flex items-center justify-center gap-1.5 mb-1">
+              <Flame className="w-4 h-4 text-orange-400 flame-animated" />
+              <span className="text-2xl font-bold theme-text-primary">{stats.currentStreak}</span>
+            </div>
+            <p className="text-xs theme-text-muted">{t("stats.streak")}</p>
+          </motion.div>
+
           <motion.div
             className="glass rounded-2xl p-4 text-center shadow-md"
             initial={{ opacity: 0, y: 15 }}
             animate={{ opacity: 1, y: 0 }}
             transition={{ delay: 0.5 }}
           >
-            <div className="flex items-center justify-center gap-1 text-purple-300 mb-1">
-              <BookOpen className="w-4 h-4" />
-              <span className="text-2xl font-bold">{stats.totalEntries}</span>
+            <div className="flex items-center justify-center gap-1.5 mb-1">
+              <Calendar className="w-4 h-4 text-pink-400" />
+              <span className="text-2xl font-bold theme-text-primary">{stats.entriesThisWeek}</span>
             </div>
-            <p className="text-xs text-white/50">{t("stats.total")}</p>
-          </motion.div>
-
-          {/* Card 2: Current Streak (Restored!) */}
-          <motion.div
-            className="glass rounded-2xl p-4 text-center shadow-md"
-            initial={{ opacity: 0, y: 15 }}
-            animate={{ opacity: 1, y: 0 }}
-            transition={{ delay: 0.55 }}
-          >
-            <div className="flex items-center justify-center gap-1 text-orange-400 mb-1">
-              <Flame className="w-4 h-4" />
-              <span className="text-2xl font-bold">{stats.currentStreak}</span>
-            </div>
-            <p className="text-xs text-white/50">{t("stats.streak")}</p>
-          </motion.div>
-
-          {/* Card 3: This Week */}
-          <motion.div
-            className="glass rounded-2xl p-4 text-center shadow-md"
-            initial={{ opacity: 0, y: 15 }}
-            animate={{ opacity: 1, y: 0 }}
-            transition={{ delay: 0.6 }}
-          >
-            <div className="flex items-center justify-center gap-1 text-pink-300 mb-1">
-              <Calendar className="w-4 h-4" />
-              <span className="text-2xl font-bold">{stats.entriesThisWeek}</span>
-            </div>
-            <p className="text-xs text-white/50">{t("stats.week")}</p>
+            <p className="text-xs theme-text-muted">{t("stats.week")}</p>
           </motion.div>
         </div>
 
-        {/* Competitor Parity: Achievement Badges Showcase (F20) */}
+        {/* 6. Achievement Badges */}
         <AchievementBadges
           longestStreak={stats.longestStreak}
           totalEntries={stats.totalEntries}
         />
 
-        {/* Weekly Trend Rolling Chart (F9 + F15) */}
+        {/* 7. Weekly Trend Chart (with Animated Horizontal Flip on EN <-> AR Switch) */}
         <motion.div
           className="glass rounded-3xl p-6 mb-6 shadow-xl"
           initial={{ opacity: 0, y: 20 }}
           animate={{ opacity: 1, y: 0 }}
-          transition={{ delay: 0.65 }}
+          transition={{ delay: 0.55 }}
         >
           <div className="flex items-center justify-between mb-4">
-            <h2 className="text-base font-semibold text-white flex items-center gap-2">
-              <TrendingUp className="w-5 h-5 text-purple-400" />
+            <h2 className="text-base font-semibold theme-text-primary flex items-center gap-2">
+              <TrendingUp className="w-5 h-5" style={{ color: "var(--accent-solid)" }} />
               <span>{t("trend.weekly")}</span>
             </h2>
-            <span className="text-xs text-white/50">
+            <span className="text-xs theme-text-muted">
               {isRtl ? "آخر ٧ أيام" : "Last 7 days"}
             </span>
           </div>
 
-          <DynamicWeeklyChart
-            data={weeklyData}
-            isRtl={isRtl}
-            isLight={isLight}
-          />
+          <div
+            key={chartFlipKey}
+            className={isChartFlipping ? "chart-flip-active" : undefined}
+          >
+            <DynamicWeeklyChart
+              data={weeklyData}
+              isRtl={isRtl}
+              isLight={isLight}
+            />
+          </div>
         </motion.div>
 
-        {/* Today's Entries List */}
+        {/* 8. Today's Entries List */}
         {todayEntries.length > 0 && (
           <motion.div
             className="glass rounded-3xl p-6 shadow-xl mb-6"
             initial={{ opacity: 0, y: 20 }}
             animate={{ opacity: 1, y: 0 }}
-            transition={{ delay: 0.7 }}
+            transition={{ delay: 0.6 }}
           >
-            <h2 className="text-base font-semibold text-white mb-4 flex items-center gap-2">
-              <BookOpen className="w-5 h-5 text-purple-400" />
+            <h2 className="text-base font-semibold theme-text-primary mb-4 flex items-center gap-2">
+              <BookOpen className="w-5 h-5" style={{ color: "var(--accent-solid)" }} />
               <span>{t("entries.today")}</span>
             </h2>
             <div className="space-y-3">
@@ -890,28 +1016,28 @@ export default function TodayPage() {
                 return (
                   <motion.div
                     key={entry.id}
-                    className="p-4 backdrop-blur-sm bg-white/5 rounded-2xl border border-white/10"
+                    className="p-4 recessed-well rounded-2xl"
                     initial={{ opacity: 0, x: -10 }}
                     animate={{ opacity: 1, x: 0 }}
-                    transition={{ delay: 0.75 + i * 0.05 }}
+                    transition={{ delay: 0.65 + i * 0.05 }}
                   >
                     <div className="flex items-center justify-between mb-2">
                       <div className="flex items-center gap-3">
                         <span className="text-2xl emoji">{mood?.emoji}</span>
                         <div className="flex items-center gap-1.5">
-                          <span className="font-semibold text-white text-sm">
+                          <span className="font-semibold theme-text-primary text-sm">
                             {tmood(entry.mood)}
                           </span>
-                          <span className="text-white/40 text-xs">·</span>
-                          <span className="text-white/40 text-xs">{entry.time}</span>
+                          <span className="theme-text-muted text-xs">·</span>
+                          <span className="theme-text-muted text-xs">{entry.time}</span>
                         </div>
                       </div>
-                      <span className="text-xs text-white/60 font-medium">
+                      <span className="text-xs theme-text-secondary font-medium">
                         {entry.intensity}%
                       </span>
                     </div>
                     {entry.text && (
-                      <p className="text-white/80 text-sm leading-relaxed mb-2">
+                      <p className="theme-text-secondary text-sm leading-relaxed mb-2">
                         {entry.text}
                       </p>
                     )}
@@ -920,7 +1046,7 @@ export default function TodayPage() {
                         {entry.tags.map((tag) => (
                           <span
                             key={tag}
-                            className="px-2 py-0.5 bg-white/10 rounded-full text-[10px] text-white/70"
+                            className="px-2 py-0.5 accent-pill rounded-full text-[10px]"
                           >
                             #{ttag(tag)}
                           </span>
@@ -934,28 +1060,28 @@ export default function TodayPage() {
           </motion.div>
         )}
 
-        {/* Empty Today Fallback: Recent Entries Preview (F9 #8) */}
+        {/* Empty Today Fallback: Recent Check-ins */}
         {todayEntries.length === 0 && (
           <motion.div
             className="glass rounded-3xl p-6 shadow-xl mb-6"
             initial={{ opacity: 0, y: 20 }}
             animate={{ opacity: 1, y: 0 }}
-            transition={{ delay: 0.7 }}
+            transition={{ delay: 0.6 }}
           >
             {entries.length > 0 ? (
               <div>
                 <div className="flex items-center justify-between mb-4">
                   <div>
-                    <h3 className="text-white font-semibold text-base">
+                    <h3 className="theme-text-primary font-semibold text-base">
                       {isRtl ? "الإدخالات الأخيرة" : "Recent Check-ins"}
                     </h3>
-                    <p className="text-white/50 text-xs">
+                    <p className="theme-text-muted text-xs">
                       {isRtl ? "لم تسجل مزاج اليوم بعد" : "You haven't logged today yet"}
                     </p>
                   </div>
                   <Link
                     href="/history"
-                    className="text-xs text-purple-300 hover:text-purple-200 flex items-center gap-1 font-medium"
+                    className="text-xs accent-pill px-3 py-1 rounded-full flex items-center gap-1 font-medium"
                   >
                     <span>{isRtl ? "عرض الكل" : "View All"}</span>
                     <ArrowRight className="w-3.5 h-3.5 rtl:rotate-180" />
@@ -968,21 +1094,21 @@ export default function TodayPage() {
                     return (
                       <div
                         key={entry.id}
-                        className="p-3 bg-white/5 rounded-xl border border-white/5 flex items-center justify-between text-xs"
+                        className="p-3 recessed-well rounded-xl flex items-center justify-between text-xs"
                       >
                         <div className="flex items-center gap-2.5">
                           <span className="text-xl emoji">{mood?.emoji}</span>
                           <div>
-                            <span className="font-semibold text-white">
+                            <span className="font-semibold theme-text-primary">
                               {tmood(entry.mood)}
                             </span>
-                            <span className="text-white/40 text-[10px] mx-1.5">·</span>
-                            <span className="text-white/50 text-[10px]">
+                            <span className="theme-text-muted text-[10px] mx-1.5">·</span>
+                            <span className="theme-text-muted text-[10px]">
                               {getRelativeDate(entry.date, locale)}
                             </span>
                           </div>
                         </div>
-                        <span className="text-white/50">{entry.intensity}%</span>
+                        <span className="theme-text-secondary">{entry.intensity}%</span>
                       </div>
                     );
                   })}
@@ -991,10 +1117,10 @@ export default function TodayPage() {
             ) : (
               <div className="text-center py-6">
                 <span className="text-5xl mb-3 block emoji">🌟</span>
-                <h3 className="text-white font-semibold text-base mb-1">
+                <h3 className="theme-text-primary font-semibold text-base mb-1">
                   {t("empty.noEntries")}
                 </h3>
-                <p className="text-white/60 text-xs">{t("empty.selectMood")}</p>
+                <p className="theme-text-secondary text-xs">{t("empty.selectMood")}</p>
               </div>
             )}
           </motion.div>

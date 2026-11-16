@@ -175,10 +175,10 @@ export default function BreathingExerciseModal({
                 ease: "easeInOut",
               }}
             >
-              <span className="text-4xl font-bold text-white tracking-wider mb-1 font-mono">
+              <span className="text-4xl font-bold theme-text-primary tracking-wider mb-1 font-mono">
                 {countdown}
               </span>
-              <span className={`text-xs font-semibold uppercase tracking-widest ${current.color}`}>
+              <span className={`text-xs font-semibold uppercase tracking-widest theme-text-secondary`}>
                 {current.label}
               </span>
             </motion.div>

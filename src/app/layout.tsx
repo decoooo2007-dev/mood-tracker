@@ -37,7 +37,7 @@ export const viewport: Viewport = {
   initialScale: 1,
   maximumScale: 5,
   userScalable: true,
-  themeColor: "#0F0F14",
+  themeColor: "#060C1A",
   viewportFit: "cover",
 };
 
@@ -73,23 +73,22 @@ export default function RootLayout({
             `,
           }}
         />
-        {/* PWA Icons */}
+        {/* PWA Icons (apple-icon.tsx automatically generates 180x180 PNG apple-touch-icon) */}
         <link rel="icon" href="/icons/icon.svg" type="image/svg+xml" />
-        <link rel="apple-touch-icon" href="/icons/icon.svg" />
         {/* PWA Meta Tags */}
         <meta name="mobile-web-app-capable" content="yes" />
         <meta name="apple-mobile-web-app-capable" content="yes" />
         <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
         <meta name="apple-mobile-web-app-title" content="MoodFlow" />
         <meta name="application-name" content="MoodFlow" />
-        <meta name="msapplication-TileColor" content="#7C3AED" />
+        <meta name="msapplication-TileColor" content="#2563EB" />
         <meta name="msapplication-tap-highlight" content="no" />
       </head>
       <body className="font-sans antialiased min-h-screen">
         <ThemeScript />
         <Providers>
           <AppLockGate>
-            <main className="min-h-screen pb-24 md:pb-28">
+            <main className="min-h-screen">
               {children}
             </main>
           </AppLockGate>

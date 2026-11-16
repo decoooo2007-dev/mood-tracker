@@ -3,6 +3,14 @@ import { getSessionFromRequest } from "@/lib/jwt";
 import { checkRateLimit } from "@/lib/rate-limit";
 import { supabaseAdmin } from "@/lib/server-supabase";
 import { tmood, ttag } from "@/lib/i18n/translations";
+import {
+  computeCompositeMoodScore,
+  computeTagCorrelations,
+  getDimensionLabel,
+  type EmotionDimension,
+} from "@/lib/sentiment";
+import { EMOTION_DIMENSIONS } from "@/lib/lexicon";
+import type { MoodType } from "@/types/mood";
 
 export const dynamic = "force-dynamic";
 
@@ -12,6 +20,23 @@ interface ReflectionResponse {
   booster: string;
   habit: string;
   source: "gemini" | "heuristic";
+}
+
+function classifyTimeWindow(timeStr: unknown): "morning" | "afternoon" | "evening" | "unknown" {
+  if (typeof timeStr !== "string" || !timeStr.trim()) return "unknown";
+  const s = timeStr.trim();
+  const isPm = /pm|م/i.test(s);
+  const isAm = /am|ص/i.test(s);
+  const match = s.match(/(\d{1,2})/);
+  if (!match) return "unknown";
+  let hour = parseInt(match[1], 10);
+  if (Number.isNaN(hour)) return "unknown";
+  if (isPm && hour < 12) hour += 12;
+  if (isAm && hour === 12) hour = 0;
+
+  if (hour >= 5 && hour < 12) return "morning";
+  if (hour >= 12 && hour < 17) return "afternoon";
+  return "evening";
 }
 
 export async function POST(request: Request) {
@@ -39,14 +64,14 @@ export async function POST(request: Request) {
   const rawBody = await request.json().catch(() => ({}));
   const locale = rawBody.locale === "ar" ? "ar" : "en";
 
-  // Fetch recent entries from past 7 days
+  // Fetch recent entries from past 7 days including sentiment & time columns
   const weekAgo = new Date();
   weekAgo.setDate(weekAgo.getDate() - 7);
   const weekAgoStr = weekAgo.toISOString().split("T")[0];
 
   const { data: entries, error } = await supabaseAdmin
     .from("mood_entries")
-    .select("mood, intensity, tags, date")
+    .select("mood, intensity, tags, date, time, sentiment_score, sentiment_keywords")
     .eq("user_id", session.userId)
     .gte("date", weekAgoStr)
     .order("date", { ascending: false });
@@ -55,23 +80,105 @@ export async function POST(request: Request) {
     console.error("[AI Reflection API] Supabase error:", error.message);
   }
 
-  const recentEntries = entries || [];
+  const recentEntries = (entries || []).map((row) => ({
+    mood: (String(row.mood || "Calm") as MoodType),
+    intensity: typeof row.intensity === "number" ? row.intensity : 50,
+    tags: Array.isArray(row.tags) ? (row.tags as string[]) : [],
+    date: String(row.date || ""),
+    time: typeof row.time === "string" ? row.time : "",
+    sentiment_score:
+      typeof row.sentiment_score === "number"
+        ? row.sentiment_score
+        : Number(row.sentiment_score ?? 0) || 0,
+    sentiment_keywords: Array.isArray(row.sentiment_keywords)
+      ? (row.sentiment_keywords as string[])
+      : [],
+  }));
 
-  // If Gemini API Key is available, invoke Gemini
+  // Compute deterministic Option A mathematical trait & lexicon metrics
+  const aggregateDimensions: Record<EmotionDimension, number> = {
+    happy: 0,
+    calm: 0,
+    motivated: 0,
+    tired: 0,
+    sad: 0,
+    frustrated: 0,
+    anxious: 0,
+    confused: 0,
+  };
+
+  let totalWellness = 0;
+  let totalIntensity = 0;
+  const moodCounts: Record<string, number> = {};
+  const tagCounts: Record<string, number> = {};
+  const keywordCounts: Record<string, number> = {};
+  const windowCounts: Record<string, number> = { morning: 0, afternoon: 0, evening: 0 };
+
+  const enrichedEntries = recentEntries.map((e) => {
+    const composite = computeCompositeMoodScore({
+      mood: e.mood,
+      intensity: e.intensity,
+      tags: e.tags,
+      sentimentScore: e.sentiment_score,
+      locale,
+    });
+    for (const dim of EMOTION_DIMENSIONS) {
+      aggregateDimensions[dim] += composite.dimensionScores[dim];
+    }
+    totalWellness += composite.wellnessIndex;
+    totalIntensity += e.intensity;
+    moodCounts[e.mood] = (moodCounts[e.mood] || 0) + 1;
+    for (const tag of e.tags) {
+      tagCounts[tag] = (tagCounts[tag] || 0) + 1;
+    }
+    for (const kw of e.sentiment_keywords) {
+      keywordCounts[kw] = (keywordCounts[kw] || 0) + 1;
+    }
+    const win = classifyTimeWindow(e.time);
+    if (win !== "unknown") {
+      windowCounts[win] += 1;
+    }
+    return { ...e, composite };
+  });
+
+  const avgWellness =
+    enrichedEntries.length > 0 ? Math.round(totalWellness / enrichedEntries.length) : 50;
+  const avgIntensity =
+    enrichedEntries.length > 0 ? Math.round(totalIntensity / enrichedEntries.length) : 50;
+  const dominantDimension = (Object.entries(aggregateDimensions).sort(
+    (a, b) => b[1] - a[1]
+  )[0]?.[0] || "calm") as EmotionDimension;
+  const dominantMood =
+    Object.entries(moodCounts).sort((a, b) => b[1] - a[1])[0]?.[0] || "Calm";
+
+  const tagCorrelations = computeTagCorrelations(
+    recentEntries.map((e) => ({
+      mood: e.mood,
+      intensity: e.intensity,
+      tags: e.tags,
+      sentiment: { score: e.sentiment_score },
+    }))
+  );
+  const topLifter = tagCorrelations.find((c) => c.delta > 0);
+  const topDrainer = tagCorrelations.find((c) => c.delta < 0);
+
+  // If Gemini API Key is available, invoke Gemini grounded in mathematical trait & lexicon metrics
   const geminiKey = process.env.GEMINI_API_KEY;
-  if (geminiKey && recentEntries.length > 0) {
+  if (geminiKey && enrichedEntries.length > 0) {
     try {
       const promptLang =
         locale === "ar"
-          ? "CRITICAL RULE: The entire response must be 100% Arabic with ZERO English or Latin characters. Provide 3 short points in JSON: {\"rhythm\": \"...\", \"booster\": \"...\", \"habit\": \"...\"}"
-          : "Provide 3 short, constructive points in JSON: {\"rhythm\": \"...\", \"booster\": \"...\", \"habit\": \"...\"}";
+          ? 'CRITICAL RULE: The entire response must be 100% Arabic with ZERO English or Latin characters. Provide 3 short points in JSON: {"rhythm": "...", "booster": "...", "habit": "..."}'
+          : 'Provide 3 short, constructive points in JSON: {"rhythm": "...", "booster": "...", "habit": "..."}';
 
-      const userSummary = recentEntries
+      const userSummary = enrichedEntries
         .map(
           (e) =>
-            `Date: ${e.date}, Mood: ${e.mood}, Intensity: ${e.intensity}%, Tags: ${(e.tags || []).join(", ")}`
+            `Date: ${e.date}, Time: ${e.time || "N/A"}, Mood: ${e.mood}, Intensity: ${e.intensity}%, WellnessIndex: ${e.composite.wellnessIndex}/100, DominantTrait: ${e.composite.dominantDimension}, SentimentScore: ${e.sentiment_score}, Keywords: ${(e.sentiment_keywords || []).join(", ")}, Tags: ${(e.tags || []).join(", ")}`
         )
         .join("\n");
+
+      const mathSummary = `Weekly Avg Wellness Index: ${avgWellness}/100, Dominant Emotional Dimension: ${dominantDimension}, Top Lifter Tag: ${topLifter ? `${topLifter.tag} (+${topLifter.delta})` : "none"}, Top Drainer Tag: ${topDrainer ? `${topDrainer.tag} (${topDrainer.delta})` : "none"}.`;
 
       const geminiRes = await fetch(
         `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent?key=${geminiKey}`,
@@ -84,7 +191,7 @@ export async function POST(request: Request) {
                 role: "user",
                 parts: [
                   {
-                    text: `You are a supportive, mindful wellness companion for MoodFlow. Analyze these recent mood logs:\n${userSummary}\n\n${promptLang}\nFormat must be pure JSON with rhythm, booster, habit fields.`,
+                    text: `You are a supportive, mindful wellness companion for MoodFlow. Analyze these recent mood logs and mathematical trait metrics:\n${mathSummary}\n\nLogs:\n${userSummary}\n\n${promptLang}\nFormat must be pure JSON with rhythm, booster, habit fields.`,
                   },
                 ],
               },
@@ -133,13 +240,13 @@ export async function POST(request: Request) {
     }
   }
 
-  // Data-driven heuristic synthesis (works 100% offline or with zero API key)
+  // Data-driven mathematical heuristic synthesis (works 100% offline or with zero API key)
   const isAr = locale === "ar";
   let rhythm: string;
   let booster: string;
   let habit: string;
 
-  if (recentEntries.length === 0) {
+  if (enrichedEntries.length === 0) {
     rhythm = isAr
       ? "ابدأ بتسجيل مشاعرك يومياً لبناء إيقاعك العاطفي الواعي."
       : "Start logging your moods daily to unlock your weekly emotional pattern.";
@@ -150,55 +257,78 @@ export async function POST(request: Request) {
       ? "سجل مزاجك في نفس الوقت يومياً، مثل المساء قبل النوم."
       : "Try checking in at the same time each evening to build a consistent habit.";
   } else {
-    const moodCounts: Record<string, number> = {};
-    const tagCounts: Record<string, number> = {};
-    let totalIntensity = 0;
-
-    for (const e of recentEntries) {
-      const m = String(e.mood || "Calm");
-      moodCounts[m] = (moodCounts[m] || 0) + 1;
-      totalIntensity += typeof e.intensity === "number" ? e.intensity : 50;
-      const tags = Array.isArray(e.tags) ? e.tags : [];
-      for (const tag of tags) {
-        tagCounts[tag] = (tagCounts[tag] || 0) + 1;
-      }
-    }
-
-    const dominantMood =
-      Object.entries(moodCounts).sort((a, b) => b[1] - a[1])[0]?.[0] || "Calm";
-    const avgIntensity = Math.round(totalIntensity / recentEntries.length);
-    const topTag = Object.entries(tagCounts).sort((a, b) => b[1] - a[1])[0]?.[0];
-
     const localizedMood = tmood(dominantMood, locale);
-    const localizedTag = topTag
-      ? isAr && /[a-zA-Z]/.test(ttag(topTag, "ar"))
+    const localizedDimension = getDimensionLabel(dominantDimension, locale);
+
+    const topTagRaw = topLifter?.tag || Object.entries(tagCounts).sort((a, b) => b[1] - a[1])[0]?.[0];
+    const localizedTopTag = topTagRaw
+      ? isAr && /[a-zA-Z]/.test(ttag(topTagRaw, "ar"))
         ? "الأنشطة اليومية"
-        : ttag(topTag, locale)
+        : ttag(topTagRaw, locale)
       : null;
 
+    const topKwRaw = Object.entries(keywordCounts).sort((a, b) => b[1] - a[1])[0]?.[0];
+    const safeKeyword =
+      topKwRaw && (!isAr || !/[a-zA-Z]/.test(topKwRaw)) ? topKwRaw : null;
+
+    const peakWindow = Object.entries(windowCounts).sort((a, b) => b[1] - a[1])[0];
+    const windowLabel =
+      peakWindow && peakWindow[1] > 0
+        ? peakWindow[0] === "morning"
+          ? isAr
+            ? "الصباح"
+            : "mornings"
+          : peakWindow[0] === "afternoon"
+          ? isAr
+            ? "فترة الظهيرة"
+            : "afternoons"
+          : isAr
+          ? "المساء"
+          : "evenings"
+        : null;
+
     rhythm = isAr
-      ? `سجلت ${recentEntries.length} قراءات هذا الأسبوع، وكان الشعور الأبرز هو ${localizedMood} بمتوسط تركيز ${avgIntensity}٪.`
-      : `You logged ${recentEntries.length} check-ins this week, centered around feeling ${localizedMood} with an average intensity of ${avgIntensity}%.`;
+      ? `سجلت ${enrichedEntries.length} تدوينات بمتوسط مؤشر عافية ${avgWellness} من ١٠٠، وكان البعد الغالب هو ${localizedDimension} مع شعور ${localizedMood} بشدة ${avgIntensity}٪${windowLabel ? ` خاصة في ${windowLabel}` : ""}.`
+      : `Across ${enrichedEntries.length} check-ins, your composite wellness index averaged ${avgWellness}/100, anchored in ${localizedDimension.toLowerCase()} traits and ${localizedMood.toLowerCase()} check-ins at ${avgIntensity}% intensity${windowLabel ? `, mostly during ${windowLabel}` : ""}.`;
 
-    booster = localizedTag
-      ? isAr
-        ? `ارتبط وسم ${localizedTag} بأغلب لحظات توازنك ووعيك الذاتي خلال الأيام الماضية.`
-        : `Your "${localizedTag}" moments were most strongly connected to your emotional check-ins this week.`
-      : isAr
-      ? "كانت لحظات التأمل الهادئة والامتنان هي الأكثر ارتباطاً بارتفاع مستوى الراحة."
-      : "Moments of gratitude and peaceful downtime were your strongest positive drivers.";
+    if (topLifter && localizedTopTag) {
+      booster = isAr
+        ? `ارتبط وسم ${localizedTopTag} برفع مؤشر عافيتك بمقدار ${topLifter.delta} نقطة${safeKeyword ? ` مع تكرار دلالة "${safeKeyword}" في كلماتك` : ""}.`
+        : `"${localizedTopTag}" lifted your wellness score by +${topLifter.delta} points${safeKeyword ? `, alongside "${safeKeyword}" in your reflections` : ""}.`;
+    } else if (localizedTopTag) {
+      booster = isAr
+        ? `ارتبط وسم ${localizedTopTag} بأغلب لحظات وعيك وتوازنك خلال الأيام الماضية.`
+        : `Your "${localizedTopTag}" moments were most frequently linked with your emotional check-ins this week.`;
+    } else {
+      booster = isAr
+        ? "لحظات الامتنان والهدوء كانت المحرك الأقوى لاستقرار مزاجك هذا الأسبوع."
+        : "Moments of gratitude and calm reflection were your strongest emotional stabilizers this week.";
+    }
 
-    if (dominantMood === "Sad" || dominantMood === "Frustrated") {
+    if (topDrainer) {
+      const drainTagSafe =
+        isAr && /[a-zA-Z]/.test(ttag(topDrainer.tag, "ar"))
+          ? "بعض الضغوط اليومية"
+          : ttag(topDrainer.tag, locale);
       habit = isAr
-        ? "جرب تمرين التنفس الهادئ لمدة دقيقتين عند الشعور بالضغط لاستعادة توازنك."
-        : "Try the 4-7-8 breathing exercise for two minutes whenever tension builds to gently reset.";
-    } else if (dominantMood === "Tired") {
+        ? `لاحظنا أن ${drainTagSafe} خفض مؤشر مزاجك؛ خصص دقيقتين للتنفس العميق بعده لاستعادة توازنك.`
+        : `Notice "${drainTagSafe}" correlated with a ${topDrainer.delta}-point dip; pair it with a 2-minute 4-7-8 breathing reset.`;
+    } else if (
+      dominantMood === "Sad" ||
+      dominantMood === "Frustrated" ||
+      dominantDimension === "anxious" ||
+      dominantDimension === "frustrated"
+    ) {
       habit = isAr
-        ? "امنح نفسك قسطاً كافياً من الراحة الليلة وابتعد عن الشاشات قبل النوم بنصف ساعة."
+        ? "جرب تمرين التنفس الهادئ ٤-٧-٨ لمدة دقيقتين عند تصاعد التوتر لاستعادة صفاء ذهنك."
+        : "Try the 4-7-8 breathing exercise for two minutes whenever tension rises to gently reset.";
+    } else if (dominantMood === "Tired" || dominantDimension === "tired") {
+      habit = isAr
+        ? "امنح نفسك راحة كافية الليلة وابتعد عن الشاشات قبل النوم بنصف ساعة."
         : "Prioritize restorative rest tonight by stepping away from screens 30 minutes before sleep.";
     } else {
       habit = isAr
-        ? "خصص خمس دقائق كل صباح لتدوين شيء واحد تشعر بالامتنان لوجوده في حياتك."
+        ? "حافظ على تدوين لحظة امتنان واحدة يومياً لتعزيز استمرارية توازنك النفسي."
         : "Dedicate 5 minutes each morning to note one thing you are grateful for to sustain your momentum.";
     }
   }
