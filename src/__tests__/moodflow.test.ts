@@ -924,15 +924,18 @@ describe("Track 3: Tag Correlations & Editable Factor Preferences", () => {
 });
 
 describe("Track 2: Nile Sapphire Default Palette & BiDi Purity", () => {
-  it("sets palette #4 Nile Sapphire x Gold as default and enforces Arabic BiDi purity across all 8 palettes", async () => {
+  it("sets palette #4 Nile Sapphire first as default with clean flagship names and Arabic BiDi purity", async () => {
     const { DEFAULT_PALETTE_ID, PALETTES, getPaletteById } = await import("@/lib/theme");
 
     expect(DEFAULT_PALETTE_ID).toBe(4);
     expect(PALETTES).toHaveLength(8);
-    expect(getPaletteById(4).nameEn).toContain("Nile Sapphire");
+    expect(PALETTES[0].id).toBe(4);
+    expect(getPaletteById(4).nameEn).toBe("Nile Sapphire");
 
     for (const pal of PALETTES) {
       expect(/[a-zA-Z]/.test(pal.nameAr)).toBe(false);
+      expect(/^\d+\./.test(pal.nameEn)).toBe(false);
+      expect(/^[٠-٩]+\./.test(pal.nameAr)).toBe(false);
     }
   });
 

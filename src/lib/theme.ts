@@ -45,9 +45,56 @@ export const MOOD_REACTIVE_STORAGE_KEY = "moodflow-mood-reactive";
 
 export const PALETTES: ThemePalette[] = [
   {
+    id: 4,
+    nameEn: "Nile Sapphire",
+    nameAr: "ياقوت النيل الذهبي",
+    swatch: "linear-gradient(135deg, #2563eb, #14b8a6, #eab308)",
+    dark: {
+      bgPrimary: "#060C1A",
+      bgStart: "#070d1f",
+      bgMid: "#172554",
+      bgEnd: "#083344",
+      blob1: "rgba(59, 130, 246, 0.42)",
+      blob2: "rgba(20, 184, 166, 0.30)",
+      blob3: "rgba(234, 179, 8, 0.24)",
+      accentFrom: "#3b82f6",
+      accentVia: "#14b8a6",
+      accentTo: "#eab308",
+      accentSolid: "#3b82f6",
+      accentSoft: "rgba(59, 130, 246, 0.22)",
+      accentBorder: "rgba(96, 165, 250, 0.45)",
+      accentText: "#bfdbfe",
+      spotPrism: "rgba(234, 179, 8, 0.20)",
+      cardBase: "rgba(255, 255, 255, 0.06)",
+      chartStroke: "#60A5FA",
+      chartDot: "#FACC15",
+    },
+    light: {
+      bgPrimary: "#EFF6FF",
+      bgStart: "#dbeafe",
+      bgMid: "#ccfbf1",
+      bgEnd: "#fef9c3",
+      blob1: "rgba(59, 130, 246, 0.30)",
+      blob2: "rgba(20, 184, 166, 0.28)",
+      blob3: "rgba(234, 179, 8, 0.24)",
+      accentFrom: "#1d4ed8",
+      accentVia: "#0d9488",
+      accentTo: "#ca8a04",
+      accentSolid: "#1d4ed8",
+      accentSoft: "rgba(29, 78, 216, 0.12)",
+      accentBorder: "rgba(29, 78, 216, 0.3)",
+      accentText: "#1e3a8a",
+      spotPrism: "rgba(59, 130, 246, 0.18)",
+      cardBase: "rgba(255, 255, 255, 0.66)",
+      lightShadow: "rgba(29, 78, 216, 0.12)",
+      chartStroke: "#2563EB",
+      chartDot: "#CA8A04",
+    },
+  },
+  {
     id: 1,
-    nameEn: "1. Amethyst × Rose × Sky",
-    nameAr: "١. بنفسجي × وردي × سماوي",
+    nameEn: "Amethyst Rose",
+    nameAr: "أرجوان الورد السماوي",
     swatch: "linear-gradient(135deg, #7c3aed, #ec4899, #38bdf8)",
     dark: {
       bgPrimary: "#0A0914",
@@ -93,8 +140,8 @@ export const PALETTES: ThemePalette[] = [
   },
   {
     id: 2,
-    nameEn: "2. Borealis Emerald × Violet",
-    nameAr: "٢. زمردي × فيروزي × بنفسجي",
+    nameEn: "Borealis Emerald",
+    nameAr: "شفق الزمرد الفيروزي",
     swatch: "linear-gradient(135deg, #10b981, #06b6d4, #8b5cf6)",
     dark: {
       bgPrimary: "#051116",
@@ -140,8 +187,8 @@ export const PALETTES: ThemePalette[] = [
   },
   {
     id: 3,
-    nameEn: "3. Velvet Dusk: Indigo × Amber",
-    nameAr: "٣. نيلي × قرمزي × عنبر ذهبي",
+    nameEn: "Velvet Dusk",
+    nameAr: "غسق العنبر المخملي",
     swatch: "linear-gradient(135deg, #4f46e5, #f43f5e, #f59e0b)",
     dark: {
       bgPrimary: "#110B14",
@@ -186,56 +233,9 @@ export const PALETTES: ThemePalette[] = [
     },
   },
   {
-    id: 4,
-    nameEn: "4. Nile Sapphire × Gold",
-    nameAr: "٤. ياقوت النيل × تركواز × ذهب",
-    swatch: "linear-gradient(135deg, #2563eb, #14b8a6, #eab308)",
-    dark: {
-      bgPrimary: "#060C1A",
-      bgStart: "#070d1f",
-      bgMid: "#172554",
-      bgEnd: "#083344",
-      blob1: "rgba(59, 130, 246, 0.42)",
-      blob2: "rgba(20, 184, 166, 0.30)",
-      blob3: "rgba(234, 179, 8, 0.24)",
-      accentFrom: "#3b82f6",
-      accentVia: "#14b8a6",
-      accentTo: "#eab308",
-      accentSolid: "#3b82f6",
-      accentSoft: "rgba(59, 130, 246, 0.22)",
-      accentBorder: "rgba(96, 165, 250, 0.45)",
-      accentText: "#bfdbfe",
-      spotPrism: "rgba(234, 179, 8, 0.20)",
-      cardBase: "rgba(255, 255, 255, 0.06)",
-      chartStroke: "#60A5FA",
-      chartDot: "#FACC15",
-    },
-    light: {
-      bgPrimary: "#EFF6FF",
-      bgStart: "#dbeafe",
-      bgMid: "#ccfbf1",
-      bgEnd: "#fef9c3",
-      blob1: "rgba(59, 130, 246, 0.30)",
-      blob2: "rgba(20, 184, 166, 0.28)",
-      blob3: "rgba(234, 179, 8, 0.24)",
-      accentFrom: "#1d4ed8",
-      accentVia: "#0d9488",
-      accentTo: "#ca8a04",
-      accentSolid: "#1d4ed8",
-      accentSoft: "rgba(29, 78, 216, 0.12)",
-      accentBorder: "rgba(29, 78, 216, 0.3)",
-      accentText: "#1e3a8a",
-      spotPrism: "rgba(59, 130, 246, 0.18)",
-      cardBase: "rgba(255, 255, 255, 0.66)",
-      lightShadow: "rgba(29, 78, 216, 0.12)",
-      chartStroke: "#2563EB",
-      chartDot: "#CA8A04",
-    },
-  },
-  {
     id: 5,
-    nameEn: "5. Cyber Prism: Cyan × Magenta",
-    nameAr: "٥. سايبر أزرق × نيلي × أرجواني",
+    nameEn: "Cyber Prism",
+    nameAr: "طيف الفيروز النيلي",
     swatch: "linear-gradient(135deg, #06b6d4, #6366f1, #e879f9)",
     dark: {
       bgPrimary: "#070914",
@@ -281,8 +281,8 @@ export const PALETTES: ThemePalette[] = [
   },
   {
     id: 6,
-    nameEn: "6. Oasis Sage × Sand",
-    nameAr: "٦. واحة خضراء × فيروزي × رمل دافئ",
+    nameEn: "Oasis Sage",
+    nameAr: "واحة الرمل الدافئ",
     swatch: "linear-gradient(135deg, #22c55e, #0d9488, #d97706)",
     dark: {
       bgPrimary: "#06120D",
@@ -328,8 +328,8 @@ export const PALETTES: ThemePalette[] = [
   },
   {
     id: 7,
-    nameEn: "7. Celestial Plum × Peach",
-    nameAr: "٧. خزامى × أزرق سماوي × خوخ دافئ",
+    nameEn: "Celestial Plum",
+    nameAr: "خزامى الشفق الدافئ",
     swatch: "linear-gradient(135deg, #8b5cf6, #3b82f6, #fb923c)",
     dark: {
       bgPrimary: "#0E0B1A",
@@ -375,8 +375,8 @@ export const PALETTES: ThemePalette[] = [
   },
   {
     id: 8,
-    nameEn: "8. Obsidian × Iridescent Pearl",
-    nameAr: "٨. أوبسيديان × لؤلؤي قزحي",
+    nameEn: "Obsidian Pearl",
+    nameAr: "أوبسيديان لؤلؤي",
     swatch: "linear-gradient(135deg, #334155, #818cf8, #f472b6)",
     dark: {
       bgPrimary: "#09090D",
@@ -439,7 +439,7 @@ export interface AppearanceState {
 }
 
 export function getPaletteById(id: number): ThemePalette {
-  return PALETTES.find((p) => p.id === id) || PALETTES[3];
+  return PALETTES.find((p) => p.id === id) || PALETTES[0];
 }
 
 export function getStoredAppearance(): AppearanceState {
@@ -457,12 +457,9 @@ export function getStoredAppearance(): AppearanceState {
   const rawPal = Number(localStorage.getItem(PALETTE_STORAGE_KEY) || DEFAULT_PALETTE_ID);
   const paletteId = PALETTES.some((p) => p.id === rawPal) ? rawPal : DEFAULT_PALETTE_ID;
 
-  const rawMoodStyle = localStorage.getItem(MOOD_STYLE_STORAGE_KEY);
-  const moodStyle: MoodButtonStyle =
-    rawMoodStyle === "keycaps" || rawMoodStyle === "orbs" ? rawMoodStyle : "hybrid";
-
-  const rawSpot = localStorage.getItem(SPOTLIGHT_STORAGE_KEY);
-  const spotlightStyle: SpotlightStyle = rawSpot === "accent" ? "accent" : "classic";
+  // Option A (Curated Flagship): Lock Hybrid Orb-Keycaps & Crystal Pearl Spotlight as signature identity
+  const moodStyle: MoodButtonStyle = "hybrid";
+  const spotlightStyle: SpotlightStyle = "classic";
 
   const rawReactive = localStorage.getItem(MOOD_REACTIVE_STORAGE_KEY);
   // Automatic Mode-Aware Aura Rule: OFF in Dark Mode, ON in Light Mode by default

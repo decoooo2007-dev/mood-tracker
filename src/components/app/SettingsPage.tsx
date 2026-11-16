@@ -28,8 +28,6 @@ import {
   AlertCircle,
   Palette,
   Sparkles,
-  MousePointerClick,
-  Layers,
 } from "lucide-react";
 import GlassBackground from "@/components/ui/GlassBackground";
 import Navigation from "@/components/ui/Navigation";
@@ -42,13 +40,10 @@ import {
 import { saveCustomTag } from "@/lib/moods";
 import {
   PALETTES,
+  DEFAULT_PALETTE_ID,
   getStoredAppearance,
   setStoredPaletteId,
-  setStoredMoodStyle,
-  setStoredSpotlightStyle,
   setStoredMoodReactive,
-  type MoodButtonStyle,
-  type SpotlightStyle,
 } from "@/lib/theme";
 import type { MoodType } from "@/types/mood";
 
@@ -82,10 +77,8 @@ export default function SettingsPage() {
   } | null>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
 
-  // Appearance state (Palettes 1-8, Mood Style, Spotlight, Mode-Aware Aura)
-  const [paletteId, setPaletteId] = useState<number>(4);
-  const [moodStyle, setMoodStyle] = useState<MoodButtonStyle>("hybrid");
-  const [spotlightStyle, setSpotlightStyle] = useState<SpotlightStyle>("classic");
+  // Appearance state (Curated Flagship Palettes + Mode-Aware Aura)
+  const [paletteId, setPaletteId] = useState<number>(DEFAULT_PALETTE_ID);
   const [moodReactive, setMoodReactive] = useState<boolean>(false);
 
   useEffect(() => {
@@ -93,8 +86,6 @@ export default function SettingsPage() {
     const syncAppearance = () => {
       const app = getStoredAppearance();
       setPaletteId(app.paletteId);
-      setMoodStyle(app.moodStyle);
-      setSpotlightStyle(app.spotlightStyle);
       setMoodReactive(app.moodReactive);
     };
     syncAppearance();
@@ -324,7 +315,7 @@ export default function SettingsPage() {
           </motion.div>
         )}
 
-        {/* Appearance (Theme Mode + Palettes 1-8 + Mood Button Style + Spotlight + Mode-Aware Aura) */}
+        {/* Appearance (Curated Flagship: Theme + Atmospheric Palettes + Mode-Aware Aura) */}
         <motion.div
           className="mb-6"
           initial={{ opacity: 0, y: 20 }}
@@ -378,7 +369,7 @@ export default function SettingsPage() {
               </div>
             </div>
 
-            {/* Selectable Palettes 1–8 (#4 Nile Sapphire x Gold Default) */}
+            {/* Selectable Atmospheric Palettes (Clean Flagship Names, Nile Sapphire Default First) */}
             <div className="p-4">
               <div className="flex items-center gap-3 mb-3">
                 <Palette className="w-5 h-5" style={{ color: "var(--accent-solid)" }} />
@@ -394,6 +385,7 @@ export default function SettingsPage() {
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
                 {PALETTES.map((pal) => {
                   const active = pal.id === paletteId;
+                  const isDefault = pal.id === DEFAULT_PALETTE_ID;
                   return (
                     <button
                       key={pal.id}
@@ -402,101 +394,29 @@ export default function SettingsPage() {
                         setPaletteId(pal.id);
                         setStoredPaletteId(pal.id);
                       }}
-                      className={`flex items-center gap-2.5 px-3 py-2 rounded-xl text-start transition-all ${
+                      className={`flex items-center justify-between gap-2 px-3 py-2 rounded-xl text-start transition-all ${
                         active
                           ? "accent-pill ring-1 ring-[var(--accent-solid)] font-semibold"
                           : "recessed-well theme-text-secondary hover:opacity-95"
                       }`}
                     >
-                      <span
-                        className="w-4 h-4 rounded-full shrink-0 border border-white/50 shadow-sm"
-                        style={{ background: pal.swatch }}
-                      />
-                      <span className="text-xs truncate">
-                        {isRtl ? pal.nameAr : pal.nameEn}
+                      <span className="flex items-center gap-2.5 min-w-0">
+                        <span
+                          className="w-4 h-4 rounded-full shrink-0 border border-white/50 shadow-sm"
+                          style={{ background: pal.swatch }}
+                        />
+                        <span className="text-xs truncate">
+                          {isRtl ? pal.nameAr : pal.nameEn}
+                        </span>
                       </span>
+                      {isDefault && (
+                        <span className="text-[10px] px-1.5 py-0.5 rounded-full bg-white/10 theme-text-muted shrink-0">
+                          {isRtl ? "الافتراضي" : "Default"}
+                        </span>
+                      )}
                     </button>
                   );
                 })}
-              </div>
-            </div>
-
-            {/* Mood Button Style (Hybrid Orb-Keycaps / 3D Keycaps / Glowing Orbs) */}
-            <div className="p-4 flex flex-col sm:flex-row sm:items-center justify-between gap-3">
-              <div className="flex items-center gap-3">
-                <Layers className="w-5 h-5" style={{ color: "var(--accent-solid)" }} />
-                <div>
-                  <p className="theme-text-primary font-medium text-sm">
-                    {t("appearance.moodStyle")}
-                  </p>
-                  <p className="theme-text-secondary text-xs">
-                    {t("appearance.moodStyleDesc")}
-                  </p>
-                </div>
-              </div>
-              <div className="flex flex-wrap gap-1.5">
-                {(
-                  [
-                    { id: "hybrid", label: t("appearance.styleHybrid") },
-                    { id: "keycaps", label: t("appearance.styleKeycaps") },
-                    { id: "orbs", label: t("appearance.styleOrbs") },
-                  ] as const
-                ).map((opt) => (
-                  <button
-                    key={opt.id}
-                    type="button"
-                    onClick={() => {
-                      setMoodStyle(opt.id);
-                      setStoredMoodStyle(opt.id);
-                    }}
-                    className={`px-3 py-1.5 rounded-xl text-xs font-medium transition-all ${
-                      moodStyle === opt.id
-                        ? "accent-gradient-btn shadow-sm"
-                        : "recessed-well theme-text-secondary"
-                    }`}
-                  >
-                    {opt.label}
-                  </button>
-                ))}
-              </div>
-            </div>
-
-            {/* Cursor Spotlight (Crystal Pearl / Accent Prism) */}
-            <div className="p-4 flex flex-col sm:flex-row sm:items-center justify-between gap-3">
-              <div className="flex items-center gap-3">
-                <MousePointerClick className="w-5 h-5" style={{ color: "var(--accent-solid)" }} />
-                <div>
-                  <p className="theme-text-primary font-medium text-sm">
-                    {t("appearance.spotlight")}
-                  </p>
-                  <p className="theme-text-secondary text-xs">
-                    {t("appearance.spotlightDesc")}
-                  </p>
-                </div>
-              </div>
-              <div className="flex gap-1.5 shrink-0">
-                {(
-                  [
-                    { id: "classic", label: t("appearance.spotClassic") },
-                    { id: "accent", label: t("appearance.spotAccent") },
-                  ] as const
-                ).map((opt) => (
-                  <button
-                    key={opt.id}
-                    type="button"
-                    onClick={() => {
-                      setSpotlightStyle(opt.id);
-                      setStoredSpotlightStyle(opt.id);
-                    }}
-                    className={`px-3 py-1.5 rounded-xl text-xs font-medium transition-all ${
-                      spotlightStyle === opt.id
-                        ? "accent-gradient-btn shadow-sm"
-                        : "recessed-well theme-text-secondary"
-                    }`}
-                  >
-                    {opt.label}
-                  </button>
-                ))}
               </div>
             </div>
 
