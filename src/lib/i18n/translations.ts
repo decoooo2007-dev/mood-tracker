@@ -385,6 +385,11 @@ export const translations = {
     "board.setupNotice": "Community leaderboard table is being initialized in the database — your live anti-cheat progress is shown below.",
     "board.growthQualified": "Growth Qualified",
     "board.growthNeedMore": "Log across 7+ days (10+ entries) to qualify for Life Growth",
+    "board.errorTaken": "This anonymous handle is already taken — please choose another.",
+    "board.errorInvalidAlias": "Handle must be 3-20 characters using letters, numbers, or underscore.",
+    "board.errorSetup": "Community leaderboard table is still initializing in the database.",
+    "board.errorRateLimited": "Too many updates — please wait a moment and try again.",
+    "board.errorGeneric": "Unable to save anonymous handle right now.",
   },
   ar: {
     "app.title": "مد فلو",
@@ -773,6 +778,11 @@ export const translations = {
     "board.setupNotice": "جارِ تهيئة جدول المنافسة في قاعدة البيانات، وإحصاءاتك الحقيقية محسوبة أدناه.",
     "board.growthQualified": "مؤهل لتصنيف النمو",
     "board.growthNeedMore": "سجل ١٠ تدوينات خلال ٧ أيام مختلفة للتأهل لتصنيف التحسن",
+    "board.errorTaken": "هذا اللقب المستعار مستخدم بالفعل، يرجى اختيار لقب آخر.",
+    "board.errorInvalidAlias": "يجب أن يكون اللقب من ٣ إلى ٢٠ حرفاً من الأحرف أو الأرقام أو الشرطة السفلية.",
+    "board.errorSetup": "جدول لوحة المنافسة قيد التهيئة في قاعدة البيانات حالياً.",
+    "board.errorRateLimited": "محاولات كثيرة متتالية، يرجى الانتظار قليلاً ثم إعادة المحاولة.",
+    "board.errorGeneric": "تعذر حفظ اللقب المستعار في الوقت الحالي.",
   }
 } as const;
 

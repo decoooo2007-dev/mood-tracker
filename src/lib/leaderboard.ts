@@ -7,8 +7,13 @@ export const MAX_CREDITED_ENTRIES_PER_DAY = 2;
 export const MIN_ENTRIES_FOR_GROWTH = 10;
 export const MIN_ACTIVE_DAYS_FOR_GROWTH = 7;
 
-/** Safe bilingual anonymous alias pattern (Arabic, English, digits, underscore; 3–20 chars) */
-export const ANONYMOUS_ALIAS_REGEX = /^[a-zA-Z0-9_\u0600-\u06FF]{3,20}$/;
+/**
+ * Safe bilingual anonymous alias pattern (3–20 chars).
+ * Restricts Arabic strictly to standard letters (\u0621-\u064A) and Arabic-Indic
+ * digits (\u0660-\u0669) so invisible BiDi formatting/control characters (\u061C,
+ * diacritics, RTL overrides) cannot be smuggled into public handles.
+ */
+export const ANONYMOUS_ALIAS_REGEX = /^[a-zA-Z0-9_\u0621-\u064A\u0660-\u0669]{3,20}$/;
 
 export interface LeaderboardEntryInput {
   date: string;
@@ -73,9 +78,15 @@ export function computeLeaderboardMetrics(
   const dailyCounts = new Map<string, number>();
   const dailyWellness = new Map<string, { sum: number; count: number }>();
 
+  // Allow +1 day UTC buffer for UTC+14 timezones while blocking far-future date spoofing
+  const maxAllowedDate = new Date(Date.now() + 36 * 60 * 60 * 1000)
+    .toISOString()
+    .slice(0, 10);
+
   for (const entry of entries) {
     const dateKey = String(entry.date || "").slice(0, 10);
     if (!/^\d{4}-\d{2}-\d{2}$/.test(dateKey)) continue;
+    if (dateKey > maxAllowedDate) continue;
 
     dailyCounts.set(dateKey, (dailyCounts.get(dateKey) ?? 0) + 1);
 
@@ -129,13 +140,17 @@ export function computeLeaderboardMetrics(
   const avg = (arr: number[]) =>
     arr.reduce((acc, v) => acc + v, 0) / Math.max(1, arr.length);
 
-  const baselineWellness = Math.round(avg(earlySlice));
-  const recentWellness = Math.round(avg(recentSlice));
+  const rawBaseline = avg(earlySlice);
+  const rawRecent = avg(recentSlice);
+  const baselineWellness = Math.round(rawBaseline);
+  const recentWellness = Math.round(rawRecent);
+  // Require consistency-capped entries >= 10 across >= 7 distinct active days
+  // so spamming entries on a single day cannot unlock Growth qualification.
   const qualifiedForGrowth =
-    entries.length >= MIN_ENTRIES_FOR_GROWTH &&
+    consistencyEntries >= MIN_ENTRIES_FOR_GROWTH &&
     activeDays >= MIN_ACTIVE_DAYS_FOR_GROWTH;
   const improvementDelta = qualifiedForGrowth
-    ? Math.round((recentWellness - baselineWellness) * 10) / 10
+    ? Math.round((rawRecent - rawBaseline) * 10) / 10
     : 0;
 
   return {

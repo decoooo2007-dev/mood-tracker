@@ -5,6 +5,7 @@ import { getSessionFromRequest } from "@/lib/jwt";
 import { checkRateLimit } from "@/lib/rate-limit";
 import { analyzeSentiment } from "@/lib/sentiment";
 import { formatTime } from "@/lib/moods";
+import { syncUserLeaderboardProfile } from "@/lib/server-leaderboard";
 import type { MoodType } from "@/types/mood";
 
 export const dynamic = "force-dynamic";
@@ -201,6 +202,8 @@ export async function POST(request: Request) {
     );
   }
 
+  await syncUserLeaderboardProfile(session.userId);
+
   return NextResponse.json(
     {
       success: true,
@@ -239,6 +242,8 @@ export async function DELETE(request: Request) {
       { status: 500, headers: { "Cache-Control": "no-store" } }
     );
   }
+
+  await syncUserLeaderboardProfile(session.userId);
 
   return NextResponse.json(
     { success: true, data: { cleared: true } },

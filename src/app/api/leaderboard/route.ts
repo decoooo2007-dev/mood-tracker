@@ -6,11 +6,13 @@ import { supabaseAdmin } from "@/lib/server-supabase";
 import { normalizeSubscriptionTier } from "@/lib/subscription";
 import {
   ANONYMOUS_ALIAS_REGEX,
-  computeLeaderboardMetrics,
   normalizeAnonymousAlias,
   type PublicLeaderboardRow,
 } from "@/lib/leaderboard";
-import type { MoodType } from "@/types/mood";
+import {
+  computeUserLeaderboardMetrics,
+  isMissingLeaderboardTableError,
+} from "@/lib/server-leaderboard";
 
 export const dynamic = "force-dynamic";
 
@@ -18,40 +20,6 @@ const UpdateLeaderboardProfileSchema = z.object({
   anonymousAlias: z.string().min(1).max(30),
   isOptedIn: z.boolean(),
 });
-
-function isMissingLeaderboardTableError(err: { code?: string; message?: string } | null): boolean {
-  if (!err) return false;
-  return (
-    err.code === "42P01" ||
-    /leaderboard_profiles.*does not exist/i.test(err.message || "") ||
-    /relation .*leaderboard_profiles.* does not exist/i.test(err.message || "")
-  );
-}
-
-async function computeCallerMetrics(userId: string) {
-  const { data: rows, error } = await supabaseAdmin
-    .from("mood_entries")
-    .select("date, mood, intensity, tags, sentiment_score")
-    .eq("user_id", userId);
-
-  if (error) {
-    console.error("[Leaderboard API] Failed to read user entries:", error.message);
-    return computeLeaderboardMetrics([]);
-  }
-
-  return computeLeaderboardMetrics(
-    (rows || []).map((r) => ({
-      date: String(r.date || ""),
-      mood: (String(r.mood || "Calm") as MoodType),
-      intensity: typeof r.intensity === "number" ? r.intensity : 50,
-      tags: Array.isArray(r.tags) ? (r.tags as string[]) : [],
-      sentiment_score:
-        typeof r.sentiment_score === "number"
-          ? r.sentiment_score
-          : Number(r.sentiment_score ?? 0) || 0,
-    }))
-  );
-}
 
 function mapRows(
   rows: Record<string, unknown>[],
@@ -92,7 +60,7 @@ export async function GET(request: Request) {
     );
   }
 
-  const myMetrics = await computeCallerMetrics(session.userId);
+  const myMetrics = await computeUserLeaderboardMetrics(session.userId);
 
   const { data: myProfile, error: myProfileError } = await supabaseAdmin
     .from("leaderboard_profiles")
@@ -114,6 +82,14 @@ export async function GET(request: Request) {
         mostImproved: [],
       },
       { status: 200, headers: { "Cache-Control": "no-store" } }
+    );
+  }
+
+  if (myProfileError) {
+    console.error("[Leaderboard API GET] Profile error:", myProfileError.message);
+    return NextResponse.json(
+      { error: "Failed to load leaderboard profile", code: "DB_ERROR" },
+      { status: 500, headers: { "Cache-Control": "no-store" } }
     );
   }
 
@@ -157,6 +133,17 @@ export async function GET(request: Request) {
       .order("active_days", { ascending: false })
       .limit(25),
   ]);
+
+  if (entriesRes.error || improvedRes.error) {
+    console.error(
+      "[Leaderboard API GET] Query error:",
+      entriesRes.error?.message || improvedRes.error?.message
+    );
+    return NextResponse.json(
+      { error: "Failed to load community rankings", code: "DB_ERROR" },
+      { status: 500, headers: { "Cache-Control": "no-store" } }
+    );
+  }
 
   const rawEntriesRows = (entriesRes.data || []) as Record<string, unknown>[];
   const rawImprovedRows = (improvedRes.data || []) as Record<string, unknown>[];
@@ -251,6 +238,14 @@ export async function POST(request: Request) {
     );
   }
 
+  if (checkErr) {
+    console.error("[Leaderboard API POST] Collision check error:", checkErr.message);
+    return NextResponse.json(
+      { error: "Failed to verify anonymous handle", code: "DB_ERROR" },
+      { status: 500, headers: { "Cache-Control": "no-store" } }
+    );
+  }
+
   const takenByOther = (conflicts || []).find(
     (c) =>
       String(c.anonymous_alias).toLowerCase() === normalizedAlias.toLowerCase() &&
@@ -263,7 +258,7 @@ export async function POST(request: Request) {
     );
   }
 
-  const myMetrics = await computeCallerMetrics(session.userId);
+  const myMetrics = await computeUserLeaderboardMetrics(session.userId);
 
   const { error: upsertErr } = await supabaseAdmin
     .from("leaderboard_profiles")

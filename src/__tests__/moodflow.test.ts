@@ -1243,7 +1243,7 @@ describe("Cross-Device Performance Track 2 & 6: O(1) E2EE Decryption Cache (cryp
 });
 
 describe("Anonymous Community Board & Anti-Cheat Engine (leaderboard.ts & Middleware)", () => {
-  it("validates bilingual anonymous aliases safely and rejects XSS or invalid lengths", async () => {
+  it("validates bilingual anonymous aliases safely and rejects XSS, BiDi overrides, or invalid lengths", async () => {
     const { ANONYMOUS_ALIAS_REGEX, normalizeAnonymousAlias } = await import(
       "@/lib/leaderboard"
     );
@@ -1253,9 +1253,12 @@ describe("Anonymous Community Board & Anti-Cheat Engine (leaderboard.ts & Middle
     expect(ANONYMOUS_ALIAS_REGEX.test("ab")).toBe(false);
     expect(ANONYMOUS_ALIAS_REGEX.test("<script>alert(1)</script>")).toBe(false);
     expect(ANONYMOUS_ALIAS_REGEX.test("user with spaces")).toBe(false);
+    // Reject invisible BiDi control / override characters (\u061C Arabic Letter Mark, \u202E RLO)
+    expect(ANONYMOUS_ALIAS_REGEX.test("Nile\u061CVoyager")).toBe(false);
+    expect(ANONYMOUS_ALIAS_REGEX.test("Nile\u202EVoyager")).toBe(false);
   });
 
-  it("caps daily consistency credit at 2 entries/day and disqualifies single-day spam from Growth ranking", async () => {
+  it("caps daily consistency credit at 2 entries/day and disqualifies single-day spam and far-future spoofing", async () => {
     const { computeLeaderboardMetrics, MAX_CREDITED_ENTRIES_PER_DAY } = await import(
       "@/lib/leaderboard"
     );
@@ -1272,6 +1275,47 @@ describe("Anonymous Community Board & Anti-Cheat Engine (leaderboard.ts & Middle
     expect(metrics.activeDays).toBe(1);
     expect(metrics.consistencyEntries).toBe(MAX_CREDITED_ENTRIES_PER_DAY);
     expect(metrics.qualifiedForGrowth).toBe(false);
+
+    // 1 entry on 6 days + 10 spammed entries on Day 7 => activeDays=7, raw=16, consistencyEntries=8 (<10)
+    const sevenDaySpam = [
+      { date: "2026-11-01", mood: "Sad" as const, intensity: 70, tags: [] },
+      { date: "2026-11-02", mood: "Sad" as const, intensity: 70, tags: [] },
+      { date: "2026-11-03", mood: "Sad" as const, intensity: 70, tags: [] },
+      { date: "2026-11-04", mood: "Sad" as const, intensity: 70, tags: [] },
+      { date: "2026-11-05", mood: "Sad" as const, intensity: 70, tags: [] },
+      { date: "2026-11-06", mood: "Sad" as const, intensity: 70, tags: [] },
+      ...Array.from({ length: 10 }, () => ({
+        date: "2026-11-07",
+        mood: "Happy" as const,
+        intensity: 95,
+        tags: [],
+      })),
+      // Far-future date spoofing attempt must be ignored
+      { date: "2099-01-01", mood: "Happy" as const, intensity: 100, tags: [] },
+    ];
+
+    const spamMetrics = computeLeaderboardMetrics(sevenDaySpam);
+    expect(spamMetrics.activeDays).toBe(7);
+    expect(spamMetrics.consistencyEntries).toBe(8);
+    expect(spamMetrics.qualifiedForGrowth).toBe(false);
+    expect(spamMetrics.improvementDelta).toBe(0);
+  });
+
+  it("handles missing leaderboard table codes gracefully without throwing during entry sync", async () => {
+    const { isMissingLeaderboardTableError } = await import(
+      "@/lib/server-leaderboard"
+    );
+
+    expect(isMissingLeaderboardTableError({ code: "42P01" })).toBe(true);
+    expect(isMissingLeaderboardTableError({ code: "PGRST205" })).toBe(true);
+    expect(
+      isMissingLeaderboardTableError({
+        message: "Could not find the table 'public.leaderboard_profiles' in the schema cache",
+      })
+    ).toBe(true);
+    expect(isMissingLeaderboardTableError({ code: "23505", message: "duplicate key" })).toBe(
+      false
+    );
   });
 
   it("computes genuine multi-day Life Growth improvement across >= 10 entries and >= 7 active days", async () => {

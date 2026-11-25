@@ -107,9 +107,16 @@ export default function BoardPage() {
       });
       const json = await res.json();
       if (!res.ok) {
+        const errorMap: Record<string, string> = {
+          ALIAS_TAKEN: t("board.errorTaken"),
+          INVALID_ALIAS: t("board.errorInvalidAlias"),
+          VALIDATION_ERROR: t("board.errorInvalidAlias"),
+          SETUP_REQUIRED: t("board.errorSetup"),
+          RATE_LIMITED: t("board.errorRateLimited"),
+        };
         setFeedback({
           type: "error",
-          text: json.error || "Unable to update handle",
+          text: errorMap[String(json.code || "")] || t("board.errorGeneric"),
         });
         return;
       }
@@ -242,7 +249,7 @@ export default function BoardPage() {
               value={aliasInput}
               onChange={(e) => setAliasInput(e.target.value)}
               placeholder={t("board.aliasPlaceholder")}
-              className="flex-1 px-3.5 py-2.5 recessed-well rounded-xl theme-text-primary text-sm outline-none"
+              className="flex-1 px-3.5 py-2.5 recessed-well rounded-xl theme-text-primary text-base sm:text-sm outline-none"
             />
             <button
               type="submit"
@@ -361,10 +368,28 @@ export default function BoardPage() {
                         <MembershipBadge tier={row.subscriptionTier} size="sm" />
                       )}
                     </div>
-                    <p className="text-[11px] theme-text-muted mt-0.5">
-                      {activeTab === "improved"
-                        ? `${row.baselineWellness} → ${row.recentWellness} · ${row.activeDays} ${t("board.activeDays")}`
-                        : `🔥 ${row.currentStreak} ${t("stats.dayStreak")} · ${row.activeDays} ${t("board.activeDays")}`}
+                    <p className="text-[11px] theme-text-muted mt-0.5 flex flex-wrap items-center gap-1.5">
+                      {activeTab === "improved" ? (
+                        <>
+                          <span dir="ltr" className="inline-block font-semibold">
+                            {row.baselineWellness} → {row.recentWellness}
+                          </span>
+                          <span>·</span>
+                          <span>
+                            {row.activeDays} {t("board.activeDays")}
+                          </span>
+                        </>
+                      ) : (
+                        <>
+                          <span>
+                            🔥 {row.currentStreak} {t("stats.dayStreak")}
+                          </span>
+                          <span>·</span>
+                          <span>
+                            {row.activeDays} {t("board.activeDays")}
+                          </span>
+                        </>
+                      )}
                     </p>
                   </div>
                 </div>

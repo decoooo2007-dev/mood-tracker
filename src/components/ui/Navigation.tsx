@@ -54,6 +54,15 @@ export default function Navigation() {
     setMobileMenuOpen(false);
   }, [pathname]);
 
+  useEffect(() => {
+    if (!mobileMenuOpen) return;
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if (e.key === "Escape") setMobileMenuOpen(false);
+    };
+    window.addEventListener("keydown", handleKeyDown);
+    return () => window.removeEventListener("keydown", handleKeyDown);
+  }, [mobileMenuOpen]);
+
   if (
     !user ||
     pathname === "/login" ||
@@ -73,7 +82,15 @@ export default function Navigation() {
   const ActiveIcon = activeItem.icon;
 
   return (
-    <nav className="fixed bottom-4 sm:bottom-5 left-0 right-0 z-50 flex flex-col items-center pointer-events-none px-2.5">
+    <>
+      {mobileMenuOpen && (
+        <div
+          aria-hidden="true"
+          onClick={() => setMobileMenuOpen(false)}
+          className="sm:hidden fixed inset-0 z-40 bg-black/20 backdrop-blur-[1px]"
+        />
+      )}
+      <nav className="fixed bottom-4 sm:bottom-5 left-0 right-0 z-50 flex flex-col items-center pointer-events-none px-2.5">
       {/* Mobile Expandable 5-Tab Launcher Menu */}
       {mobileMenuOpen && (
         <div className="sm:hidden pointer-events-auto mb-2 w-full max-w-[360px]">
@@ -181,16 +198,20 @@ export default function Navigation() {
           <button
             type="button"
             onClick={() => setMobileMenuOpen((v) => !v)}
-            className="flex items-center gap-2 px-3 py-1.5 rounded-full accent-gradient-btn text-xs font-semibold shadow-sm"
+            className="flex items-center gap-1.5 px-3 py-1.5 rounded-full accent-gradient-btn text-xs font-semibold shadow-sm min-w-0 shrink"
             aria-expanded={mobileMenuOpen}
             aria-label={t(activeItem.labelKey)}
           >
-            {mobileMenuOpen ? <X className="w-4 h-4" /> : <Menu className="w-4 h-4" />}
-            <ActiveIcon className="w-3.5 h-3.5" />
-            <span>{t(activeItem.labelKey)}</span>
+            {mobileMenuOpen ? (
+              <X className="w-4 h-4 shrink-0" />
+            ) : (
+              <Menu className="w-4 h-4 shrink-0" />
+            )}
+            <ActiveIcon className="w-3.5 h-3.5 shrink-0" />
+            <span className="truncate">{t(activeItem.labelKey)}</span>
           </button>
 
-          <div className="flex items-center gap-1">
+          <div className="flex items-center gap-1 shrink-0">
             <Link
               href="/"
               aria-label={t("nav.home")}
@@ -199,15 +220,6 @@ export default function Navigation() {
               }`}
             >
               <Home className="w-4 h-4" />
-            </Link>
-            <Link
-              href="/history"
-              aria-label={t("nav.history")}
-              className={`p-2 rounded-full transition-colors ${
-                pathname === "/history" ? "accent-pill" : "theme-text-secondary opacity-80"
-              }`}
-            >
-              <Clock className="w-4 h-4" />
             </Link>
             <Link
               href="/board"
@@ -247,5 +259,6 @@ export default function Navigation() {
         </div>
       </div>
     </nav>
+    </>
   );
 }

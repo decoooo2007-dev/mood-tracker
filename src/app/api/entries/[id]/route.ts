@@ -4,6 +4,7 @@ import { supabaseAdmin } from "@/lib/server-supabase";
 import { getSessionFromRequest } from "@/lib/jwt";
 import { checkRateLimit } from "@/lib/rate-limit";
 import { analyzeSentiment } from "@/lib/sentiment";
+import { syncUserLeaderboardProfile } from "@/lib/server-leaderboard";
 import { formatEntryRow, normalizeMoodValue } from "@/app/api/entries/route";
 
 export const dynamic = "force-dynamic";
@@ -144,6 +145,8 @@ export async function PATCH(
     );
   }
 
+  await syncUserLeaderboardProfile(session.userId);
+
   return NextResponse.json(
     {
       success: true,
@@ -203,6 +206,8 @@ export async function DELETE(
       { status: 404, headers: { "Cache-Control": "no-store" } }
     );
   }
+
+  await syncUserLeaderboardProfile(session.userId);
 
   return NextResponse.json(
     { success: true, data: { id: deleted.id, deleted: true } },
