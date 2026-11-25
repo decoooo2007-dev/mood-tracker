@@ -145,7 +145,7 @@ export default function BoardPage() {
           className="mb-6"
         >
           <div className="flex items-center gap-2.5 mb-1">
-            <div className="w-10 h-10 rounded-2xl accent-avatar flex items-center justify-center shadow-md">
+            <div className="w-10 h-10 rounded-2xl accent-avatar flex items-center justify-center shadow-md shrink-0">
               <Trophy className="w-5 h-5 text-white" />
             </div>
             <div>
